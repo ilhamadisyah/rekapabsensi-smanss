@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { ShiftTemplate } from '@/lib/types';
-import { X, Plus, Edit2, Trash2, Clock, Check, AlertCircle, Sparkles, Shield, Sun, Moon, Coffee } from 'lucide-react';
+import { X, Plus, Edit2, Trash2, Clock, Check, AlertCircle, Sparkles, Shield, Sun, Moon, Coffee, RotateCcw } from 'lucide-react';
 
 function formatTimeOffset(baseTime: string, offsetMinutes: number, isNextDay?: boolean): string {
   if (!baseTime) return '--:--';
@@ -90,6 +90,7 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
   const [formIsOvernight, setFormIsOvernight] = useState<boolean>(false);
   const [formIsOffDay, setFormIsOffDay] = useState<boolean>(false);
   const [formIsDefault, setFormIsDefault] = useState<boolean>(false);
+  const [formShiftType, setFormShiftType] = useState<'regular' | 'shift' | 'off'>('regular');
   const [formColor, setFormColor] = useState('#2563eb');
   const [formDescription, setFormDescription] = useState('');
 
@@ -113,34 +114,38 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
     }
   };
 
-  const handleSelectType = (type: 'regular' | 'overnight' | 'off') => {
+  const handleSelectType = (type: 'regular' | 'shift' | 'off') => {
+    setFormShiftType(type);
     if (type === 'regular') {
       setFormIsOffDay(false);
       setFormIsOvernight(false);
+      setFormIsDefault(true);
       if (formStartTime >= '18:00' || formEndTime <= '08:00') {
         setFormStartTime('07:30');
         setFormEndTime('16:00');
       }
-    } else if (type === 'overnight') {
+    } else if (type === 'shift') {
       setFormIsOffDay(false);
-      setFormIsOvernight(true);
-      if (formStartTime < '17:00' && formEndTime >= '12:00') {
-        setFormStartTime('20:00');
-        setFormEndTime('05:00');
+      setFormIsDefault(false);
+      if (!formStartTime || !formEndTime || formStartTime === '00:00') {
+        setFormStartTime('07:00');
+        setFormEndTime('15:00');
       }
     } else {
       setFormIsOffDay(true);
       setFormIsOvernight(false);
+      setFormIsDefault(false);
     }
   };
 
   const startCreate = () => {
     setEditingTemplate(null);
     setIsCreating(true);
+    setFormShiftType('shift');
     setFormName('');
     setFormCode('');
-    setFormStartTime('07:30');
-    setFormEndTime('16:00');
+    setFormStartTime('07:00');
+    setFormEndTime('15:00');
     setFormGracePeriod(0);
     setFormCheckInWindow(120);
     setFormCheckOutWindow(240);
@@ -156,6 +161,7 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
   const startEdit = (t: ShiftTemplate) => {
     setIsCreating(false);
     setEditingTemplate(t);
+    setFormShiftType(t.is_off_day ? 'off' : t.is_default ? 'regular' : 'shift');
     setFormName(t.name);
     setFormCode(t.code);
     setFormStartTime(t.start_time.substring(0, 5));
@@ -353,7 +359,7 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                     type="button"
                     onClick={() => handleSelectType('regular')}
                     className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                      !formIsOffDay && !formIsOvernight
+                      formShiftType === 'regular' && !formIsOffDay
                         ? 'bg-white text-blue-700 shadow-xs font-bold border border-slate-200/80'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                     }`}
@@ -364,22 +370,22 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => handleSelectType('overnight')}
+                    onClick={() => handleSelectType('shift')}
                     className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                      !formIsOffDay && formIsOvernight
-                        ? 'bg-white text-indigo-700 shadow-xs font-bold border border-slate-200/80'
+                      formShiftType === 'shift' && !formIsOffDay
+                        ? 'bg-white text-blue-700 shadow-xs font-bold border border-slate-200/80'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                     }`}
                   >
-                    <Moon className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                    <span className="truncate">Shift Malam</span>
+                    <RotateCcw className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span className="truncate">Shift</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleSelectType('off')}
                     className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                      formIsOffDay
+                      formIsOffDay || formShiftType === 'off'
                         ? 'bg-white text-slate-900 shadow-xs font-bold border border-slate-200/80'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                     }`}
@@ -609,7 +615,15 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                   <input
                     type="checkbox"
                     checked={formIsDefault}
-                    onChange={(e) => setFormIsDefault(e.target.checked)}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setFormIsDefault(checked);
+                      if (checked) {
+                        setFormShiftType('regular');
+                      } else if (formShiftType === 'regular') {
+                        setFormShiftType('shift');
+                      }
+                    }}
                     className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
                   />
                   <div>

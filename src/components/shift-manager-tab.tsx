@@ -15,6 +15,7 @@ import {
   Coffee,
   Check,
   Sun,
+  RotateCcw,
 } from 'lucide-react';
 
 function formatTimeOffset(baseTime: string, offsetMinutes: number, isNextDay?: boolean): string {
@@ -85,16 +86,18 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
   const [color, setColor] = useState('#2563eb');
   const [description, setDescription] = useState('');
   const [isDefault, setIsDefault] = useState(false);
+  const [shiftType, setShiftType] = useState<'regular' | 'shift' | 'off'>('regular');
 
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const openCreateModal = () => {
     setEditingTemplate(null);
+    setShiftType('shift');
     setName('');
     setCode('');
-    setStartTime('07:30');
-    setEndTime('16:00');
+    setStartTime('07:00');
+    setEndTime('15:00');
     setGracePeriod(0);
     setCheckInWindow(120);
     setCheckOutWindow(240);
@@ -109,6 +112,7 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
 
   const openEditModal = (t: ShiftTemplate) => {
     setEditingTemplate(t);
+    setShiftType(t.is_off_day ? 'off' : t.is_default ? 'regular' : 'shift');
     setName(t.name);
     setCode(t.code);
     setStartTime(t.start_time.substring(0, 5));
@@ -155,24 +159,27 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
     }
   };
 
-  const handleSelectType = (type: 'regular' | 'overnight' | 'off') => {
+  const handleSelectType = (type: 'regular' | 'shift' | 'off') => {
+    setShiftType(type);
     if (type === 'regular') {
       setIsOffDay(false);
       setIsOvernight(false);
+      setIsDefault(true);
       if (startTime >= '18:00' || endTime <= '08:00') {
         setStartTime('07:30');
         setEndTime('16:00');
       }
-    } else if (type === 'overnight') {
+    } else if (type === 'shift') {
       setIsOffDay(false);
-      setIsOvernight(true);
-      if (startTime < '17:00' && endTime >= '12:00') {
-        setStartTime('20:00');
-        setEndTime('05:00');
+      setIsDefault(false);
+      if (!startTime || !endTime || startTime === '00:00') {
+        setStartTime('07:00');
+        setEndTime('15:00');
       }
     } else {
       setIsOffDay(true);
       setIsOvernight(false);
+      setIsDefault(false);
     }
   };
 
@@ -474,7 +481,7 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                       type="button"
                       onClick={() => handleSelectType('regular')}
                       className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                        !isOffDay && !isOvernight
+                        shiftType === 'regular' && !isOffDay
                           ? 'bg-white text-blue-700 shadow-xs font-bold border border-slate-200/80'
                           : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                       }`}
@@ -485,22 +492,22 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
 
                     <button
                       type="button"
-                      onClick={() => handleSelectType('overnight')}
+                      onClick={() => handleSelectType('shift')}
                       className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                        !isOffDay && isOvernight
-                          ? 'bg-white text-indigo-700 shadow-xs font-bold border border-slate-200/80'
+                        shiftType === 'shift' && !isOffDay
+                          ? 'bg-white text-blue-700 shadow-xs font-bold border border-slate-200/80'
                           : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                       }`}
                     >
-                      <Moon className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                      <span className="truncate">Shift Malam</span>
+                      <RotateCcw className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span className="truncate">Shift</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => handleSelectType('off')}
                       className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                        isOffDay
+                        isOffDay || shiftType === 'off'
                           ? 'bg-white text-slate-900 shadow-xs font-bold border border-slate-200/80'
                           : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
                       }`}
@@ -730,7 +737,15 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                     <input
                       type="checkbox"
                       checked={isDefault}
-                      onChange={(e) => setIsDefault(e.target.checked)}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setIsDefault(checked);
+                        if (checked) {
+                          setShiftType('regular');
+                        } else if (shiftType === 'regular') {
+                          setShiftType('shift');
+                        }
+                      }}
                       className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
                     />
                     <div>
