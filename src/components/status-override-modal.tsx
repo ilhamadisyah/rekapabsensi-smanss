@@ -10,7 +10,9 @@ import {
   User, 
   CheckCircle2, 
   Sparkles,
-  Info
+  Info,
+  Briefcase,
+  Fingerprint
 } from 'lucide-react';
 
 interface StatusOverrideModalProps {
@@ -219,7 +221,7 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
             {/* Employee & Schedule Information Card */}
-            <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-200 space-y-2.5">
+            <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-200 space-y-3">
               {/* Employee Header */}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -241,73 +243,154 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                 </span>
               </div>
 
-              {/* Tanggal & Shift Info */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-200/60 text-[11px]">
-                <div className="flex items-center gap-1.5 text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/60">
+              {/* Info Badges (Tanggal, Jam Kerja, Shift, Tap Mesin) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-200/70 text-[11px]">
+                {/* 1. Tanggal */}
+                <div className="flex items-center gap-2 text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/80">
                   <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <span className="truncate">{formatDateLabel(dateStr, dayNumber)}</span>
+                  <span className="font-medium text-slate-800 truncate">{formatDateLabel(dateStr, dayNumber)}</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/60">
-                  <Clock className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                  <span className="truncate">
-                    Shift: <strong className="text-indigo-950">{currentAttendance?.shift_name || (currentAttendance?.is_off_day ? 'Libur Shift' : (currentAttendance?.is_holiday ? 'Hari Libur' : 'Jam Kerja Normal'))}</strong>
-                  </span>
-                </div>
-              </div>
 
-              {/* Jam Kerja Wajib & Log Tap Mesin */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
-                <div className="flex items-center justify-between gap-1.5 text-slate-800 bg-blue-50/70 px-2.5 py-1.5 rounded-lg border border-blue-200/70">
-                  <span className="text-slate-600">Jam Kerja Wajib:</span>
-                  <strong className="text-blue-900 font-bold">
+                {/* 2. Jam Kerja */}
+                <div className="flex items-center justify-between gap-2 text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/80">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Clock className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                    <span className="text-slate-600">Jam Kerja:</span>
+                  </div>
+                  <strong className="text-indigo-950 font-bold truncate">
                     {currentAttendance?.is_off_day
                       ? 'Libur Shift'
                       : currentAttendance?.is_holiday
                       ? 'Hari Libur'
-                      : `${currentAttendance?.scheduled_start?.substring(0, 5) || '07:30'} - ${currentAttendance?.scheduled_end?.substring(0, 5) || '16:00'} WIB`}
+                      : `${currentAttendance?.scheduled_start?.substring(0, 5) || '07:30'} s/d ${currentAttendance?.scheduled_end?.substring(0, 5) || '16:00'} WIB`}
                   </strong>
                 </div>
 
-                <div className="flex items-center justify-between gap-1.5 text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/60">
-                  <span className="truncate">
-                    Tap: <strong>{currentAttendance?.first_in || '--:--'} s/d {currentAttendance?.last_out || '--:--'}</strong>
+                {/* 3. Shift */}
+                <div className="flex items-center justify-between gap-2 text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/80">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Briefcase className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <span className="text-slate-600">Shift:</span>
+                  </div>
+                  <span className="font-semibold text-slate-800 truncate">
+                    {currentAttendance?.shift_name || (currentAttendance?.is_off_day ? 'Libur Shift' : currentAttendance?.is_holiday ? 'Hari Libur' : 'Jam Kerja Normal')}
                   </span>
-                  <span className="text-[10px] text-slate-400 font-medium shrink-0">
-                    ({currentAttendance?.tap_count || 0} tap)
-                  </span>
+                </div>
+
+                {/* 4. Tap Log */}
+                <div className="flex items-center justify-between gap-2 text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/80">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Fingerprint className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span className="text-slate-600">Tap:</span>
+                  </div>
+                  <div className="flex items-center gap-1 min-w-0">
+                    <strong className="text-slate-900 font-bold truncate">
+                      {currentAttendance?.first_in || '--:--'} s/d {currentAttendance?.last_out || '--:--'}
+                    </strong>
+                    <span className="text-[10px] text-slate-400 font-medium shrink-0">
+                      ({currentAttendance?.tap_count || 0} tap)
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Status Evaluasi Jam Kerja Dinamis Untuk Setiap Detail */}
-              {currentAttendance?.is_off_day ? (
-                <div className="text-[11px] text-slate-700 bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-300 flex items-center gap-1.5">
-                  <Info className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                  <span>
-                    <strong>Jadwal Libur Shift:</strong> Pegawai dijadwalkan bebas tugas pada hari ini (tidak dikenakan denda keterlambatan/Alpha).
-                  </span>
-                </div>
-              ) : currentAttendance?.is_holiday ? (
-                <div className="text-[11px] text-rose-800 bg-rose-50 px-2.5 py-1.5 rounded-lg border border-rose-200/80 flex items-center gap-1.5">
-                  <Info className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                  <span>
-                    <strong>Hari Libur Resmi:</strong> Ditetapkan sebagai {currentAttendance?.shift_name || 'Hari Libur'} (bebas tugas reguler).
-                  </span>
-                </div>
-              ) : currentAttendance?.system_status === 'HADIR' ? (
-                <div className="text-[11px] text-emerald-800 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200/80 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>
-                    <strong>Memenuhi Jam Kerja:</strong> Sesuai shift {currentAttendance?.shift_name || 'Normal'} (Masuk &le; {currentAttendance?.scheduled_start?.substring(0, 5) || '07:30'} &amp; Pulang &ge; {currentAttendance?.scheduled_end?.substring(0, 5) || '16:00'} WIB).
-                  </span>
-                </div>
-              ) : (
-                <div className="text-[11px] text-amber-800 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-center gap-1.5">
-                  <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span>
-                    <strong>Belum Memenuhi Jam Kerja:</strong> Syarat shift {currentAttendance?.shift_name || 'Normal'} ({currentAttendance?.scheduled_start?.substring(0, 5) || '07:30'} - {currentAttendance?.scheduled_end?.substring(0, 5) || '16:00'} WIB) adalah masuk &le; {currentAttendance?.scheduled_start?.substring(0, 5) || '07:30'} &amp; pulang &ge; {currentAttendance?.scheduled_end?.substring(0, 5) || '16:00'} WIB (min. 2 tap).
-                  </span>
-                </div>
-              )}
+              {/* Notifikasi Sistem (Selalu Muncul Dinamis) */}
+              {(() => {
+                const scheduledStart = currentAttendance?.scheduled_start?.substring(0, 5) || '07:30';
+                const scheduledEnd = currentAttendance?.scheduled_end?.substring(0, 5) || '16:00';
+                const firstIn = currentAttendance?.first_in;
+                const lastOut = currentAttendance?.last_out;
+                const tapCount = currentAttendance?.tap_count || 0;
+
+                if (currentAttendance?.is_off_day) {
+                  return (
+                    <div className="text-[11px] text-slate-800 bg-slate-100/90 p-2.5 rounded-lg border border-slate-300 flex items-start gap-2">
+                      <Info className="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-bold text-slate-900">Notifikasi Sistem: Libur Shift (Bebas Tugas)</div>
+                        <div className="text-slate-600 mt-0.5 leading-relaxed">
+                          Pegawai dijadwalkan bebas tugas/shift libur pada tanggal ini sesuai jadwal matriks. Tidak ada kewajiban jam kerja dan tap presensi.
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (currentAttendance?.is_holiday) {
+                  return (
+                    <div className="text-[11px] text-rose-900 bg-rose-50/90 p-2.5 rounded-lg border border-rose-200 flex items-start gap-2">
+                      <Info className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-bold text-rose-950">Notifikasi Sistem: Hari Libur Resmi ({currentAttendance?.shift_name || 'Libur Sekolah/Nasional'})</div>
+                        <div className="text-rose-700 mt-0.5 leading-relaxed">
+                          Tanggal ini merupakan hari libur resmi yang terdaftar di kalender. Pegawai dibebaskan dari jam kerja reguler.
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (currentAttendance?.system_status === 'HADIR') {
+                  return (
+                    <div className="text-[11px] text-emerald-900 bg-emerald-50/90 p-2.5 rounded-lg border border-emerald-200 flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-bold text-emerald-950 flex items-center gap-1.5">
+                          <span>Notifikasi Sistem: Jam Kerja Terpenuhi (Hadir Penuh)</span>
+                          <span className="px-1.5 py-0.5 bg-emerald-200 text-emerald-900 rounded text-[9px] font-bold">Valid</span>
+                        </div>
+                        <div className="text-emerald-800 mt-0.5 leading-relaxed">
+                          Tap presensi memenuhi jam kerja wajib shift {currentAttendance?.shift_name || 'Normal'} (<strong>{scheduledStart} s/d {scheduledEnd} WIB</strong>). Pegawai tercatat masuk pukul <strong>{firstIn}</strong> (&le; {scheduledStart}) dan pulang pukul <strong>{lastOut}</strong> (&ge; {scheduledEnd}) dengan total {tapCount} tap.
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (tapCount === 0) {
+                  return (
+                    <div className="text-[11px] text-rose-900 bg-rose-50/90 p-2.5 rounded-lg border border-rose-200 flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-bold text-rose-950 flex items-center gap-1.5">
+                          <span>Notifikasi Sistem: Belum Memenuhi Jam Kerja (Alpha)</span>
+                          <span className="px-1.5 py-0.5 bg-rose-200 text-rose-900 rounded text-[9px] font-bold">0 Tap</span>
+                        </div>
+                        <div className="text-rose-800 mt-0.5 leading-relaxed">
+                          Tidak ditemukan rekaman tap mesin pada tanggal ini. Jam kerja yang berlaku adalah <strong>{scheduledStart} s/d {scheduledEnd} WIB</strong>. Silakan pilih status override (DL, Sakit, Izin, Cuti) jika ada dokumen pendukung.
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // tapCount > 0 but not HADIR
+                let reason = `Tap presensi belum memenuhi ketentuan jam kerja penuh (${scheduledStart} s/d ${scheduledEnd} WIB).`;
+                if (tapCount === 1) {
+                  reason = `Pegawai hanya melakukan 1 kali tap (${firstIn}). Kehadiran penuh mewajibkan minimal 2 tap (masuk & pulang).`;
+                } else if (firstIn && firstIn > scheduledStart && lastOut && lastOut < scheduledEnd) {
+                  reason = `Masuk terlambat (${firstIn} > ${scheduledStart}) dan pulang mendahului (${lastOut} < ${scheduledEnd}).`;
+                } else if (firstIn && firstIn > scheduledStart) {
+                  reason = `Masuk terlambat pada pukul ${firstIn} (batas maksimal masuk: ${scheduledStart} WIB).`;
+                } else if (lastOut && lastOut < scheduledEnd) {
+                  reason = `Pulang mendahului jam kerja pada pukul ${lastOut} (batas minimal pulang: ${scheduledEnd} WIB).`;
+                }
+
+                return (
+                  <div className="text-[11px] text-amber-900 bg-amber-50/90 p-2.5 rounded-lg border border-amber-200 flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-bold text-amber-950 flex items-center gap-1.5">
+                        <span>Notifikasi Sistem: Jam Kerja Belum Terpenuhi</span>
+                        <span className="px-1.5 py-0.5 bg-amber-200 text-amber-900 rounded text-[9px] font-bold">{tapCount} Tap</span>
+                      </div>
+                      <div className="text-amber-800 mt-0.5 leading-relaxed">
+                        {reason} Jam kerja shift: <strong>{scheduledStart} s/d {scheduledEnd} WIB</strong>.
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Status Selection Grid (Clean 2-Column Compact Layout) */}
