@@ -16,16 +16,36 @@ export const supabaseStore = {
     const client = getSupabaseServerClient();
     if (!client) return [];
 
-    const { data, error } = await client
-      .from('employees')
-      .select('*')
-      .order('excel_row_index', { ascending: true });
+    const allEmployees: Employee[] = [];
+    const pageSize = 1000;
+    let from = 0;
+    let hasMore = true;
 
-    if (error) {
-      console.error('[Supabase] Error getEmployees:', error);
-      return [];
+    while (hasMore) {
+      const { data, error } = await client
+        .from('employees')
+        .select('*')
+        .order('excel_row_index', { ascending: true })
+        .range(from, from + pageSize - 1);
+
+      if (error) {
+        console.error('[Supabase] Error getEmployees:', error);
+        break;
+      }
+
+      if (data && data.length > 0) {
+        allEmployees.push(...data);
+        if (data.length < pageSize) {
+          hasMore = false;
+        } else {
+          from += pageSize;
+        }
+      } else {
+        hasMore = false;
+      }
     }
-    return data || [];
+
+    return allEmployees;
   },
 
   async updateEmployee(id: string, updates: Partial<Employee>): Promise<Employee | null> {
@@ -79,6 +99,8 @@ export const supabaseStore = {
         .from('daily_attendance')
         .select('*')
         .like('attendance_date', `${prefix}%`)
+        .order('attendance_date', { ascending: true })
+        .order('employee_id', { ascending: true })
         .range(from, from + pageSize - 1);
 
       if (error) {
@@ -151,7 +173,7 @@ export const supabaseStore = {
       await client.from('employees').upsert(newEmployeesToInsert, { onConflict: 'machine_id' });
     }
 
-    // 3. Fetch existing attendance for this month to preserve verified data
+    // 3. Fetch existing attendance for this month with deterministic order to preserve verified data
     const existingAttendance = await this.getAttendanceForMonth(
       uploadRecord.period_month,
       uploadRecord.period_year
@@ -176,13 +198,26 @@ export const supabaseStore = {
         `Pegawai ${newRec.employee_id}`;
 
       if (existingRec) {
-        const isVerified =
-          existingRec.is_verified === true ||
-          Boolean(existingRec.verified_by) ||
-          (existingRec.final_status !== 'HADIR' && existingRec.final_status !== 'A') ||
-          Boolean(existingRec.notes && existingRec.notes.trim().length > 0);
+        // Distinguish system placeholders from true manual human verifications:
+        const isSystemPlaceholder =
+          existingRec.upload_id === 'sync_system' ||
+          existingRec.upload_id?.startsWith('virtual-') ||
+          existingRec.notes === 'Alpha (Tidak Ada Rekaman Mesin)' ||
+          existingRec.notes === 'Libur Rutin (Akhir Pekan)' ||
+          existingRec.notes === 'Hari Libur Resmi' ||
+          existingRec.notes === 'Libur Shift (Bebas Tugas)';
 
-        if (isVerified) {
+        const isHumanVerified =
+          !isSystemPlaceholder &&
+          (
+            existingRec.is_verified === true ||
+            (Boolean(existingRec.verified_by) && existingRec.verified_by !== 'system') ||
+            existingRec.upload_id === 'manual_override' ||
+            // Manual admin status overrides (DL, Sakit, Izin, Cuti, etc.)
+            ['DL', 'S', 'I', 'C', 'IL', 'PM', 'AL', 'OTL', 'HIP', 'HIS'].includes(existingRec.final_status)
+          );
+
+        if (isHumanVerified) {
           recordsToUpsert.push({
             ...existingRec,
             employee_name: existingRec.employee_name || resolvedName,
@@ -198,6 +233,7 @@ export const supabaseStore = {
           });
           preservedVerifiedCount++;
         } else {
+          // Real biometric punches take precedence over system placeholders!
           recordsToUpsert.push({
             ...newRec,
             employee_name: resolvedName,
@@ -214,15 +250,15 @@ export const supabaseStore = {
       }
     }
 
-    // Upsert batch in chunks of 500
-    const chunkSize = 500;
+    // Upsert batch in safe chunks of 200 to avoid request size limits
+    const chunkSize = 200;
     for (let i = 0; i < recordsToUpsert.length; i += chunkSize) {
       const chunk = recordsToUpsert.slice(i, i + chunkSize);
       const { error } = await client
         .from('daily_attendance')
         .upsert(chunk, { onConflict: 'employee_id,attendance_date' });
       if (error) {
-        console.error('[Supabase] Error saving daily_attendance batch chunk:', error);
+        console.error(`[Supabase] Error saving daily_attendance batch chunk ${i}-${i + chunk.length}:`, error);
       }
     }
 
@@ -457,7 +493,10 @@ export const supabaseStore = {
       if (prefix) {
         query = query.like('date', `${prefix}%`);
       }
-      const { data, error } = await query.range(from, from + pageSize - 1);
+      const { data, error } = await query
+        .order('date', { ascending: true })
+        .order('employee_id', { ascending: true })
+        .range(from, from + pageSize - 1);
 
       if (error) {
         console.error('[Supabase] Error getEmployeeSchedules:', error);

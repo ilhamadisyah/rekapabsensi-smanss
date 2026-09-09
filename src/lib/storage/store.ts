@@ -288,13 +288,24 @@ const localDb = {
       if (existingIdx !== undefined) {
         // Record already exists for this employee and date
         const existingRec = data.daily_attendance[existingIdx];
-        const isVerified =
-          existingRec.is_verified === true ||
-          Boolean(existingRec.verified_by) ||
-          (existingRec.final_status !== 'HADIR' && existingRec.final_status !== 'A') ||
-          Boolean(existingRec.notes && existingRec.notes.trim().length > 0);
+        const isSystemPlaceholder =
+          existingRec.upload_id === 'sync_system' ||
+          existingRec.upload_id?.startsWith('virtual-') ||
+          existingRec.notes === 'Alpha (Tidak Ada Rekaman Mesin)' ||
+          existingRec.notes === 'Libur Rutin (Akhir Pekan)' ||
+          existingRec.notes === 'Hari Libur Resmi' ||
+          existingRec.notes === 'Libur Shift (Bebas Tugas)';
 
-        if (isVerified) {
+        const isHumanVerified =
+          !isSystemPlaceholder &&
+          (
+            existingRec.is_verified === true ||
+            (Boolean(existingRec.verified_by) && existingRec.verified_by !== 'system') ||
+            existingRec.upload_id === 'manual_override' ||
+            ['DL', 'S', 'I', 'C', 'IL', 'PM', 'AL', 'OTL', 'HIP', 'HIS'].includes(existingRec.final_status)
+          );
+
+        if (isHumanVerified) {
           // RULE: USE DATA YANG SUDAH DIVERIFIKASI (DATA LAMA)
           // Keep the verified final status, verified_by, notes, and verification flag!
           data.daily_attendance[existingIdx] = {
@@ -312,7 +323,7 @@ const localDb = {
           };
           preservedVerifiedCount++;
         } else {
-          // Not verified yet -> update with new biometric record
+          // Not verified by human (or was system placeholder) -> real biometric record takes precedence!
           data.daily_attendance[existingIdx] = {
             ...newRec,
             employee_name: resolvedName,

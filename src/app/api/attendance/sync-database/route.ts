@@ -87,11 +87,22 @@ export async function POST(request: NextRequest) {
         const existing = attendanceMap.get(key);
 
         if (existing) {
-          // Check if manually verified (DL, I, IL, PM, AL, OTL, HIP, HIS, or verified Hadir/Alpha)
+          // Check if manually verified by admin (DL, S, I, C, IL, PM, AL, OTL, HIP, HIS, or human-verified)
+          const isSystemPlaceholder =
+            existing.upload_id === 'sync_system' ||
+            existing.upload_id?.startsWith('virtual-') ||
+            existing.notes === 'Alpha (Tidak Ada Rekaman Mesin)' ||
+            existing.notes === 'Libur Rutin (Akhir Pekan)' ||
+            existing.notes === 'Hari Libur Resmi' ||
+            existing.notes === 'Libur Shift (Bebas Tugas)';
+
           const isManuallyVerified =
-            existing.is_verified === true ||
-            Boolean(existing.verified_by) ||
-            (existing.final_status !== 'HADIR' && existing.final_status !== 'A' && existing.final_status !== 'LIBUR' && existing.final_status !== 'OFF');
+            !isSystemPlaceholder &&
+            (
+              (existing.is_verified === true && Boolean(existing.verified_by) && existing.verified_by !== 'system') ||
+              existing.upload_id === 'manual_override' ||
+              ['DL', 'S', 'I', 'C', 'IL', 'PM', 'AL', 'OTL', 'HIP', 'HIS'].includes(existing.final_status)
+            );
 
           if (isManuallyVerified) {
             // Preserve manual verification exactly

@@ -100,21 +100,7 @@ export function detectPeriodFromFile(fileBuffer: Buffer): { success: boolean; pe
       if (!rawTime || String(rawTime).toLowerCase().includes('waktu')) continue;
       if (rawId) empSet.add(rawId);
 
-      let d: Date | null = null;
-      if (typeof rawTime === 'number') {
-        d = excelSerialToDate(rawTime);
-      } else if (typeof rawTime === 'string') {
-        const timeClean = rawTime.trim();
-        const parsedMs = Date.parse(timeClean);
-        if (!isNaN(parsedMs)) {
-          d = new Date(parsedMs);
-        } else {
-          const match = timeClean.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
-          if (match) {
-            d = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]));
-          }
-        }
-      }
+      const d = parseTransactionTimestamp(rawTime);
 
       if (d && !isNaN(d.getTime())) {
         parsedDates.push({
@@ -195,6 +181,90 @@ export function detectPeriodFromFile(fileBuffer: Buffer): { success: boolean; pe
   } catch (err: any) {
     return { success: false, error: err.message || 'Gagal mendeteksi periode berkas' };
   }
+}
+
+/**
+ * Intelligently parses raw biometric time cell value (.xls serial number, ISO string, or Indonesian DD/MM/YYYY)
+ */
+export function parseTransactionTimestamp(
+  rawTime: any,
+  targetMonth?: number,
+  targetYear?: number
+): Date | null {
+  if (rawTime === null || rawTime === undefined || rawTime === '') return null;
+
+  if (typeof rawTime === 'number') {
+    const wholeDays = Math.floor(rawTime);
+    const frac = rawTime - wholeDays;
+    const totalSeconds = Math.round(frac * 86400);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const date = new Date(1899, 11, 30);
+    date.setDate(date.getDate() + wholeDays);
+    date.setHours(hours, minutes, seconds, 0);
+
+    // Handle common Excel DD/MM vs MM/DD swap anomaly for serials
+    if (targetMonth && date.getDate() === targetMonth && date.getMonth() + 1 !== targetMonth) {
+      return new Date(
+        targetYear || date.getFullYear(),
+        targetMonth - 1,
+        date.getMonth() + 1,
+        hours,
+        minutes,
+        seconds
+      );
+    }
+    return date;
+  }
+
+  if (typeof rawTime === 'string') {
+    const s = rawTime.trim();
+    if (!s || s.toLowerCase().includes('waktu') || s.toLowerCase().includes('time')) return null;
+
+    // 1. ISO string: YYYY-MM-DD or YYYY/MM/DD
+    const isoMatch = s.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+    if (isoMatch) {
+      const [, y, m, d, h, min, sec] = isoMatch;
+      return new Date(Number(y), Number(m) - 1, Number(d), Number(h || 0), Number(min || 0), Number(sec || 0));
+    }
+
+    // 2. Indonesian / European Standard: DD/MM/YYYY or DD-MM-YYYY
+    const dmyMatch = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+    if (dmyMatch) {
+      const [, d, m, y, h, min, sec] = dmyMatch;
+      let day = Number(d);
+      let month = Number(m);
+      const year = Number(y);
+
+      if (month > 12 && day <= 12) {
+        const temp = day;
+        day = month;
+        month = temp;
+      }
+      return new Date(year, month - 1, day, Number(h || 0), Number(min || 0), Number(sec || 0));
+    }
+
+    // 3. Fallback to generic Date.parse
+    const parsedMs = Date.parse(s);
+    if (!isNaN(parsedMs)) {
+      const d = new Date(parsedMs);
+      if (targetMonth && d.getDate() === targetMonth && d.getMonth() + 1 !== targetMonth) {
+        return new Date(
+          targetYear || d.getFullYear(),
+          targetMonth - 1,
+          d.getMonth() + 1,
+          d.getHours(),
+          d.getMinutes(),
+          d.getSeconds()
+        );
+      }
+      return d;
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -484,43 +554,10 @@ export function parseAttendanceFile(
       const machineId = String(rawId).trim().replace(/\.0$/, '');
       const name = String(rawName || '').trim();
 
-      let timestamp: Date | null = null;
-
-      if (typeof rawTime === 'number') {
-        timestamp = excelSerialToDate(rawTime);
-      } else if (typeof rawTime === 'string') {
-        const timeClean = rawTime.trim();
-        // Try parsing string datetime
-        const parsedMs = Date.parse(timeClean);
-        if (!isNaN(parsedMs)) {
-          timestamp = new Date(parsedMs);
-        } else {
-          // Check DD/MM/YYYY HH:mm:ss format
-          const match = timeClean.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/);
-          if (match) {
-            const [, d, m, y, h, min, s] = match;
-            timestamp = new Date(Number(y), Number(m) - 1, Number(d), Number(h), Number(min), Number(s || 0));
-          }
-        }
-      }
+      const timestamp = parseTransactionTimestamp(rawTime, activeMonth, activeYear);
 
       if (!timestamp || isNaN(timestamp.getTime())) {
         continue;
-      }
-
-      // Handle common Excel DD/MM vs MM/DD swap anomaly:
-      // If the parsed date's day matches activeMonth, but its month does not, swap them!
-      if (timestamp.getDate() === activeMonth && timestamp.getMonth() + 1 !== activeMonth) {
-        const oldDay = timestamp.getDate();
-        const oldMonth = timestamp.getMonth() + 1;
-        timestamp = new Date(
-          activeYear,
-          oldDay - 1, // Month index 0-11
-          oldMonth,   // Day of month
-          timestamp.getHours(),
-          timestamp.getMinutes(),
-          timestamp.getSeconds()
-        );
       }
 
       // Check if matches target year and month
