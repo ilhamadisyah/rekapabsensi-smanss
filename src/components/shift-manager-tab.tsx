@@ -141,6 +141,41 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
     return `${hours} Jam ${minutes > 0 ? `${minutes} Mnt` : ''}`;
   };
 
+  const handleStartTimeChange = (val: string) => {
+    setStartTime(val);
+    if (val && endTime && val > endTime) {
+      setIsOvernight(true);
+    }
+  };
+
+  const handleEndTimeChange = (val: string) => {
+    setEndTime(val);
+    if (val && startTime && startTime > val) {
+      setIsOvernight(true);
+    }
+  };
+
+  const handleSelectType = (type: 'regular' | 'overnight' | 'off') => {
+    if (type === 'regular') {
+      setIsOffDay(false);
+      setIsOvernight(false);
+      if (startTime >= '18:00' || endTime <= '08:00') {
+        setStartTime('07:30');
+        setEndTime('16:00');
+      }
+    } else if (type === 'overnight') {
+      setIsOffDay(false);
+      setIsOvernight(true);
+      if (startTime < '17:00' && endTime >= '12:00') {
+        setStartTime('20:00');
+        setEndTime('05:00');
+      }
+    } else {
+      setIsOffDay(true);
+      setIsOvernight(false);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !code.trim()) {
@@ -437,10 +472,7 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                   <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200">
                     <button
                       type="button"
-                      onClick={() => {
-                        setIsOffDay(false);
-                        setIsOvernight(false);
-                      }}
+                      onClick={() => handleSelectType('regular')}
                       className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                         !isOffDay && !isOvernight
                           ? 'bg-white text-blue-700 shadow-xs font-bold border border-slate-200/80'
@@ -453,10 +485,7 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
 
                     <button
                       type="button"
-                      onClick={() => {
-                        setIsOffDay(false);
-                        setIsOvernight(true);
-                      }}
+                      onClick={() => handleSelectType('overnight')}
                       className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                         !isOffDay && isOvernight
                           ? 'bg-white text-indigo-700 shadow-xs font-bold border border-slate-200/80'
@@ -469,10 +498,7 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
 
                     <button
                       type="button"
-                      onClick={() => {
-                        setIsOffDay(true);
-                        setIsOvernight(false);
-                      }}
+                      onClick={() => handleSelectType('off')}
                       className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                         isOffDay
                           ? 'bg-white text-slate-900 shadow-xs font-bold border border-slate-200/80'
@@ -497,7 +523,7 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                         <input
                           type="time"
                           value={startTime}
-                          onChange={(e) => setStartTime(e.target.value)}
+                          onChange={(e) => handleStartTimeChange(e.target.value)}
                           className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                           required
                         />
@@ -507,15 +533,15 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                         <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
                           <span>Jam Pulang (WIB) <span className="text-rose-500">*</span></span>
                           {isOvernight && (
-                            <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100">
-                              Besok
+                            <span className="text-[10px] text-indigo-700 font-bold bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200">
+                              Besok (+1)
                             </span>
                           )}
                         </label>
                         <input
                           type="time"
                           value={endTime}
-                          onChange={(e) => setEndTime(e.target.value)}
+                          onChange={(e) => handleEndTimeChange(e.target.value)}
                           className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                           required
                         />
@@ -542,15 +568,70 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                       </div>
                     </div>
 
-                    {/* Jendela Waktu Presensi Card */}
-                    <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-200/90 rounded-2xl p-3.5 space-y-3">
+                    {/* Ringkasan Durasi & Toleransi Bar */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-slate-100/70 border border-slate-200/80 rounded-xl text-[11px] text-slate-600">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span>
+                          Total Durasi: <strong className="text-slate-800 font-bold">{calculateDuration(startTime, endTime, isOvernight, isOffDay)}</strong>
+                        </span>
+                      </div>
+                      {gracePeriod > 0 && (
+                        <div className="flex items-center gap-1 text-amber-700 font-medium">
+                          <span>Toleransi masuk hingga: <strong>{formatTimeOffset(startTime, gracePeriod)}</strong></span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* KARTU 1: PENGATURAN SHIFT LINTAS HARI (OVERNIGHT) */}
+                    <div className={`p-3.5 rounded-2xl border transition-all ${
+                      isOvernight
+                        ? 'bg-gradient-to-br from-indigo-50/60 to-purple-50/40 border-indigo-200 shadow-2xs'
+                        : 'bg-slate-50/70 border-slate-200'
+                    }`}>
+                      <label className="flex items-start gap-3 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={isOvernight}
+                          onChange={(e) => setIsOvernight(e.target.checked)}
+                          className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 mt-0.5 cursor-pointer shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                              <Moon className={`w-3.5 h-3.5 ${isOvernight ? 'text-indigo-600' : 'text-slate-400'}`} />
+                              Shift Lintas Hari (Overnight / Pulang Keesokan Harinya)
+                            </span>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              isOvernight
+                                ? 'bg-indigo-100 text-indigo-800 border-indigo-200'
+                                : 'bg-slate-200/70 text-slate-600 border-slate-300'
+                            }`}>
+                              {isOvernight ? 'Lintas Hari (+1 Aktif)' : 'Hari yang Sama'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                            Aktifkan jika jam kerja melewati pukul 00:00 tengah malam. Jam pulang akan dihitung pada hari kalender berikutnya (+1). Sistem presensi akan otomatis melakukan pencocokan <em>Cross-Day Punch Pairing</em>.
+                          </p>
+                          {startTime > endTime && (
+                            <div className="mt-2 text-[10.5px] text-indigo-700 bg-indigo-100/70 px-2.5 py-1 rounded-lg border border-indigo-200/80 font-medium flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                              <span>Jam pulang ({endTime}) lebih kecil dari jam masuk ({startTime}). Otomatis diakui sebagai shift lintas hari (+1 hari).</span>
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* KARTU 2: JENDELA WAKTU PRESENSI (PROTEKSI KEAMANAN CROSS-DAY) */}
+                    <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-200/90 rounded-2xl p-3.5 space-y-3 shadow-2xs">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <div className="w-5 h-5 rounded-md bg-blue-100 flex items-center justify-center text-blue-600">
                             <Shield className="w-3.5 h-3.5" />
                           </div>
                           <span className="text-xs font-bold text-slate-800">
-                            Jendela Waktu Presensi (Proteksi Keamanan)
+                            Jendela Waktu Presensi (Proteksi Keamanan Cross-Day)
                           </span>
                         </div>
                         <span className="text-[10px] text-blue-700 bg-blue-100/70 border border-blue-200/60 px-2 py-0.5 rounded-full font-bold">
@@ -558,12 +639,16 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <p className="text-[11px] text-slate-500 -mt-1 leading-relaxed">
+                        Mencegah salah deteksi presensi agar tap mesin di luar rentang jam operasional (misalnya tap siang hari saat pegawai bertugas shift malam) tidak disalahartikan sebagai absensi sah.
+                      </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                         {/* Jendela Buka Tap Masuk */}
-                        <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs space-y-1.5">
+                        <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs space-y-2">
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="font-bold text-slate-700">Batas Maksimal Absen Masuk</span>
-                            <span className="text-blue-600 font-bold text-[10px]">
+                            <span className="text-blue-600 font-bold text-[10px] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
                               {(checkInWindow / 60).toFixed(1)} jam sebelum
                             </span>
                           </div>
@@ -583,19 +668,19 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                             </span>
                           </div>
 
-                          <div className="text-[10.5px] text-slate-600 flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
-                            <Clock className="w-3 h-3 text-blue-500 shrink-0" />
+                          <div className="text-[10.5px] text-slate-600 flex items-center gap-1.5 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-100">
+                            <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                             <span className="truncate">
-                              Absen dimulai: <strong className="text-slate-800 font-bold">{formatTimeOffset(startTime, -checkInWindow)}</strong>
+                              Tap masuk dibuka: <strong className="text-slate-800 font-bold">{formatTimeOffset(startTime, -checkInWindow)}</strong>
                             </span>
                           </div>
                         </div>
 
                         {/* Batas Akhir Tap Pulang */}
-                        <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs space-y-1.5">
+                        <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs space-y-2">
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="font-bold text-slate-700">Batas Maksimal Absen Pulang</span>
-                            <span className="text-blue-600 font-bold text-[10px]">
+                            <span className="text-blue-600 font-bold text-[10px] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
                               {(checkOutWindow / 60).toFixed(1)} jam setelah
                             </span>
                           </div>
@@ -615,10 +700,10 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                             </span>
                           </div>
 
-                          <div className="text-[10.5px] text-slate-600 flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
-                            <Clock className="w-3 h-3 text-blue-500 shrink-0" />
+                          <div className="text-[10.5px] text-slate-600 flex items-center gap-1.5 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-100">
+                            <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                             <span className="truncate">
-                              Absen diterima hingga: <strong className="text-slate-800 font-bold">{formatTimeOffset(endTime, checkOutWindow, isOvernight)}</strong>
+                              Tap pulang ditutup: <strong className="text-slate-800 font-bold">{formatTimeOffset(endTime, checkOutWindow, isOvernight)}</strong>
                             </span>
                           </div>
                         </div>
@@ -638,6 +723,26 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                     </div>
                   </div>
                 )}
+
+                {/* KARTU 3: JADIKAN SHIFT STANDAR (DEFAULT) */}
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={isDefault}
+                      onChange={(e) => setIsDefault(e.target.checked)}
+                      className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-slate-800 block">
+                        Jadikan Shift Standar (Default Sekolah)
+                      </span>
+                      <span className="text-[11px] text-slate-500">
+                        Otomatis diterapkan untuk seluruh pegawai pada hari kerja jika tidak memiliki penugasan shift khusus.
+                      </span>
+                    </div>
+                  </label>
+                </div>
 
                 {/* Color Presets */}
                 <div>

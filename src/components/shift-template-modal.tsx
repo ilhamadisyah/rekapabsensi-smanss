@@ -35,6 +35,23 @@ function formatTimeOffset(baseTime: string, offsetMinutes: number, isNextDay?: b
   return timeStr;
 }
 
+function calculateWorkDuration(startTime: string, endTime: string, isOvernight: boolean): string {
+  if (!startTime || !endTime) return '-';
+  const [sh, sm] = startTime.split(':').map(Number);
+  const [eh, em] = endTime.split(':').map(Number);
+  if (isNaN(sh) || isNaN(eh)) return '-';
+  let startTotal = sh * 60 + (sm || 0);
+  let endTotal = eh * 60 + (em || 0);
+  if (isOvernight || endTotal < startTotal) {
+    endTotal += 24 * 60;
+  }
+  const diffMinutes = endTotal - startTotal;
+  const hours = Math.floor(diffMinutes / 60);
+  const mins = diffMinutes % 60;
+  if (mins === 0) return `${hours} jam`;
+  return `${hours} jam ${mins} menit`;
+}
+
 interface ShiftTemplateModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -72,6 +89,7 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
   const [formCheckOutWindow, setFormCheckOutWindow] = useState<number>(240);
   const [formIsOvernight, setFormIsOvernight] = useState<boolean>(false);
   const [formIsOffDay, setFormIsOffDay] = useState<boolean>(false);
+  const [formIsDefault, setFormIsDefault] = useState<boolean>(false);
   const [formColor, setFormColor] = useState('#2563eb');
   const [formDescription, setFormDescription] = useState('');
 
@@ -80,6 +98,41 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const handleStartTimeChange = (val: string) => {
+    setFormStartTime(val);
+    if (val && formEndTime && val > formEndTime) {
+      setFormIsOvernight(true);
+    }
+  };
+
+  const handleEndTimeChange = (val: string) => {
+    setFormEndTime(val);
+    if (val && formStartTime && formStartTime > val) {
+      setFormIsOvernight(true);
+    }
+  };
+
+  const handleSelectType = (type: 'regular' | 'overnight' | 'off') => {
+    if (type === 'regular') {
+      setFormIsOffDay(false);
+      setFormIsOvernight(false);
+      if (formStartTime >= '18:00' || formEndTime <= '08:00') {
+        setFormStartTime('07:30');
+        setFormEndTime('16:00');
+      }
+    } else if (type === 'overnight') {
+      setFormIsOffDay(false);
+      setFormIsOvernight(true);
+      if (formStartTime < '17:00' && formEndTime >= '12:00') {
+        setFormStartTime('20:00');
+        setFormEndTime('05:00');
+      }
+    } else {
+      setFormIsOffDay(true);
+      setFormIsOvernight(false);
+    }
+  };
 
   const startCreate = () => {
     setEditingTemplate(null);
@@ -93,6 +146,7 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
     setFormCheckOutWindow(240);
     setFormIsOvernight(false);
     setFormIsOffDay(false);
+    setFormIsDefault(false);
     setFormColor('#2563eb');
     setFormDescription('');
     setErrorMsg(null);
@@ -111,6 +165,7 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
     setFormCheckOutWindow(typeof t.check_out_window_minutes === 'number' ? t.check_out_window_minutes : 240);
     setFormIsOvernight(t.is_overnight);
     setFormIsOffDay(t.is_off_day);
+    setFormIsDefault(Boolean(t.is_default));
     setFormColor(t.color || '#2563eb');
     setFormDescription(t.description || '');
     setErrorMsg(null);
@@ -154,7 +209,7 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
           is_off_day: formIsOffDay,
           color: formColor,
           description: formDescription.trim(),
-          is_default: editingTemplate?.is_default || false,
+          is_default: formIsDefault,
         }),
       });
 
@@ -290,20 +345,18 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
 
               {/* Tipe Shift Kerja: 3-Segmented Pill Selector */}
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1.5">
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
                   Tipe Shift Kerja
                 </label>
-                <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100/80 rounded-xl border border-slate-200">
+                <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200">
                   <button
                     type="button"
-                    onClick={() => {
-                      setFormIsOffDay(false);
-                      setFormIsOvernight(false);
-                    }}
-                    className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${!formIsOffDay && !formIsOvernight
-                      ? 'bg-white text-blue-700 shadow-xs font-bold border border-slate-200/80'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                      }`}
+                    onClick={() => handleSelectType('regular')}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      !formIsOffDay && !formIsOvernight
+                        ? 'bg-white text-blue-700 shadow-xs font-bold border border-slate-200/80'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    }`}
                   >
                     <Sun className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                     <span className="truncate">Reguler (Harian)</span>
@@ -311,14 +364,12 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setFormIsOffDay(false);
-                      setFormIsOvernight(true);
-                    }}
-                    className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${!formIsOffDay && formIsOvernight
-                      ? 'bg-white text-indigo-700 shadow-xs font-bold border border-slate-200/80'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                      }`}
+                    onClick={() => handleSelectType('overnight')}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      !formIsOffDay && formIsOvernight
+                        ? 'bg-white text-indigo-700 shadow-xs font-bold border border-slate-200/80'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    }`}
                   >
                     <Moon className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                     <span className="truncate">Shift Malam</span>
@@ -326,14 +377,12 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setFormIsOffDay(true);
-                      setFormIsOvernight(false);
-                    }}
-                    className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${formIsOffDay
-                      ? 'bg-white text-slate-900 shadow-xs font-bold border border-slate-200/80'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                      }`}
+                    onClick={() => handleSelectType('off')}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      formIsOffDay
+                        ? 'bg-white text-slate-900 shadow-xs font-bold border border-slate-200/80'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    }`}
                   >
                     <Coffee className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                     <span className="truncate">Bebas Tugas</span>
@@ -341,43 +390,44 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                 </div>
               </div>
 
-              {/* Time pickers & Time Windows */}
+              {/* Working Hours or Off-day Info */}
               {!formIsOffDay ? (
                 <>
+                  {/* Jam Masuk, Jam Pulang, Toleransi Telat (3 Kolom Seimbang) */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
                         Jam Masuk (WIB) <span className="text-rose-500">*</span>
                       </label>
                       <input
                         type="time"
                         value={formStartTime}
-                        onChange={(e) => setFormStartTime(e.target.value)}
-                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onChange={(e) => handleStartTimeChange(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                      <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
                         <span>Jam Pulang (WIB) <span className="text-rose-500">*</span></span>
                         {formIsOvernight && (
-                          <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100">
-                            Besok
+                          <span className="text-[10px] text-indigo-700 font-bold bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200">
+                            Besok (+1)
                           </span>
                         )}
                       </label>
                       <input
                         type="time"
                         value={formEndTime}
-                        onChange={(e) => setFormEndTime(e.target.value)}
-                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onChange={(e) => handleEndTimeChange(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
                         Toleransi Telat
                       </label>
                       <div className="relative">
@@ -387,37 +437,101 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                           max={60}
                           value={formGracePeriod}
                           onChange={(e) => setFormGracePeriod(Number(e.target.value))}
-                          className="w-full pl-3 pr-12 py-1.5 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full pl-3 pr-12 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                           placeholder="0"
                         />
-                        <span className="absolute right-3 top-1.5 text-[10.5px] text-slate-400 font-medium">
+                        <span className="absolute right-3 top-2 text-[11px] text-slate-400 font-medium">
                           menit
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Time Windows Settings */}
-                  <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-200/90 rounded-xl p-3 space-y-2.5">
+                  {/* Ringkasan Durasi & Toleransi Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-slate-100/70 border border-slate-200/80 rounded-xl text-[11px] text-slate-600">
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>
+                        Total Durasi: <strong className="text-slate-800 font-bold">{calculateWorkDuration(formStartTime, formEndTime, formIsOvernight)}</strong>
+                      </span>
+                    </div>
+                    {formGracePeriod > 0 && (
+                      <div className="flex items-center gap-1 text-amber-700 font-medium">
+                        <span>Toleransi masuk hingga: <strong>{formatTimeOffset(formStartTime, formGracePeriod)}</strong></span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* KARTU 1: PENGATURAN SHIFT LINTAS HARI (OVERNIGHT) */}
+                  <div className={`p-3.5 rounded-2xl border transition-all ${
+                    formIsOvernight
+                      ? 'bg-gradient-to-br from-indigo-50/60 to-purple-50/40 border-indigo-200 shadow-2xs'
+                      : 'bg-slate-50/70 border-slate-200'
+                  }`}>
+                    <label className="flex items-start gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={formIsOvernight}
+                        onChange={(e) => setFormIsOvernight(e.target.checked)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 mt-0.5 cursor-pointer shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                            <Moon className={`w-3.5 h-3.5 ${formIsOvernight ? 'text-indigo-600' : 'text-slate-400'}`} />
+                            Shift Lintas Hari (Overnight / Pulang Keesokan Harinya)
+                          </span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                            formIsOvernight
+                              ? 'bg-indigo-100 text-indigo-800 border-indigo-200'
+                              : 'bg-slate-200/70 text-slate-600 border-slate-300'
+                          }`}>
+                            {formIsOvernight ? 'Lintas Hari (+1 Aktif)' : 'Hari yang Sama'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                          Aktifkan jika jam kerja melewati pukul 00:00 tengah malam. Jam pulang akan dihitung pada hari kalender berikutnya (+1). Sistem presensi akan otomatis melakukan pencocokan <em>Cross-Day Punch Pairing</em>.
+                        </p>
+                        {formStartTime > formEndTime && (
+                          <div className="mt-2 text-[10.5px] text-indigo-700 bg-indigo-100/70 px-2.5 py-1 rounded-lg border border-indigo-200/80 font-medium flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                            <span>Jam pulang ({formEndTime}) lebih kecil dari jam masuk ({formStartTime}). Otomatis diakui sebagai shift lintas hari (+1 hari).</span>
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* KARTU 2: JENDELA WAKTU PRESENSI (PROTEKSI KEAMANAN CROSS-DAY) */}
+                  <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-200/90 rounded-2xl p-3.5 space-y-3 shadow-2xs">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
-                        <div className="w-4 h-4 rounded bg-blue-100 flex items-center justify-center text-blue-600">
-                          <Shield className="w-3 h-3" />
+                        <div className="w-5 h-5 rounded-md bg-blue-100 flex items-center justify-center text-blue-600">
+                          <Shield className="w-3.5 h-3.5" />
                         </div>
-                        <span className="text-[11px] font-bold text-slate-800">
-                          Batas Waktu Presensi
+                        <span className="text-xs font-bold text-slate-800">
+                          Jendela Waktu Presensi (Proteksi Keamanan Cross-Day)
                         </span>
                       </div>
+                      <span className="text-[10px] text-blue-700 bg-blue-100/70 border border-blue-200/60 px-2 py-0.5 rounded-full font-bold">
+                        Anti-Absen Diluar Jam
+                      </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="bg-white border border-slate-200/80 rounded-lg p-2.5 shadow-2xs space-y-1.5">
+                    <p className="text-[11px] text-slate-500 -mt-1 leading-relaxed">
+                      Mencegah salah deteksi presensi agar tap mesin di luar rentang jam operasional (misalnya tap siang hari saat pegawai bertugas shift malam) tidak disalahartikan sebagai absensi sah.
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      {/* Jendela Buka Tap Masuk */}
+                      <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs space-y-2">
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-semibold text-slate-700">Batas Maksimal Absen Masuk</span>
-                          <span className="text-blue-600 font-bold text-[10px]">
+                          <span className="font-bold text-slate-700">Batas Maksimal Absen Masuk</span>
+                          <span className="text-blue-600 font-bold text-[10px] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
                             {(formCheckInWindow / 60).toFixed(1)} jam sebelum
                           </span>
                         </div>
+
                         <div className="relative">
                           <input
                             type="number"
@@ -426,25 +540,30 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                             step={15}
                             value={formCheckInWindow}
                             onChange={(e) => setFormCheckInWindow(Number(e.target.value))}
-                            className="w-full pl-2.5 pr-12 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                            className="w-full pl-2.5 pr-12 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
                           />
-                          <span className="absolute right-2.5 top-1.5 text-[10px] text-slate-400 font-medium">menit</span>
+                          <span className="absolute right-2.5 top-1.5 text-[10px] text-slate-400 font-medium">
+                            menit
+                          </span>
                         </div>
-                        <div className="text-[10px] text-slate-600 flex items-center gap-1 bg-slate-50 px-2 py-1 rounded border border-slate-100">
-                          <Clock className="w-3 h-3 text-blue-500 shrink-0" />
+
+                        <div className="text-[10.5px] text-slate-600 flex items-center gap-1.5 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-100">
+                          <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                           <span className="truncate">
-                            Absen dimulai: <strong className="text-slate-800 font-bold">{formatTimeOffset(formStartTime, -formCheckInWindow)}</strong>
+                            Tap masuk dibuka: <strong className="text-slate-800 font-bold">{formatTimeOffset(formStartTime, -formCheckInWindow)}</strong>
                           </span>
                         </div>
                       </div>
 
-                      <div className="bg-white border border-slate-200/80 rounded-lg p-2.5 shadow-2xs space-y-1.5">
+                      {/* Batas Akhir Tap Pulang */}
+                      <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs space-y-2">
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-semibold text-slate-700">Batas Maksimal Absen Pulang</span>
-                          <span className="text-blue-600 font-bold text-[10px]">
+                          <span className="font-bold text-slate-700">Batas Maksimal Absen Pulang</span>
+                          <span className="text-blue-600 font-bold text-[10px] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
                             {(formCheckOutWindow / 60).toFixed(1)} jam setelah
                           </span>
                         </div>
+
                         <div className="relative">
                           <input
                             type="number"
@@ -453,14 +572,17 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                             step={15}
                             value={formCheckOutWindow}
                             onChange={(e) => setFormCheckOutWindow(Number(e.target.value))}
-                            className="w-full pl-2.5 pr-12 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                            className="w-full pl-2.5 pr-12 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
                           />
-                          <span className="absolute right-2.5 top-1.5 text-[10px] text-slate-400 font-medium">menit</span>
+                          <span className="absolute right-2.5 top-1.5 text-[10px] text-slate-400 font-medium">
+                            menit
+                          </span>
                         </div>
-                        <div className="text-[10px] text-slate-600 flex items-center gap-1 bg-slate-50 px-2 py-1 rounded border border-slate-100">
-                          <Clock className="w-3 h-3 text-blue-500 shrink-0" />
+
+                        <div className="text-[10.5px] text-slate-600 flex items-center gap-1.5 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-100">
+                          <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                           <span className="truncate">
-                            Absen diterima hingga: <strong className="text-slate-800 font-bold">{formatTimeOffset(formEndTime, formCheckOutWindow, formIsOvernight)}</strong>
+                            Tap pulang ditutup: <strong className="text-slate-800 font-bold">{formatTimeOffset(formEndTime, formCheckOutWindow, formIsOvernight)}</strong>
                           </span>
                         </div>
                       </div>
@@ -468,18 +590,38 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                   </div>
                 </>
               ) : (
-                <div className="p-3 bg-slate-50 border border-dashed border-slate-300 rounded-xl flex items-start gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center text-amber-700 shrink-0 mt-0.5">
-                    <Coffee className="w-3.5 h-3.5" />
+                <div className="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-2xl flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0 mt-0.5">
+                    <Coffee className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="text-[11px] font-bold text-slate-800">Shift Bebas Tugas / Libur (OFF)</h4>
-                    <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
-                      Pegawai dengan shift ini tidak dikenakan kewajiban presensi dan bebas dari alpa serta keterlambatan.
+                    <h4 className="text-xs font-bold text-slate-800">Shift Bebas Tugas / Libur (OFF)</h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                      Pegawai dengan shift ini tidak dikenakan kewajiban presensi datang maupun pulang, serta otomatis dibebaskan dari alpa dan keterlambatan.
                     </p>
                   </div>
                 </div>
               )}
+
+              {/* KARTU 3: JADIKAN SHIFT STANDAR (DEFAULT) */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={formIsDefault}
+                    onChange={(e) => setFormIsDefault(e.target.checked)}
+                    className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">
+                      Jadikan Shift Standar (Default Sekolah)
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      Otomatis diterapkan untuk seluruh pegawai pada hari kerja jika tidak memiliki penugasan shift khusus.
+                    </span>
+                  </div>
+                </label>
+              </div>
 
               {/* Color Presets */}
               <div>
