@@ -127,3 +127,36 @@ input[type="date"]::-webkit-datetime-edit-year-field {
     #f1f5f9 8px
   );
 }
+
+/* Attendance Matrix Table Grid Lines - Pertegas batas sel agar terlihat jelas & terstruktur */
+.attendance-matrix-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.attendance-matrix-table th,
+.attendance-matrix-table td {
+  border-color: #94a3b8 !important;
+}
+
+.attendance-matrix-table thead tr.header-row-1 th {
+  border-right: 1px solid #94a3b8 !important;
+  border-bottom: 1px solid #94a3b8 !important;
+}
+
+.attendance-matrix-table thead tr.header-row-2 th {
+  border-right: 1px solid #94a3b8 !important;
+  border-bottom: 2px solid #64748b !important;
+}
+
+.attendance-matrix-table tbody td {
+  border-right: 1px solid #94a3b8 !important;
+  border-bottom: 1px solid #94a3b8 !important;
+}
+
+/* Sticky column 3 separator for distinction between employee profile and calendar grid */
+.attendance-matrix-table th.sticky-col-3,
+.attendance-matrix-table td.sticky-col-3 {
+  border-right: 2px solid #64748b !important;
+}
+

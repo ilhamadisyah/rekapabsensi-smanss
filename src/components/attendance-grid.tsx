@@ -562,8 +562,8 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
       </div>
 
       {/* Matrix Table with sticky headers & sticky columns */}
-      <div className="overflow-x-auto overflow-y-auto max-h-[680px] relative z-10 border-b border-slate-200">
-        <table className="w-full border-separate border-spacing-0 text-left text-xs">
+      <div className="overflow-x-auto overflow-y-auto max-h-[680px] relative z-10 border-b border-slate-300">
+        <table className="attendance-matrix-table w-full border-separate border-spacing-0 text-left text-xs">
           <colgroup>
             <col className="w-[56px] min-w-[56px] max-w-[56px]" />
             <col className="w-[220px] min-w-[220px] max-w-[220px]" />
@@ -575,13 +575,13 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
           <thead>
             {/* ROW 1: Day Names (MON / TUE / WED / THU / FRI / SAT / SUN) */}
             <tr className="bg-slate-100 text-[11px] font-bold text-slate-700 header-row-1">
-              <th className="sticky-col-1 bg-slate-100 px-1 h-8 border-b border-r border-slate-200 text-center text-slate-500 font-bold box-border">
+              <th className="sticky-col-1 bg-slate-100 px-1 h-8 border-b border-r border-slate-300 text-center text-slate-500 font-bold box-border">
                 #
               </th>
-              <th className="sticky-col-2 bg-slate-100 px-3 h-8 border-b border-r border-slate-200 font-bold text-slate-700 box-border">
+              <th className="sticky-col-2 bg-slate-100 px-3 h-8 border-b border-r border-slate-300 font-bold text-slate-700 box-border">
                 Identitas Pegawai
               </th>
-              <th className="sticky-col-3 bg-slate-100 px-2 h-8 border-b border-r border-slate-300 text-center font-bold text-xs text-slate-700 box-border">
+              <th className="sticky-col-3 bg-slate-100 px-2 h-8 border-b border-r-2 border-slate-400 text-center font-bold text-xs text-slate-700 box-border">
                 Ringkasan
               </th>
               {days.map((d) => {
@@ -589,7 +589,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                 return (
                   <th
                     key={`day-name-${d.day}`}
-                    className={`w-[42px] min-w-[42px] max-w-[42px] h-8 p-0 text-center border-b border-r border-slate-200 text-[10px] box-border ${
+                    className={`w-[42px] min-w-[42px] max-w-[42px] h-8 p-0 text-center border-b border-r border-slate-300 text-[10px] box-border ${
                       isRedDay ? 'bg-rose-50/90 text-rose-700 font-black' : 'bg-slate-100 text-slate-600 font-bold'
                     }`}
                     title={d.holiday ? `Hari Libur: ${d.holiday.name}` : d.isWeekend ? `Akhir Pekan (${d.dayName})` : d.dayName}
@@ -610,7 +610,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
               <th className="sticky-col-2 bg-slate-200 px-3 h-8 border-b-2 border-r border-slate-300 font-bold text-slate-800 box-border">
                 Daftar Pegawai
               </th>
-              <th className="sticky-col-3 bg-slate-200 px-2 h-8 border-b-2 border-r border-slate-300 text-center text-xs font-black tracking-wide box-border" title="Ringkasan: Hadir (H) / Alpha (A) / Izin, Sakit, DL (I)">
+              <th className="sticky-col-3 bg-slate-200 px-2 h-8 border-b-2 border-r-2 border-slate-400 text-center text-xs font-black tracking-wide box-border" title="Ringkasan: Hadir (H) / Alpha (A) / Izin, Sakit, DL (I)">
                 <span className="text-emerald-700">H</span>
                 <span className="text-slate-400 font-normal mx-0.5">/</span>
                 <span className="text-rose-600">A</span>
@@ -685,12 +685,12 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                     className="hover:bg-blue-50/30 transition-colors group"
                   >
                     {/* Sticky Col 1: Number */}
-                    <td className="sticky-col-1 bg-white group-hover:bg-slate-50 px-1 py-2 text-center border-r border-b border-slate-200 text-xs font-semibold text-slate-700 box-border">
+                    <td className="sticky-col-1 bg-white group-hover:bg-slate-50 px-1 py-2 text-center border-r border-b border-slate-300 text-xs font-semibold text-slate-700 box-border">
                       {empIdx + 1}
                     </td>
 
                     {/* Sticky Col 2: Employee Name & Machine ID */}
-                    <td className="sticky-col-2 bg-white group-hover:bg-slate-50 px-3 py-2 border-r border-b border-slate-200 box-border">
+                    <td className="sticky-col-2 bg-white group-hover:bg-slate-50 px-3 py-2 border-r border-b border-slate-300 box-border">
                       <div className="font-semibold text-slate-900 truncate" title={emp.full_name}>
                         {emp.full_name}
                       </div>
@@ -703,7 +703,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                     </td>
 
                     {/* Sticky Col 3: Row Quick Stats */}
-                    <td className="sticky-col-3 bg-white group-hover:bg-slate-50 px-2 py-2 border-r border-b border-slate-300 text-center box-border">
+                    <td className="sticky-col-3 bg-white group-hover:bg-slate-50 px-2 py-2 border-r-2 border-b border-slate-400 text-center box-border">
                       <div className="flex items-center justify-center gap-1 text-[13px] font-bold tracking-tight tabular-nums">
                         <span className="text-emerald-700 min-w-[16px] text-center" title="Hadir (H)">{hadirCount}</span>
                         <span className="text-slate-300 font-normal text-[11px] select-none">/</span>
@@ -750,7 +750,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                               });
                             }}
                             onMouseLeave={() => setHoveredCell(null)}
-                            className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-rose-200/80 bg-rose-50/90 hover:bg-rose-100/90 transition-all font-semibold select-none cursor-pointer box-border"
+                            className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-300 bg-rose-50/90 hover:bg-rose-100/90 transition-all font-semibold select-none cursor-pointer box-border"
                             title={`${emp.full_name} | Tgl ${d.day}: ${d.holiday?.name || (isWeekend ? `Akhir Pekan (${d.dayName})` : 'Hari Libur')} | Jam Kerja: Bebas Tugas (Klik untuk ubah status)`}
                           >
                             <div className="w-full h-full flex flex-col items-center justify-center">
@@ -781,7 +781,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                               });
                             }}
                             onMouseLeave={() => setHoveredCell(null)}
-                            className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-200 bg-slate-100/90 hover:bg-slate-200 transition-all font-semibold select-none cursor-pointer box-border"
+                            className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-300 bg-slate-100/90 hover:bg-slate-200 transition-all font-semibold select-none cursor-pointer box-border"
                             title={`${emp.full_name} | Tgl ${d.day}: Libur Shift / Bebas Tugas | Jam Kerja: Bebas Tugas (Klik untuk ganti shift/izin)`}
                           >
                             <div className="w-full h-full flex flex-col items-center justify-center">
@@ -813,7 +813,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                               });
                             }}
                             onMouseLeave={() => setHoveredCell(null)}
-                            className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-200 bg-slate-100/70 hover:bg-slate-200/70 transition-all font-medium select-none cursor-pointer box-border relative group/cell"
+                            className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-300 bg-slate-100/70 hover:bg-slate-200/70 transition-all font-medium select-none cursor-pointer box-border relative group/cell"
                             title={`${emp.full_name} | Tgl ${d.day}: Belum Terekap | Shift: ${rec?.shift_name || 'Jam Kerja Normal'} | Jam Kerja: ${cellWorkingHours}`}
                           >
                             <div className="w-full h-full flex flex-col items-center justify-center">
@@ -857,7 +857,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                             });
                           }}
                           onMouseLeave={() => setHoveredCell(null)}
-                          className={`w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-200 transition-all font-bold select-none cursor-pointer box-border relative ${
+                          className={`w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-300 transition-all font-bold select-none cursor-pointer box-border relative ${
                             isHadir
                               ? 'bg-[#C6EFCE] text-[#006100] hover:brightness-95'
                               : isAlpha
