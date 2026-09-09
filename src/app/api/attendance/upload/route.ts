@@ -26,8 +26,33 @@ export async function POST(request: NextRequest) {
     let month = parseInt(monthStr || '', 10);
     let year = parseInt(yearStr || '', 10);
 
+    // Optional: Pre-load shift schedules to enhance cross-day pairing accuracy
+    let scheduleMap: Map<string, { isOvernight?: boolean; startTime?: string; endTime?: string; isOffDay?: boolean }> | undefined;
+    try {
+      const [schedules, shifts] = await Promise.all([
+        db.getEmployeeSchedules(month || undefined, year || undefined),
+        db.getShiftTemplates(),
+      ]);
+      const shiftMap = new Map(shifts.map((s) => [s.id, s]));
+      scheduleMap = new Map();
+      for (const sc of schedules) {
+        const sh = shiftMap.get(sc.shift_id);
+        scheduleMap.set(`${sc.employee_id}___${sc.date}`, {
+          isOvernight: Boolean(sh?.is_overnight),
+          startTime: sc.custom_start_time || sh?.start_time,
+          endTime: sc.custom_end_time || sh?.end_time,
+          isOffDay: Boolean(sh?.is_off_day),
+        });
+      }
+    } catch {
+      // Ignore if schedules cannot be pre-loaded, parser will use intelligent heuristics
+    }
+
     const uploadId = `upload-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    const parseResult = parseAttendanceFile(buffer, month, year, uploadId);
+    const parseResult = parseAttendanceFile(buffer, month, year, uploadId, {
+      scheduleMap,
+      enableCrossDayPairing: true,
+    });
 
     if (!parseResult.success) {
       return NextResponse.json(

@@ -105,6 +105,24 @@ export async function POST(request: NextRequest) {
             continue;
           }
 
+          // Check Cross-Day Punch Pairing for overnight shifts:
+          let effectiveFirstIn = existing.first_in;
+          let effectiveLastOut = existing.last_out;
+          let effectiveTapCount = existing.tap_count;
+
+          if (isOvernight && effectiveFirstIn && effectiveFirstIn >= '15:00:00' && (!effectiveLastOut || effectiveLastOut >= '15:00:00' || effectiveTapCount < 2)) {
+            // Look up next day's record for morning checkout
+            const dNext = new Date(dateStr + 'T00:00:00');
+            dNext.setDate(dNext.getDate() + 1);
+            const nextDateStr = `${dNext.getFullYear()}-${String(dNext.getMonth() + 1).padStart(2, '0')}-${String(dNext.getDate()).padStart(2, '0')}`;
+            const nextKey = `${emp.machine_id}___${nextDateStr}`;
+            const nextRec = attendanceMap.get(nextKey);
+            if (nextRec && nextRec.first_in && nextRec.first_in <= '10:30:00') {
+              effectiveLastOut = nextRec.first_in;
+              effectiveTapCount = Math.max(effectiveTapCount || 1, 2);
+            }
+          }
+
           // Existing record from biometric punch: re-evaluate against assigned shift / holiday / weekend
           const scheduleContext = {
             startTime,
@@ -118,9 +136,9 @@ export async function POST(request: NextRequest) {
           };
 
           const evaluated = evaluateAttendanceStatus(
-            existing.first_in,
-            existing.last_out,
-            existing.tap_count,
+            effectiveFirstIn,
+            effectiveLastOut,
+            effectiveTapCount,
             isWeekend,
             scheduleContext
           );
@@ -136,6 +154,9 @@ export async function POST(request: NextRequest) {
           recordsToSync.push({
             ...existing,
             employee_name: existing.employee_name || emp.full_name,
+            first_in: effectiveFirstIn,
+            last_out: effectiveLastOut,
+            tap_count: effectiveTapCount,
             system_status: systemStatus,
             final_status: finalStatus,
             is_verified: false,

@@ -315,8 +315,11 @@ export function evaluateAttendanceStatus(
 
   // Handle overnight shift support (e.g. 20:00 - 06:00)
   if (scheduleContext?.isOvernight) {
-    isCheckInValid = firstIn <= checkInLimit || firstIn >= '18:00:00';
-    isCheckOutValid = lastOut >= checkOutLimit || lastOut >= '22:00:00';
+    // Overnight shift: check-in on starting evening, check-out on next morning
+    // Valid check-in: arrived on time (firstIn <= checkInLimit) during starting evening (firstIn >= 15:00:00)
+    isCheckInValid = firstIn >= '15:00:00' && firstIn <= checkInLimit;
+    // Valid check-out: stayed until scheduled end (lastOut >= checkOutLimit) in morning (< 14:00:00)
+    isCheckOutValid = lastOut < '14:00:00' && lastOut >= checkOutLimit;
   }
 
   if (isCheckInValid && isCheckOutValid) {
@@ -326,6 +329,11 @@ export function evaluateAttendanceStatus(
   return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
 }
 
+export interface ParseAttendanceOptions {
+  scheduleMap?: Map<string, { isOvernight?: boolean; startTime?: string; endTime?: string; isOffDay?: boolean }>;
+  enableCrossDayPairing?: boolean;
+}
+
 /**
  * Parses attendance file buffer (.xls or .xlsx) with automatic or specified period
  */
@@ -333,7 +341,8 @@ export function parseAttendanceFile(
   fileBuffer: Buffer,
   targetMonth?: number,
   targetYear?: number,
-  uploadId: string = 'upload-' + Date.now()
+  uploadId: string = 'upload-' + Date.now(),
+  options?: ParseAttendanceOptions
 ): ParseResult {
   try {
     let activeMonth = targetMonth;
@@ -510,17 +519,16 @@ export function parseAttendanceFile(
       });
     }
 
-    // Group punches by (machineId, dateStr)
-    const grouped = new Map<string, RawPunchRecord[]>();
+    // Group punches by employee to support Cross-Day Punch Pairing (Overnight Shifts)
+    const punchesByEmployee = new Map<string, RawPunchRecord[]>();
     const detectedDatesSet = new Set<string>();
     const uniqueEmployeesSet = new Set<string>();
 
     for (const punch of rawPunches) {
-      const key = `${punch.machineId}__${punch.dateStr}`;
-      if (!grouped.has(key)) {
-        grouped.set(key, []);
+      if (!punchesByEmployee.has(punch.machineId)) {
+        punchesByEmployee.set(punch.machineId, []);
       }
-      grouped.get(key)!.push(punch);
+      punchesByEmployee.get(punch.machineId)!.push(punch);
       detectedDatesSet.add(punch.dateStr);
       uniqueEmployeesSet.add(punch.machineId);
     }
@@ -529,47 +537,136 @@ export function parseAttendanceFile(
     const employeeNames: Record<string, string> = {};
     let totalPresent = 0;
     let totalUnverifiedRed = 0;
+    const enableCrossDayPairing = options?.enableCrossDayPairing ?? true;
 
-    for (const [key, punches] of grouped.entries()) {
-      const [machineId, dateStr] = key.split('__');
-
-      // Sort punches chronologically
+    for (const [machineId, punches] of punchesByEmployee.entries()) {
       punches.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-      const firstIn = punches[0].timeStr;
-      const lastOut = punches[punches.length - 1].timeStr;
-      const tapCount = punches.length;
       const rawName = punches[0]?.name || '';
       const realName = getEmployeeNameByMachineId(machineId, rawName);
       employeeNames[machineId] = realName;
 
-      // Check weekend
-      const d = new Date(dateStr + 'T00:00:00');
-      const dayOfWeek = d.getDay(); // 0 is Sun, 6 is Sat
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const consumedIndices = new Set<number>();
 
-      const { systemStatus, finalStatus } = evaluateAttendanceStatus(firstIn, lastOut, tapCount, isWeekend);
+      for (let i = 0; i < punches.length; i++) {
+        if (consumedIndices.has(i)) continue;
 
-      if (finalStatus === 'HADIR') {
-        totalPresent++;
-      } else if (!isWeekend && finalStatus === 'A') {
-        totalUnverifiedRed++;
+        const punch = punches[i];
+        const dateStr = punch.dateStr;
+        const sched = options?.scheduleMap?.get(`${machineId}___${dateStr}`);
+
+        // Check if this punch is candidate for beginning an overnight shift:
+        // Either scheduled as isOvernight = true, or punch occurs in the evening (>= 17:00:00)
+        const isExplicitOvernight = Boolean(sched?.isOvernight);
+        const isEveningPunch = punch.timeStr >= '17:00:00';
+        const isOvernightCandidate = enableCrossDayPairing && (isExplicitOvernight || isEveningPunch);
+
+        let isOvernightSession = false;
+        const sessionPunches: RawPunchRecord[] = [punch];
+        consumedIndices.add(i);
+
+        if (isOvernightCandidate) {
+          // Collect other evening punches on the same starting date
+          for (let j = i + 1; j < punches.length; j++) {
+            if (consumedIndices.has(j)) continue;
+            const p2 = punches[j];
+            if (p2.dateStr === dateStr && p2.timeStr >= '15:00:00') {
+              sessionPunches.push(p2);
+              consumedIndices.add(j);
+            } else {
+              break;
+            }
+          }
+
+          // Next calendar day for cross-day checkout
+          const dNext = new Date(dateStr + 'T00:00:00');
+          dNext.setDate(dNext.getDate() + 1);
+          const nextDateStr = formatDate(dNext);
+
+          // Find morning checkout punches on next day
+          const nextDayMorningPunches: { index: number; punch: RawPunchRecord }[] = [];
+          for (let j = i + 1; j < punches.length; j++) {
+            if (consumedIndices.has(j)) continue;
+            const pNext = punches[j];
+            if (pNext.dateStr === nextDateStr && pNext.timeStr <= '10:30:00') {
+              const diffHours = (pNext.timestamp.getTime() - punch.timestamp.getTime()) / (1000 * 60 * 60);
+              if (diffHours >= 4 && diffHours <= 18) {
+                nextDayMorningPunches.push({ index: j, punch: pNext });
+              }
+            } else if (pNext.dateStr > nextDateStr) {
+              break;
+            }
+          }
+
+          if (nextDayMorningPunches.length > 0) {
+            isOvernightSession = true;
+            for (const item of nextDayMorningPunches) {
+              sessionPunches.push(item.punch);
+              consumedIndices.add(item.index);
+            }
+          }
+        }
+
+        // If not paired with next morning checkout, collect remaining punches on the same date
+        if (!isOvernightSession) {
+          for (let j = i + 1; j < punches.length; j++) {
+            if (consumedIndices.has(j)) continue;
+            const pSame = punches[j];
+            if (pSame.dateStr === dateStr) {
+              sessionPunches.push(pSame);
+              consumedIndices.add(j);
+            } else {
+              break;
+            }
+          }
+        }
+
+        sessionPunches.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+        const firstIn = sessionPunches[0].timeStr;
+        const lastOut = sessionPunches[sessionPunches.length - 1].timeStr;
+        const tapCount = sessionPunches.length;
+
+        // Check weekend
+        const d = new Date(dateStr + 'T00:00:00');
+        const dayOfWeek = d.getDay(); // 0 is Sun, 6 is Sat
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+        const scheduleContext: ScheduleEvaluationContext = {
+          startTime: sched?.startTime,
+          endTime: sched?.endTime,
+          isOvernight: isOvernightSession || Boolean(sched?.isOvernight),
+          isOffDay: sched?.isOffDay,
+        };
+
+        const { systemStatus, finalStatus } = evaluateAttendanceStatus(
+          firstIn,
+          lastOut,
+          tapCount,
+          isWeekend,
+          scheduleContext
+        );
+
+        if (finalStatus === 'HADIR') {
+          totalPresent++;
+        } else if (!isWeekend && finalStatus === 'A') {
+          totalUnverifiedRed++;
+        }
+
+        records.push({
+          id: `att-${machineId}-${dateStr}`,
+          upload_id: uploadId,
+          employee_id: machineId,
+          employee_name: realName,
+          attendance_date: dateStr,
+          first_in: firstIn,
+          last_out: lastOut,
+          tap_count: tapCount,
+          system_status: systemStatus,
+          final_status: finalStatus,
+          is_verified: finalStatus === 'HADIR',
+          updated_at: new Date().toISOString(),
+        });
       }
-
-      records.push({
-        id: `att-${machineId}-${dateStr}`,
-        upload_id: uploadId,
-        employee_id: machineId,
-        employee_name: realName,
-        attendance_date: dateStr,
-        first_in: firstIn,
-        last_out: lastOut,
-        tap_count: tapCount,
-        system_status: systemStatus,
-        final_status: finalStatus,
-        is_verified: finalStatus === 'HADIR',
-        updated_at: new Date().toISOString(),
-      });
     }
 
     return {
