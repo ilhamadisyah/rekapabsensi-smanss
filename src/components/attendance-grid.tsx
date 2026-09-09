@@ -29,7 +29,9 @@ import {
   Calendar,
   CheckCircle2,
   FileSpreadsheet,
-  Download
+  Download,
+  RefreshCw,
+  Database
 } from 'lucide-react';
 
 export type AttendanceFilterType = 
@@ -136,6 +138,8 @@ interface AttendanceGridProps {
   } | null;
   onOpenExport?: () => void;
   isExporting?: boolean;
+  onSyncDatabase?: () => Promise<void> | void;
+  isSyncingDatabase?: boolean;
 }
 
 export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
@@ -153,6 +157,8 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
   detectedPeriod,
   onOpenExport,
   isExporting = false,
+  onSyncDatabase,
+  isSyncingDatabase = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<'ALL' | 'Guru' | 'TU'>('ALL');
@@ -412,6 +418,18 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
 
           {/* Right side: Bulk Action & Counter Info */}
           <div className="flex items-center gap-2.5">
+            {onSyncDatabase && userRole !== 'pimpinan' && (
+              <button
+                type="button"
+                onClick={onSyncDatabase}
+                disabled={isSyncingDatabase}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xs active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                title="Sinkronkan seluruh data matriks presensi (termasuk Sabtu/Minggu Libur, Jadwal Shift, dan status verifikasi) ke database Supabase"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingDatabase ? 'animate-spin' : ''}`} />
+                <span>{isSyncingDatabase ? 'Menyinkronkan...' : 'Sinkronkan DB'}</span>
+              </button>
+            )}
             {onOpenBulk && userRole !== 'pimpinan' && (
               <button
                 type="button"

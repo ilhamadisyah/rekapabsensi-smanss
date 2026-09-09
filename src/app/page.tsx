@@ -49,6 +49,7 @@ export default function HomePage() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isBulkOpen, setIsBulkOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isSyncingDb, setIsSyncingDb] = useState(false);
   const [overrideModal, setOverrideModal] = useState<{
     isOpen: boolean;
     employee: Employee | null;
@@ -230,6 +231,30 @@ export default function HomePage() {
     }
   };
 
+  // Synchronize entire attendance matrix with Supabase database
+  const handleSyncDatabase = async () => {
+    try {
+      setIsSyncingDb(true);
+      showToast('Menyinkronkan data presensi & hari libur ke database Supabase...');
+      const res = await fetch('/api/attendance/sync-database', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ month: selectedMonth, year: selectedYear }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(`Sinkronisasi berhasil! ${data.syncedRecords || 0} catatan presensi tersimpan di Supabase.`);
+        await loadData(selectedMonth, selectedYear);
+      } else {
+        showToast(`Gagal sinkronisasi: ${data.error || 'Terjadi kesalahan'}`);
+      }
+    } catch (err: any) {
+      showToast(`Kesalahan sinkronisasi: ${err.message}`);
+    } finally {
+      setIsSyncingDb(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Top Navbar */}
@@ -352,6 +377,8 @@ export default function HomePage() {
                 detectedPeriod={detectedPeriod}
                 onOpenExport={() => setIsExportModalOpen(true)}
                 isExporting={isExporting}
+                onSyncDatabase={handleSyncDatabase}
+                isSyncingDatabase={isSyncingDb}
               />
             )}
           </div>
