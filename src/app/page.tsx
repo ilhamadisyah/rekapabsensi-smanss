@@ -117,14 +117,6 @@ export default function HomePage() {
     day: AttendanceMatrixDay,
     attendance: DailyAttendance | null
   ) => {
-    const hasShiftDuty = Boolean(
-      attendance?.shift_id ||
-      attendance?.scheduled_start ||
-      attendance?.is_custom_schedule ||
-      attendance?.first_in ||
-      (attendance && (attendance.final_status as string) !== '-')
-    );
-    if (day.isWeekend && !hasShiftDuty) return;
     if (userRole === 'pimpinan') {
       showToast('Peran Pimpinan hanya memiliki hak akses baca (Read-Only).');
       return;

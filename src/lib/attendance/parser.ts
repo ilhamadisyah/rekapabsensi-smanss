@@ -280,11 +280,11 @@ export function evaluateAttendanceStatus(
   }
 
   // 3. Regular weekend with no assigned active work shift
-  if (isWeekend && !scheduleContext?.startTime) {
+  if (isWeekend && !scheduleContext?.hasAssignedDuty) {
     if (firstIn && (lastOut || tapCount >= 1)) {
       return { systemStatus: 'HADIR', finalStatus: 'HADIR' };
     }
-    return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
+    return { systemStatus: 'HADIR', finalStatus: 'LIBUR' };
   }
 
   // 4. Standard workday: requires valid check-in, check-out, and at least 2 taps

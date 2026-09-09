@@ -730,37 +730,9 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                         ? `Hari Libur (${d.holiday?.name || rec?.shift_name || 'Libur Resmi'})`
                         : `${sStart} s/d ${sEnd} WIB`;
 
-                      // 1. Weekend WITHOUT assigned shift duty, no punches, and not manually verified
-                      if (isWeekend && !hasAssignedDuty && !rec?.first_in && !isManuallyVerified) {
-                        return (
-                          <td
-                            key={`cell-${emp.id}-${d.day}`}
-                            onMouseEnter={(e) => {
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              setHoveredCell({
-                                empId: emp.id,
-                                day: d.day,
-                                x: rect.left,
-                                y: rect.top,
-                              });
-                            }}
-                            onMouseLeave={() => setHoveredCell(null)}
-                            className="w-[42px] min-w-[42px] max-w-[42px] p-0 text-center border-r border-slate-200 bg-weekend-pattern opacity-60 cursor-not-allowed select-none box-border"
-                            title={`${emp.full_name} | Tgl ${d.day}: Akhir Pekan (${d.dayName}) - Libur Rutin | Jam Kerja: Bebas Tugas`}
-                          >
-                            <span className="text-[9px] text-slate-400 select-none">•</span>
-                          </td>
-                        );
-                      }
-
-                      // 2. Holiday (Hari Libur Resmi / Nasional) WITHOUT active assigned work duty
-                      const isHolidayDate = rec?.final_status === 'LIBUR' || rec?.is_holiday || Boolean(d.holiday);
-                      if (
-                        isHolidayDate &&
-                        !hasAssignedDuty &&
-                        !rec?.first_in &&
-                        !isManuallyVerified
-                      ) {
+                      // 1. Weekend or Holiday WITHOUT assigned active work duty, and not tapped / verified
+                      const isWeekendOrHoliday = isWeekend || isHol || rec?.final_status === 'LIBUR';
+                      if (isWeekendOrHoliday && !hasAssignedDuty && !rec?.first_in && !isManuallyVerified) {
                         return (
                           <td
                             key={`cell-${emp.id}-${d.day}`}
@@ -779,7 +751,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                             }}
                             onMouseLeave={() => setHoveredCell(null)}
                             className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-rose-200/80 bg-rose-50/90 hover:bg-rose-100/90 transition-all font-semibold select-none cursor-pointer box-border"
-                            title={`${emp.full_name} | Tgl ${d.day}: ${d.holiday?.name || rec?.shift_name || 'Hari Libur Resmi'} | Jam Kerja: Hari Libur (Bebas Tugas)`}
+                            title={`${emp.full_name} | Tgl ${d.day}: ${d.holiday?.name || (isWeekend ? `Akhir Pekan (${d.dayName})` : 'Hari Libur')} | Jam Kerja: Bebas Tugas (Klik untuk ubah status)`}
                           >
                             <div className="w-full h-full flex flex-col items-center justify-center">
                               <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200 shadow-2xs">
@@ -790,7 +762,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                         );
                       }
 
-                      // 3. Explicit OFF day (Libur Shift / Bebas Tugas)
+                      // 2. Explicit OFF day (Libur Shift / Bebas Tugas)
                       if (rec?.final_status === 'OFF' || rec?.is_off_day) {
                         return (
                           <td

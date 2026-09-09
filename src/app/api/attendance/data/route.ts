@@ -134,7 +134,8 @@ export async function GET(request: NextRequest) {
         const isHoliday = Boolean(hol);
         const isExplicitOffShift = Boolean(sched && (shift?.is_off_day === true || shift?.code === 'OFF'));
         const hasAssignedDuty = Boolean(sched && !isExplicitOffShift);
-        const isOffDay = isExplicitOffShift || (!sched && d.isWeekend);
+        const isWeekendLibur = d.isWeekend && !hasAssignedDuty;
+        const isOffDay = isExplicitOffShift;
 
         const isWorkRequired = sched ? !isExplicitOffShift : (!d.isWeekend && !isHoliday);
 
@@ -186,9 +187,9 @@ export async function GET(request: NextRequest) {
           }
         } else {
           // No record in biometric logs
-          if (isRecordedDay) {
-            if (isHoliday && !hasAssignedDuty) {
-              // Designated Holiday without assigned active duty -> LIBUR
+          if (isRecordedDay || d.isWeekend) {
+            if ((isHoliday || isWeekendLibur) && !hasAssignedDuty) {
+              // Designated Holiday or Weekend without assigned active duty -> LIBUR
               rec = {
                 id: `att-hol-${emp.machine_id}-${d.dateStr}`,
                 upload_id: 'virtual-holiday',
@@ -201,9 +202,9 @@ export async function GET(request: NextRequest) {
                 system_status: 'HADIR',
                 final_status: 'LIBUR',
                 is_off_day: true,
-                is_holiday: true,
+                is_holiday: isHoliday,
                 shift_code: 'LIBUR',
-                shift_name: hol?.name || 'Hari Libur Resmi',
+                shift_name: isHoliday ? (hol?.name || 'Hari Libur Resmi') : 'Akhir Pekan (Libur Rutin)',
                 shift_color: '#f43f5e',
                 is_verified: false,
                 is_custom_schedule: false,
