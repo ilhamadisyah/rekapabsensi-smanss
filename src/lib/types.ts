@@ -166,7 +166,7 @@ export const ATTENDANCE_STATUS_MAP: Record<AttendanceCode, AttendanceStatusInfo>
     category: 'present',
     excelCode: '',
     targetCol: '-',
-    description: 'Hari Libur Tambahan / Nasional (Bebas Tugas)',
+    description: 'Libur Rutin (Sabtu/Minggu) & Hari Libur Resmi',
     penaltyPoints: 0,
     bgHex: '#FFE4E6',
     textHex: '#BE123C',

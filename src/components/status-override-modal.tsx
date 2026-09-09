@@ -99,7 +99,7 @@ const STATUS_DISPLAY_CONFIG: Record<AttendanceCode, {
     badgeBorder: 'border-slate-300',
   },
   LIBUR: {
-    title: 'Hari Libur Tambahan',
+    title: 'Libur Rutin (Sabtu/Minggu) / Hari Libur',
     badgeBg: 'bg-rose-100',
     badgeText: 'text-rose-800',
     badgeBorder: 'border-rose-300',
@@ -137,8 +137,19 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
   currentAttendance,
   onSaveStatus,
 }) => {
+  const isWeekendDay = (() => {
+    if (!dateStr) return false;
+    try {
+      const d = new Date(dateStr + 'T00:00:00');
+      const dayOfWeek = d.getDay();
+      return dayOfWeek === 0 || dayOfWeek === 6;
+    } catch {
+      return false;
+    }
+  })();
+
   const [selectedStatus, setSelectedStatus] = useState<AttendanceCode>(
-    currentAttendance?.final_status || 'A'
+    currentAttendance?.final_status || (isWeekendDay ? 'LIBUR' : 'A')
   );
   const [notes, setNotes] = useState(currentAttendance?.notes || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -148,11 +159,14 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
     if (currentAttendance) {
       setSelectedStatus(currentAttendance.final_status);
       setNotes(currentAttendance.notes || '');
+    } else if (isWeekendDay) {
+      setSelectedStatus('LIBUR');
+      setNotes('');
     } else {
       setSelectedStatus('A');
       setNotes('');
     }
-  }, [currentAttendance, dateStr, isOpen]);
+  }, [currentAttendance, dateStr, isWeekendDay, isOpen]);
 
   if (!isOpen || !employee) return null;
 
@@ -259,9 +273,11 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                   </div>
                   <strong className="text-indigo-950 font-bold truncate">
                     {currentAttendance?.is_off_day
-                      ? 'Libur Shift'
-                      : currentAttendance?.is_holiday
-                      ? 'Hari Libur'
+                      ? 'Libur Shift (Bebas Tugas)'
+                      : (currentAttendance?.is_holiday || currentAttendance?.final_status === 'LIBUR')
+                      ? 'Hari Libur Resmi'
+                      : isWeekendDay && !currentAttendance?.shift_id
+                      ? 'Libur Akhir Pekan (Bebas Tugas)'
                       : `${currentAttendance?.scheduled_start?.substring(0, 5) || '07:30'} s/d ${currentAttendance?.scheduled_end?.substring(0, 5) || '16:00'} WIB`}
                   </strong>
                 </div>
@@ -273,7 +289,7 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                     <span className="text-slate-600">Shift:</span>
                   </div>
                   <span className="font-semibold text-slate-800 truncate">
-                    {currentAttendance?.shift_name || (currentAttendance?.is_off_day ? 'Libur Shift' : currentAttendance?.is_holiday ? 'Hari Libur' : 'Jam Kerja Normal')}
+                    {currentAttendance?.shift_name || (currentAttendance?.is_off_day ? 'Libur Shift' : (currentAttendance?.is_holiday || currentAttendance?.final_status === 'LIBUR') ? 'Hari Libur' : isWeekendDay ? 'Libur Akhir Pekan' : 'Jam Kerja Normal')}
                   </span>
                 </div>
 
@@ -316,12 +332,32 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                   );
                 }
 
-                if (currentAttendance?.is_holiday) {
+                if (isWeekendDay && !currentAttendance?.shift_id && !currentAttendance?.first_in && (!currentAttendance || !currentAttendance.is_verified)) {
                   return (
                     <div className="text-[11px] text-rose-900 bg-rose-50/90 p-2.5 rounded-lg border border-rose-200 flex items-start gap-2">
                       <Info className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                       <div>
-                        <div className="font-bold text-rose-950">Notifikasi Sistem: Hari Libur Resmi ({currentAttendance?.shift_name || 'Libur Sekolah/Nasional'})</div>
+                        <div className="font-bold text-rose-950 flex items-center gap-1.5">
+                          <span>Notifikasi Sistem: Libur Akhir Pekan (Sabtu / Minggu)</span>
+                          <span className="px-1.5 py-0.5 bg-rose-100 text-rose-800 rounded text-[9px] font-bold">Libur Rutin</span>
+                        </div>
+                        <div className="text-rose-700 mt-0.5 leading-relaxed">
+                          Tanggal ini merupakan akhir pekan (Sabtu/Minggu). Pegawai dibebaskan dari kewajiban jam kerja reguler. Jika pegawai bertugas piket, dinas luar, atau lembur, silakan pilih status kehadiran terkait.
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (currentAttendance?.is_holiday || currentAttendance?.final_status === 'LIBUR') {
+                  return (
+                    <div className="text-[11px] text-rose-900 bg-rose-50/90 p-2.5 rounded-lg border border-rose-200 flex items-start gap-2">
+                      <Info className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-bold text-rose-950 flex items-center gap-1.5">
+                          <span>Notifikasi Sistem: Hari Libur Resmi ({currentAttendance?.shift_name || 'Libur Sekolah/Nasional'})</span>
+                          <span className="px-1.5 py-0.5 bg-rose-100 text-rose-800 rounded text-[9px] font-bold">Libur Resmi</span>
+                        </div>
                         <div className="text-rose-700 mt-0.5 leading-relaxed">
                           Tanggal ini merupakan hari libur resmi yang terdaftar di kalender. Pegawai dibebaskan dari jam kerja reguler.
                         </div>

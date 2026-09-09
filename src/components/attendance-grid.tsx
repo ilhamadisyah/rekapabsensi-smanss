@@ -915,17 +915,17 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
+            <span className="inline-block px-1.5 h-4 rounded bg-rose-100 border border-rose-200 text-rose-700 text-center font-bold text-[9px] leading-4">
+              LIBUR
+            </span>
+            <span className="text-slate-600 font-medium text-rose-700">Libur Rutin (Sabtu/Minggu) & Hari Libur</span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
             <span className="inline-block px-1.5 h-4 rounded bg-slate-100 border border-slate-300 text-slate-600 text-center font-bold text-[9px] leading-4">
               OFF
             </span>
             <span className="text-slate-600">Libur Shift (Bebas Tugas)</span>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <span className="inline-block px-1.5 h-4 rounded bg-rose-50 border border-rose-200 text-rose-700 text-center font-bold text-[9px] leading-4">
-              LIBUR
-            </span>
-            <span className="text-slate-600">Hari Libur Tambahan</span>
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -954,11 +954,6 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
               -
             </span>
             <span className="text-slate-500">Belum Terekap (Log Belum Ada)</span>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <span className="inline-block w-4 h-4 rounded bg-slate-200 border border-slate-300"></span>
-            <span className="text-slate-400">Sabtu / Minggu (Libur Rutin)</span>
           </div>
         </div>
 
@@ -996,8 +991,15 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
       const isHol = hRec?.is_holiday || Boolean(hDay.holiday) || hRec?.final_status === 'LIBUR';
       const sTime = hRec?.scheduled_start ? hRec.scheduled_start.substring(0, 5) : '07:30';
       const eTime = hRec?.scheduled_end ? hRec.scheduled_end.substring(0, 5) : '16:00';
-      const workingHoursStr = isHol ? 'Hari Libur Resmi' : isOff ? 'Libur Shift' : `${sTime} - ${eTime} WIB`;
-      const fStatus = hRec ? hRec.final_status : (hDay.isWeekend ? '-' : (isHol ? 'LIBUR' : (isOff ? 'OFF' : 'A')));
+      const isWeekendOrHol = hDay.isWeekend || isHol || hRec?.final_status === 'LIBUR';
+      const workingHoursStr = isHol
+        ? 'Hari Libur Resmi'
+        : hDay.isWeekend
+        ? 'Libur Akhir Pekan (Bebas Tugas)'
+        : isOff
+        ? 'Libur Shift'
+        : `${sTime} - ${eTime} WIB`;
+      const fStatus = hRec ? hRec.final_status : (isWeekendOrHol ? 'LIBUR' : (isOff ? 'OFF' : 'A'));
 
       // Clean, concise status badge
       const getCleanStatusBadge = (code: string) => {
@@ -1007,7 +1009,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
           case 'A':
             return { label: 'Alpha', badge: 'bg-rose-50 text-rose-700 border-rose-200' };
           case 'LIBUR':
-            return { label: 'Hari Libur', badge: 'bg-rose-50 text-rose-700 border-rose-200' };
+            return { label: hDay.isWeekend ? 'Libur Akhir Pekan' : 'Hari Libur', badge: 'bg-rose-50 text-rose-700 border-rose-200' };
           case 'OFF':
             return { label: 'Libur Shift', badge: 'bg-slate-100 text-slate-700 border-slate-200' };
           case 'DL':
@@ -1027,11 +1029,11 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
           case 'HIS':
             return { label: 'Izin Siang', badge: 'bg-amber-50 text-amber-700 border-amber-200' };
           default:
-            return { label: hDay.isWeekend ? 'Akhir Pekan' : 'Belum Terekap', badge: 'bg-slate-100 text-slate-500 border-slate-200' };
+            return { label: 'Belum Terekap', badge: 'bg-slate-100 text-slate-500 border-slate-200' };
         }
       };
 
-      const statusBadge = getCleanStatusBadge(isHol ? 'LIBUR' : fStatus);
+      const statusBadge = getCleanStatusBadge(isWeekendOrHol ? 'LIBUR' : fStatus);
 
       // Smart vertical positioning: if near top of window (< 220px), show BELOW cell, else show ABOVE cell
       const showBelow = hoveredCell.y < 220;
