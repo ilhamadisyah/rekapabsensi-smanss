@@ -3,6 +3,7 @@ import { db } from '@/lib/storage/store';
 import { evaluateAttendanceStatus } from '@/lib/attendance/parser';
 import { AttendanceCode, DailyAttendance } from '@/lib/types';
 import { getSupabaseServerClient, isSupabaseConfigured } from '@/lib/supabase/server';
+import { sanitizeDailyAttendanceForDb } from '@/lib/storage/supabase-store';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -242,10 +243,10 @@ export async function POST(request: NextRequest) {
     const client = isSupabaseConfigured ? getSupabaseServerClient() : null;
 
     if (client) {
-      // Upsert into Supabase in chunks of 500
-      const chunkSize = 500;
+      // Upsert into Supabase in safe chunks of 200
+      const chunkSize = 200;
       for (let i = 0; i < recordsToSync.length; i += chunkSize) {
-        const chunk = recordsToSync.slice(i, i + chunkSize);
+        const chunk = recordsToSync.slice(i, i + chunkSize).map(sanitizeDailyAttendanceForDb);
         const { error: upsertErr } = await client
           .from('daily_attendance')
           .upsert(chunk, { onConflict: 'employee_id,attendance_date' });

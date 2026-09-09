@@ -11,6 +11,29 @@ import {
 } from '../types';
 import { getEmployeeNameByMachineId } from '../attendance/employee-mapping';
 
+/**
+ * Strips UI-only / runtime-computed fields from daily_attendance before sending to Supabase
+ * to ensure 100% schema cache compatibility with Supabase Postgres table.
+ */
+export function sanitizeDailyAttendanceForDb(rec: Partial<DailyAttendance>): Record<string, any> {
+  return {
+    id: rec.id,
+    upload_id: rec.upload_id || null,
+    employee_id: rec.employee_id,
+    employee_name: rec.employee_name || null,
+    attendance_date: rec.attendance_date,
+    first_in: rec.first_in || null,
+    last_out: rec.last_out || null,
+    tap_count: typeof rec.tap_count === 'number' ? rec.tap_count : 0,
+    system_status: rec.system_status || 'TIDAK_HADIR',
+    final_status: rec.final_status || 'A',
+    notes: rec.notes || null,
+    is_verified: Boolean(rec.is_verified),
+    verified_by: rec.verified_by || null,
+    updated_at: rec.updated_at || new Date().toISOString(),
+  };
+}
+
 export const supabaseStore = {
   async getEmployees(): Promise<Employee[]> {
     const client = getSupabaseServerClient();
@@ -253,7 +276,7 @@ export const supabaseStore = {
     // Upsert batch in safe chunks of 200 to avoid request size limits
     const chunkSize = 200;
     for (let i = 0; i < recordsToUpsert.length; i += chunkSize) {
-      const chunk = recordsToUpsert.slice(i, i + chunkSize);
+      const chunk = recordsToUpsert.slice(i, i + chunkSize).map(sanitizeDailyAttendanceForDb);
       const { error } = await client
         .from('daily_attendance')
         .upsert(chunk, { onConflict: 'employee_id,attendance_date' });
@@ -321,9 +344,10 @@ export const supabaseStore = {
       updated_at: new Date().toISOString(),
     };
 
+    const sanitizedRecord = sanitizeDailyAttendanceForDb(recordToSave);
     const { error: upsertErr } = await client
       .from('daily_attendance')
-      .upsert(recordToSave, { onConflict: 'employee_id,attendance_date' });
+      .upsert(sanitizedRecord, { onConflict: 'employee_id,attendance_date' });
 
     if (upsertErr) {
       console.error('[Supabase] Error updateAttendanceCell:', upsertErr);

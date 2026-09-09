@@ -147,3 +147,7 @@ VALUES
 ('shift-malam', 'MALAM', 'Shift Malam (Security/Asrama)', '20:00:00', '06:00:00', 0, true, false, '#7c3aed', 'Shift malam penjagaan & pengawasan (20:00 - 06:00 WIB)', false),
 ('shift-off', 'OFF', 'Libur Shift (Bebas Tugas)', '00:00:00', '00:00:00', 0, false, true, '#64748b', 'Hari libur/lepas piket bagi pegawai sistem shift (bebas tap/alpha)', false)
 ON CONFLICT (id) DO NOTHING;
+
+-- 11. Kolom Tambahan (Migrasi Skema Opsional)
+ALTER TABLE daily_attendance ADD COLUMN IF NOT EXISTS is_cross_day BOOLEAN DEFAULT FALSE;
+
