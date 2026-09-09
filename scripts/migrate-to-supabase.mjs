@@ -80,9 +80,19 @@ async function runMigration() {
     const chunkSize = 200;
     for (let i = 0; i < dbData.employee_schedules.length; i += chunkSize) {
       const chunk = dbData.employee_schedules.slice(i, i + chunkSize);
-      const { error } = await supabase
+      let { error } = await supabase
         .from('employee_schedules')
         .upsert(chunk, { onConflict: 'employee_id,date' });
+
+      if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
+        // Fallback: strip extra properties if not in Supabase schema
+        const cleanChunk = chunk.map(({ employee_name, shift_code, shift_name, ...rest }) => rest);
+        const retry = await supabase
+          .from('employee_schedules')
+          .upsert(cleanChunk, { onConflict: 'employee_id,date' });
+        error = retry.error;
+      }
+
       if (error) console.error(`  Gagal chunk schedules ${i}:`, error.message);
     }
     console.log('  ✓ Berhasil migrasi penugasan jadwal pegawai.');
@@ -121,9 +131,18 @@ async function runMigration() {
   // 7. Migrate Audit Logs
   if (dbData.audit_logs && dbData.audit_logs.length > 0) {
     console.log(`Mengunggah ${dbData.audit_logs.length} riwayat audit log...`);
-    const { error } = await supabase
+    let { error } = await supabase
       .from('audit_logs')
       .upsert(dbData.audit_logs, { onConflict: 'id' });
+
+    if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
+      const cleanLogs = dbData.audit_logs.map(({ employee_name, ...rest }) => rest);
+      const retry = await supabase
+        .from('audit_logs')
+        .upsert(cleanLogs, { onConflict: 'id' });
+      error = retry.error;
+    }
+
     if (error) console.error('  Gagal audit_logs:', error.message);
     else console.log('  ✓ Berhasil migrasi audit logs.');
   }

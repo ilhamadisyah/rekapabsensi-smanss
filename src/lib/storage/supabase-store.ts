@@ -287,7 +287,11 @@ export const supabaseStore = {
       changed_at: new Date().toISOString(),
     };
 
-    await client.from('audit_logs').insert(audit);
+    let { error: auditErr } = await client.from('audit_logs').insert(audit);
+    if (auditErr && (auditErr.message.includes('column') || auditErr.message.includes('schema cache'))) {
+      const { employee_name, ...cleanAudit } = audit;
+      await client.from('audit_logs').insert(cleanAudit);
+    }
 
     return { success: true, record: recordToSave, audit };
   },
@@ -329,7 +333,14 @@ export const supabaseStore = {
       console.error('[Supabase] Error getAuditLogs:', error);
       return [];
     }
-    return data || [];
+
+    const employees = await this.getEmployees();
+    const empMap = new Map(employees.map((e) => [e.machine_id, e.full_name]));
+
+    return (data || []).map((log) => ({
+      ...log,
+      employee_name: log.employee_name || empMap.get(log.employee_id) || getEmployeeNameByMachineId(log.employee_id),
+    }));
   },
 
   // --- SHIFTS ---
@@ -424,7 +435,21 @@ export const supabaseStore = {
       console.error('[Supabase] Error getEmployeeSchedules:', error);
       return [];
     }
-    return data || [];
+
+    const shifts = await this.getShiftTemplates();
+    const shiftMap = new Map(shifts.map((s) => [s.id, s]));
+    const employees = await this.getEmployees();
+    const empMap = new Map(employees.map((e) => [e.machine_id, e.full_name]));
+
+    return (data || []).map((s) => {
+      const shift = shiftMap.get(s.shift_id);
+      return {
+        ...s,
+        employee_name: s.employee_name || empMap.get(s.employee_id) || getEmployeeNameByMachineId(s.employee_id),
+        shift_code: s.shift_code || shift?.code || 'NORM',
+        shift_name: s.shift_name || shift?.name || 'Jam Kerja Normal',
+      };
+    });
   },
 
   async getScheduleForEmployeeDate(employee_id: string, date: string): Promise<EmployeeSchedule | null> {
@@ -438,8 +463,18 @@ export const supabaseStore = {
       .eq('date', date)
       .maybeSingle();
 
-    if (error) return null;
-    return data;
+    if (error || !data) return null;
+
+    const shifts = await this.getShiftTemplates();
+    const shift = shifts.find((s) => s.id === data.shift_id);
+    const emp = (await this.getEmployees()).find((e) => e.machine_id === employee_id);
+
+    return {
+      ...data,
+      employee_name: data.employee_name || emp?.full_name || getEmployeeNameByMachineId(employee_id),
+      shift_code: data.shift_code || shift?.code || 'NORM',
+      shift_name: data.shift_name || shift?.name || 'Jam Kerja Normal',
+    };
   },
 
   async saveEmployeeSchedule(
@@ -479,9 +514,17 @@ export const supabaseStore = {
       updated_at: now,
     };
 
-    const { error } = await client
+    let { error } = await client
       .from('employee_schedules')
       .upsert(fullSchedule, { onConflict: 'employee_id,date' });
+
+    if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
+      const { employee_name, shift_code, shift_name, ...cleanSchedule } = fullSchedule;
+      const retry = await client
+        .from('employee_schedules')
+        .upsert(cleanSchedule, { onConflict: 'employee_id,date' });
+      error = retry.error;
+    }
 
     if (error) {
       console.error('[Supabase] Error saveEmployeeSchedule:', error);
@@ -524,9 +567,18 @@ export const supabaseStore = {
     const chunkSize = 200;
     for (let i = 0; i < payload.length; i += chunkSize) {
       const chunk = payload.slice(i, i + chunkSize);
-      const { error } = await client
+      let { error } = await client
         .from('employee_schedules')
         .upsert(chunk, { onConflict: 'employee_id,date' });
+
+      if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
+        const cleanChunk = chunk.map(({ employee_name, shift_code, shift_name, ...rest }) => rest);
+        const retry = await client
+          .from('employee_schedules')
+          .upsert(cleanChunk, { onConflict: 'employee_id,date' });
+        error = retry.error;
+      }
+
       if (error) {
         console.error('[Supabase] Error saveBulkEmployeeSchedules chunk:', error);
         throw new Error(error.message);
