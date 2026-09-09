@@ -105,13 +105,26 @@ export default function HomePage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (activeTab === 'matrix') {
+      loadData();
+    }
+  }, [activeTab, loadData]);
+
   // Handle cell click
   const handleCellClick = (
     employee: Employee,
     day: AttendanceMatrixDay,
     attendance: DailyAttendance | null
   ) => {
-    if (day.isWeekend) return;
+    const hasShiftDuty = Boolean(
+      attendance?.shift_id ||
+      attendance?.scheduled_start ||
+      attendance?.is_custom_schedule ||
+      attendance?.first_in ||
+      (attendance && (attendance.final_status as string) !== '-')
+    );
+    if (day.isWeekend && !hasShiftDuty) return;
     if (userRole === 'pimpinan') {
       showToast('Peran Pimpinan hanya memiliki hak akses baca (Read-Only).');
       return;

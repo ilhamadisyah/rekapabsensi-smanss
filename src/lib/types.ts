@@ -10,7 +10,9 @@ export type AttendanceCode =
   | 'PM'     // Permission (Izin Resmi)
   | 'OTL'    // Other Leave (Cuti Lainnya)
   | 'AL'     // Annual Leave (Cuti Tahunan)
-  | 'DL';    // Dinas Luar (Tugas Kedinasan)
+  | 'DL'     // Dinas Luar (Tugas Kedinasan)
+  | 'OFF'    // Libur Shift (Bebas Tugas)
+  | 'LIBUR'; // Hari Libur Nasional / Sekolah
 
 export interface AttendanceStatusInfo {
   code: AttendanceCode;
@@ -32,7 +34,7 @@ export const ATTENDANCE_STATUS_MAP: Record<AttendanceCode, AttendanceStatusInfo>
     category: 'present',
     excelCode: '',
     targetCol: '-',
-    description: 'Hadir Penuh Tepat Waktu (07:30 - 16:00 WIB, min 2 tap)',
+    description: 'Hadir Penuh Tepat Waktu (Sesuai Jam Shift / Operasional)',
     penaltyPoints: 0,
     bgHex: '#C6EFCE',
     textHex: '#006100',
@@ -146,6 +148,30 @@ export const ATTENDANCE_STATUS_MAP: Record<AttendanceCode, AttendanceStatusInfo>
     textHex: '#9C6500',
     tailwindClass: 'bg-[#FFEB9C] text-[#9C6500] border-[#ECC767]',
   },
+  OFF: {
+    code: 'OFF',
+    label: 'LIBUR SHIFT',
+    category: 'present',
+    excelCode: '',
+    targetCol: '-',
+    description: 'Libur Shift / Bebas Tugas (Bebas Denda Alpha)',
+    penaltyPoints: 0,
+    bgHex: '#F1F5F9',
+    textHex: '#475569',
+    tailwindClass: 'bg-slate-100 text-slate-600 border-slate-300',
+  },
+  LIBUR: {
+    code: 'LIBUR',
+    label: 'HARI LIBUR',
+    category: 'present',
+    excelCode: '',
+    targetCol: '-',
+    description: 'Hari Libur Tambahan / Nasional (Bebas Tugas)',
+    penaltyPoints: 0,
+    bgHex: '#FFE4E6',
+    textHex: '#BE123C',
+    tailwindClass: 'bg-rose-50 text-rose-700 border-rose-200',
+  },
 };
 
 export interface Employee {
@@ -184,6 +210,12 @@ export interface DailyAttendance {
   shift_id?: string;
   shift_code?: string;
   shift_name?: string;
+  shift_color?: string;
+  is_off_day?: boolean;
+  is_holiday?: boolean;
+  scheduled_start?: string | null;
+  scheduled_end?: string | null;
+  is_custom_schedule?: boolean;
   is_verified: boolean;
   verified_by?: string;
   updated_at: string;

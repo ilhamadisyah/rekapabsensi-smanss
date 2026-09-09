@@ -44,8 +44,12 @@ export async function POST(request: NextRequest) {
         holidayName: holiday?.name,
       };
 
-      // Only re-evaluate automatic statuses (HADIR or A) without overwriting manual excuse overrides like DL, I, IL, etc.
-      const isAutomaticStatus = rec.final_status === 'HADIR' || rec.final_status === 'A';
+      // Only re-evaluate automatic statuses without overwriting manual excuse overrides like DL, I, IL, PM, etc.
+      const isAutomaticStatus =
+        rec.final_status === 'HADIR' ||
+        rec.final_status === 'A' ||
+        rec.final_status === 'OFF' ||
+        rec.final_status === 'LIBUR';
 
       if (isAutomaticStatus) {
         const { systemStatus, finalStatus } = evaluateAttendanceStatus(
@@ -56,12 +60,18 @@ export async function POST(request: NextRequest) {
           scheduleContext
         );
 
-        if (rec.system_status !== systemStatus || rec.final_status !== finalStatus) {
+        if (
+          rec.system_status !== systemStatus ||
+          rec.final_status !== finalStatus ||
+          rec.shift_id !== shift?.id
+        ) {
           rec.system_status = systemStatus;
           rec.final_status = finalStatus;
           rec.shift_id = shift?.id;
           rec.shift_code = shift?.code;
           rec.shift_name = shift?.name;
+          rec.is_off_day = shift?.is_off_day;
+          rec.is_holiday = Boolean(holiday);
           rec.updated_at = new Date().toISOString();
           updatedCount++;
         }

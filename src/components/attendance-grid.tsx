@@ -206,16 +206,24 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
     let sickCount = 0; // I or IL
 
     days.forEach((d) => {
-      if (d.isWeekend) return;
-      const isRecorded = recordedDays.length > 0 ? recordedDays.includes(d.day) : true;
       const rec = empAttendance[d.day];
+      const isRecorded = recordedDays.length > 0 ? recordedDays.includes(d.day) : true;
+      const isWeekend = d.isWeekend;
+      const hasDuty = Boolean(rec?.shift_id || rec?.scheduled_start || rec?.is_custom_schedule);
+      const isOff = rec?.is_off_day || rec?.final_status === 'OFF';
+      const isHol = rec?.is_holiday || Boolean(d.holiday) || rec?.final_status === 'LIBUR';
+
+      // Non-working day: weekend without duty, scheduled OFF day, or holiday without duty
+      if ((isWeekend && !hasDuty && !rec?.first_in) || isOff || (isHol && !hasDuty && !rec?.first_in)) {
+        return;
+      }
 
       if (isRecorded) {
         if (!rec || rec.final_status === 'A') {
           alphaCount++;
         } else if (rec.final_status === 'HADIR') {
           hadirCount++;
-        } else {
+        } else if (rec.final_status !== 'OFF' && rec.final_status !== 'LIBUR') {
           permissionCount++;
           if (rec.final_status === 'HIP') lateCount++;
           if (rec.final_status === 'HIS') earlyCount++;
@@ -226,7 +234,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
         if (rec && rec.is_verified) {
           if (rec.final_status === 'HADIR') {
             hadirCount++;
-          } else if (rec.final_status !== 'A') {
+          } else if (rec.final_status !== 'A' && rec.final_status !== 'OFF' && rec.final_status !== 'LIBUR') {
             permissionCount++;
             if (rec.final_status === 'HIP') lateCount++;
             if (rec.final_status === 'HIS') earlyCount++;
@@ -702,23 +710,71 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                     {days.map((d) => {
                       const rec = empAttendance[d.day];
                       const isWeekend = d.isWeekend;
+                      const hasAssignedDuty = Boolean(rec?.shift_id || rec?.scheduled_start || rec?.is_custom_schedule);
+                      const isRecorded = recordedDays.length > 0 ? recordedDays.includes(d.day) : true;
+                      const isManuallyVerified = rec && rec.is_verified;
 
-                      if (isWeekend) {
+                      // 1. Weekend WITHOUT assigned shift duty, no punches, and not manually verified
+                      if (isWeekend && !hasAssignedDuty && !rec?.first_in && !isManuallyVerified) {
                         return (
                           <td
                             key={`cell-${emp.id}-${d.day}`}
                             className="w-[42px] min-w-[42px] max-w-[42px] p-0 text-center border-r border-slate-200 bg-weekend-pattern opacity-60 cursor-not-allowed select-none box-border"
-                            title={`Akhir Pekan (${d.dayName})`}
+                            title={`Akhir Pekan (${d.dayName}) - Libur Rutin`}
                           >
                             <span className="text-[9px] text-slate-400 select-none">•</span>
                           </td>
                         );
                       }
 
-                      const isRecorded = recordedDays.length > 0 ? recordedDays.includes(d.day) : true;
-                      const isManuallyVerified = rec && rec.is_verified;
-                      const isUnrecordedEmpty = !isRecorded && !isManuallyVerified;
+                      // 2. Explicit OFF day (Libur Shift / Bebas Tugas)
+                      if (rec?.final_status === 'OFF' || rec?.is_off_day) {
+                        return (
+                          <td
+                            key={`cell-${emp.id}-${d.day}`}
+                            onClick={() => {
+                              if (userRole === 'pimpinan') return;
+                              onCellClick(emp, d, rec || null);
+                            }}
+                            className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-200 bg-slate-100/90 hover:bg-slate-200 transition-all font-semibold select-none cursor-pointer box-border"
+                            title={`${emp.full_name} | Tgl ${d.day}: Libur Shift / Bebas Tugas (Klik untuk ganti shift/izin)`}
+                          >
+                            <div className="w-full h-full flex flex-col items-center justify-center">
+                              <span className="px-1 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-600 border border-slate-300 shadow-2xs">
+                                OFF
+                              </span>
+                            </div>
+                          </td>
+                        );
+                      }
 
+                      // 3. Holiday (Hari Libur Tambahan / Nasional) without active work duty
+                      if (
+                        (rec?.final_status === 'LIBUR' || (d.holiday && !hasAssignedDuty)) &&
+                        !rec?.first_in &&
+                        !isManuallyVerified
+                      ) {
+                        return (
+                          <td
+                            key={`cell-${emp.id}-${d.day}`}
+                            onClick={() => {
+                              if (userRole === 'pimpinan') return;
+                              onCellClick(emp, d, rec || null);
+                            }}
+                            className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-200 bg-rose-50/70 hover:bg-rose-100 transition-all font-semibold select-none cursor-pointer box-border"
+                            title={`${emp.full_name} | Tgl ${d.day}: ${d.holiday?.name || rec?.shift_name || 'Hari Libur'} (Bebas Tugas)`}
+                          >
+                            <div className="w-full h-full flex flex-col items-center justify-center">
+                              <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200 shadow-2xs">
+                                LIBUR
+                              </span>
+                            </div>
+                          </td>
+                        );
+                      }
+
+                      // 4. Unrecorded empty cell (future dates / logs not uploaded yet)
+                      const isUnrecordedEmpty = !isRecorded && !isManuallyVerified;
                       if (isUnrecordedEmpty) {
                         return (
                           <td
@@ -727,23 +783,32 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                               if (userRole === 'pimpinan') return;
                               onCellClick(emp, d, rec || null);
                             }}
-                            className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-200 bg-slate-100/70 hover:bg-slate-200/70 transition-all font-medium select-none cursor-pointer box-border"
-                            title={`${emp.full_name} | Tgl ${d.day}: Belum Terekap (Log Belum Tersedia - Klik untuk Verifikasi/Izin)`}
+                            className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-200 bg-slate-100/70 hover:bg-slate-200/70 transition-all font-medium select-none cursor-pointer box-border relative group/cell"
+                            title={`${emp.full_name} | Tgl ${d.day}: Belum Terekap ${rec?.shift_name ? `(Jadwal: ${rec.shift_name})` : ''}`}
                           >
                             <div className="w-full h-full flex flex-col items-center justify-center">
                               <span className="text-[11px] font-semibold text-slate-300 select-none">
                                 -
                               </span>
+                              {rec?.is_custom_schedule && rec?.shift_code && rec.shift_code !== 'NORM' && (
+                                <span
+                                  className="absolute bottom-0.5 right-0.5 text-[8px] font-extrabold px-0.5 rounded leading-none text-white opacity-90 shadow-2xs"
+                                  style={{ backgroundColor: rec.shift_color || '#3b82f6' }}
+                                >
+                                  {rec?.shift_code?.substring(0, 3)}
+                                </span>
+                              )}
                             </div>
                           </td>
                         );
                       }
 
+                      // 5. Active recorded / evaluated cell
                       const finalStatus: AttendanceCode = rec ? rec.final_status : 'A';
                       const statusInfo = ATTENDANCE_STATUS_MAP[finalStatus];
                       const isHadir = finalStatus === 'HADIR';
                       const isAlpha = finalStatus === 'A';
-                      const isVerified = !isHadir && !isAlpha;
+                      const isCustomShift = rec?.is_custom_schedule && rec?.shift_code && rec.shift_code !== 'NORM';
 
                       return (
                         <td
@@ -762,14 +827,14 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                             });
                           }}
                           onMouseLeave={() => setHoveredCell(null)}
-                          className={`w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-200 transition-all font-bold select-none cursor-pointer box-border ${
+                          className={`w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-200 transition-all font-bold select-none cursor-pointer box-border relative ${
                             isHadir
                               ? 'bg-[#C6EFCE] text-[#006100] hover:brightness-95'
                               : isAlpha
                               ? 'bg-[#FFC7CE] text-[#9C0006] hover:brightness-95 animate-pulse-subtle'
                               : 'bg-[#FFEB9C] text-[#9C6500] hover:brightness-95'
                           }`}
-                          title={`${emp.full_name} | Tgl ${d.day}: ${statusInfo?.label || finalStatus}`}
+                          title={`${emp.full_name} | Tgl ${d.day}: ${statusInfo?.label || finalStatus}${rec?.shift_name ? ` (${rec.shift_name})` : ''}`}
                         >
                           <div className="w-full h-full flex flex-col items-center justify-center">
                             {isHadir ? (
@@ -777,6 +842,15 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                             ) : (
                               <span className="text-xs leading-none tracking-tight font-black">
                                 {finalStatus}
+                              </span>
+                            )}
+                            {Boolean(isCustomShift && rec?.shift_code) && (
+                              <span
+                                className="absolute bottom-0.5 right-0.5 text-[7px] font-black px-0.5 rounded leading-none text-white shadow-2xs"
+                                style={{ backgroundColor: rec?.shift_color || '#3b82f6' }}
+                                title={rec?.shift_name}
+                              >
+                                {rec?.shift_code?.substring(0, 3)}
                               </span>
                             )}
                           </div>
@@ -800,7 +874,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
             <span className="inline-block w-4 h-4 rounded bg-[#C6EFCE] border border-[#93D097] text-[#006100] text-center font-bold text-[10px] leading-4">
               ✓
             </span>
-            <span className="text-slate-600">Hadir (07:30 - 16:00 WIB)</span>
+            <span className="text-slate-600">Hadir (Sesuai Jam Shift / Operasional)</span>
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -808,6 +882,20 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
               A
             </span>
             <span className="text-slate-600 font-semibold text-rose-700">Alpha / Tanpa Info (-3 Poin)</span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block px-1.5 h-4 rounded bg-slate-100 border border-slate-300 text-slate-600 text-center font-bold text-[9px] leading-4">
+              OFF
+            </span>
+            <span className="text-slate-600">Libur Shift (Bebas Tugas)</span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block px-1.5 h-4 rounded bg-rose-50 border border-rose-200 text-rose-700 text-center font-bold text-[9px] leading-4">
+              LIBUR
+            </span>
+            <span className="text-slate-600">Hari Libur Tambahan</span>
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -840,7 +928,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
 
           <div className="flex items-center gap-1.5">
             <span className="inline-block w-4 h-4 rounded bg-slate-200 border border-slate-300"></span>
-            <span className="text-slate-400">Sabtu / Minggu (Libur)</span>
+            <span className="text-slate-400">Sabtu / Minggu (Libur Rutin)</span>
           </div>
         </div>
 

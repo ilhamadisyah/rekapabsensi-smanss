@@ -258,7 +258,10 @@ export function evaluateAttendanceStatus(
 ): { systemStatus: 'HADIR' | 'TIDAK_HADIR'; finalStatus: AttendanceCode } {
   // 1. If schedule explicitly designates this as an OFF day (libur shift)
   if (scheduleContext?.isOffDay) {
-    return { systemStatus: 'HADIR', finalStatus: 'HADIR' };
+    if (firstIn && (lastOut || tapCount >= 1)) {
+      return { systemStatus: 'HADIR', finalStatus: 'HADIR' };
+    }
+    return { systemStatus: 'HADIR', finalStatus: 'OFF' };
   }
 
   // 2. If date is a designated Blackout Holiday (Hari Libur Tambahan / Nasional / Sekolah)
@@ -272,7 +275,7 @@ export function evaluateAttendanceStatus(
       return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
     }
     // Case C: Regular employee without duty shift on holiday -> Exempt from Alpha penalty
-    return { systemStatus: 'HADIR', finalStatus: 'HADIR' };
+    return { systemStatus: 'HADIR', finalStatus: 'LIBUR' };
   }
 
   // 3. Regular weekend with no assigned active work shift

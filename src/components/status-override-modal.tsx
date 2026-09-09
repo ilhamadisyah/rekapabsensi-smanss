@@ -90,6 +90,18 @@ const STATUS_DISPLAY_CONFIG: Record<AttendanceCode, {
     badgeText: 'text-rose-800',
     badgeBorder: 'border-rose-300',
   },
+  OFF: {
+    title: 'Libur Shift (Bebas Tugas)',
+    badgeBg: 'bg-slate-100',
+    badgeText: 'text-slate-800',
+    badgeBorder: 'border-slate-300',
+  },
+  LIBUR: {
+    title: 'Hari Libur Tambahan',
+    badgeBg: 'bg-rose-100',
+    badgeText: 'text-rose-800',
+    badgeBorder: 'border-rose-300',
+  },
 };
 
 const ORDERED_STATUS_LIST: AttendanceCode[] = [
@@ -102,6 +114,8 @@ const ORDERED_STATUS_LIST: AttendanceCode[] = [
   'HIP',
   'HIS',
   'I',
+  'OFF',
+  'LIBUR',
   'A',
 ];
 

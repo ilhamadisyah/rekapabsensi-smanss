@@ -52,7 +52,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
             )}
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Jam Operasional Resmi: <span className="font-semibold text-slate-700">07:30 s/d 16:00 WIB</span> | Hari Kerja Efektif: <span className="font-semibold text-slate-700">{summary.totalWorkingDays} Hari</span>
+            Jam Operasional: <span className="font-semibold text-slate-700">Tersinkron dengan Jadwal &amp; Shift Pegawai</span> | Hari Kerja Efektif: <span className="font-semibold text-slate-700">{summary.totalWorkingDays} Hari</span>
           </p>
         </div>
 
@@ -103,7 +103,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
             <span className="text-xs text-emerald-700 font-medium">Hadir Tepat Waktu</span>
           </div>
           <div className="mt-2 text-[11px] text-slate-500">
-            Berdasarkan jam masuk &lt;= 07:30 &amp; pulang &gt;= 16:00 WIB
+            Dihitung berdasarkan kesesuaian jam shift &amp; jadwal masing-masing pegawai
           </div>
         </div>
 
