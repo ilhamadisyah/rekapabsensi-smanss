@@ -1,0 +1,1208 @@
+import { Employee } from '../types';
+
+export const KNOWN_MACHINE_ID_NAMES: Record<string, string> = {
+  "5": "EKO VALERY FREDDIE, S.E, M.Pd",
+  "9": "KURNIAWATI, M.Pd",
+  "13": "ARMANSYAH,S.Kom. M.Pd",
+  "15": "RIEFKA ANNISA PRILYTA, S.Pd",
+  "25": "NUR PADMI TYASTUTI, S.Pd, M.T",
+  "33": "ERPADELLAH, S.Pd",
+  "34": "M. AMIRUDDIN, S.Pd., M.Pd.",
+  "35": "FARIDA HASMI, S.E",
+  "43": "DEBBY LEONELLA, A.Md",
+  "48": "NANAK SUPRIYATNA",
+  "54": "MICO RUSWANTO",
+  "55": "IRFAN DWI CAHYA",
+  "58": "OLIN REYNALDI",
+  "60": "BASRI",
+  "62": "SOBIRIN",
+  "63": "WAWAN",
+  "67": "ERWIN SETYONO",
+  "69": "SUPRIADI",
+  "70": "ADI CANDRA",
+  "71": "HERI IRAWAN",
+  "79": "DIAN NOVITA, S.Pd",
+  "81": "ARIS WIBOWO, M.Kom.",
+  "83": "MARDIANTO",
+  "84": "ADE FEBRI AFRINANTO",
+  "85": "RAMADANSYAH, S.Pd",
+  "86": "MALISA OKTARINA, S.Pd",
+  "92": "ELIZAH, S.Pd",
+  "95": "NENENG KHAIRANI, M.Pd",
+  "101": "KMS. FANI HASYIM",
+  "108": "GUSTI AGUSTINA",
+  "130": "MUHAMMAD RIFQI, M.Pd.",
+  "135": "BAGUS ABDILLAH, M.Pd",
+  "140": "RANANDA VINSIAH, S.Pd.,M.Si",
+  "141": "EGA NIRMALA, S.Pd",
+  "142": "NOVIANTI ISLAHIAH, S.Pd.,M.Ed.",
+  "143": "SUCI WULANDARY, S.Pd",
+  "145": "MADIYANSYAH, S.Sos.I.,M.Pd.I",
+  "153": "SRI MULYATI, S.Pd.,M.Hum.",
+  "155": "BAGUS ABDILLAH, M.Pd",
+  "157": "ISWAN DJATI KUSUMA, S.Pd, M.Si",
+  "165": "ROHANA",
+  "166": "SINGGIH BINTANG, A.Md.Par",
+  "171": "YENI VIFI KUSUMAWATI",
+  "174": "AGAM AULIA FAHLEVI, S.Pd., M.M.",
+  "175": "ANDRI",
+  "176": "YULIANSYAH",
+  "177": "DEWI KRISNAWATI, S.IP",
+  "182": "AHMAD ARIYADI, S.Ag",
+  "184": "ZIE",
+  "186": "RAHMA TRI KUSUMA, S.Pd",
+  "188": "MEIYADI",
+  "190": "LIEYANA",
+  "193": "TITI",
+  "194": "MARTANDI",
+  "200": "DIAN JULIA SILVIANI, A.Md.",
+  "202": "TATI",
+  "204": "Bdn. KHALDA TIARA PUTRI, S.Tr.Keb.",
+  "207": "RILLO ABYUDAYA",
+  "209": "YUNI EKA SARI, S.Pd.",
+  "210": "ANNISA HIDAYATI, S.Tr.T",
+  "212": "SINTA HELYAWAN, S.Pd.",
+  "213": "RANDI PUTRA RAMADHON, S.Pd.",
+  "217": "ADELIA RAMADANTHI, A.Md.T",
+  "219": "BAYU AJI NURCAHYANTO",
+  "220": "CHANDRA ADI KIRANA",
+  "221": "AZZAM PASAH",
+  "222": "USWATUN",
+  "224": "MUH. MIFTACHUDIN, S.E.Sy",
+  "225": "NOVIE TRI ARDIANSYAH",
+  "226": "AGUNG PRIBADI",
+  "227": "SAMARI, S.Pd.,M.Pd.",
+  "228": "AGIK AGDILA, S.Pd.,M.Pd.",
+  "229": "LARAS RASMITA, S.Psi.",
+  "234": "Bdn. MALA RISPA, S.Tr.Keb.",
+  "236": "ANNISA SEPTIANI, S.Pd.",
+  "238": "LEONARDO JONATHAN SHINARIKO, M.Pd.",
+  "239": "AHYU KHURIN NUROH, S.Pd",
+  "240": "JIHAN YULIANTI, S.IP.",
+  "241": "LUSI LESTARI, S. Ag",
+  "242": "REZA GUNAWAN",
+  "243": "MUHAMMAD RIFKI FERNIARDO",
+  "244": "FETA LARA SARI",
+  "247": "M. KHAIDIR",
+  "249": "IIS GUNAWAN",
+  "250": "AKMAL NAZIR",
+  "251": "DENI PRATAMA",
+  "252": "FERIANTO",
+  "254": "M IQBAL RIZKY",
+  "255": "WIRASWASTANA",
+  "256": "DEWI SUSANTI",
+  "257": "ANNISA (LAB)",
+  "258": "ILHAM MEE",
+  "259": "MIFTA OCTAVIANDIE",
+  "260": "TRI SECURITY",
+  "261": "Pegawai 261",
+  "262": "Pegawai 262",
+  "1020": "HANDAYANI, M.Pd.",
+  "1042": "ARESTI RANDIKA, M.Pd",
+  "1044": "ANISAH RAHMADAN PUTRI, S.Pd.",
+  "1045": "WANDA LISTYANINGSIH, S.SI., M.Sc.",
+  "1066": "TIO SULTAN IBRANOV",
+  "1067": "CHITIA MAURINDA PUTRI, S.Ag",
+  "1079": "MULYA",
+  "1085": "BAGUS TRIWAHYU",
+  "1094": "HIDAYATULLAH",
+  "1097": "MOEHAMMAD NAJIRIN",
+  "1099": "WINARTI, A.Ma.Pust."
+};
+
+export function getEmployeeNameByMachineId(machineId: string, fallbackName?: string): string {
+  const cleanId = String(machineId || '').trim().replace(/\.0$/, '');
+  if (KNOWN_MACHINE_ID_NAMES[cleanId]) {
+    return KNOWN_MACHINE_ID_NAMES[cleanId];
+  }
+  if (fallbackName && fallbackName.trim() && !fallbackName.toLowerCase().includes('pegawai id') && !fallbackName.toLowerCase().includes('(id:')) {
+    return fallbackName.trim();
+  }
+  const emp = INITIAL_EMPLOYEES.find((e) => e.machine_id === cleanId);
+  if (emp && emp.full_name) {
+    return emp.full_name;
+  }
+  return fallbackName && fallbackName.trim() ? fallbackName.trim() : ('Pegawai ' + cleanId);
+}
+
+export const INITIAL_EMPLOYEES: Employee[] = [
+  {
+    "id": "emp-17",
+    "machine_id": "157",
+    "nik": "1671010017",
+    "full_name": "ISWAN DJATI KUSUMA, S.Pd, M.Si",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 17,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-18",
+    "machine_id": "5",
+    "nik": "1671010018",
+    "full_name": "EKO VALERY FREDDIE, S.E, M.Pd",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 18,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-19",
+    "machine_id": "9",
+    "nik": "1671010019",
+    "full_name": "KURNIAWATI, M.Pd",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 19,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-20",
+    "machine_id": "1020",
+    "nik": "1671010020",
+    "full_name": "HANDAYANI, M.Pd.",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 20,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-21",
+    "machine_id": "34",
+    "nik": "1671010021",
+    "full_name": "M. AMIRUDDIN, S.Pd., M.Pd.",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 21,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-22",
+    "machine_id": "228",
+    "nik": "1671010022",
+    "full_name": "AGIK AGDILA, S.Pd.,M.Pd.",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 22,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-23",
+    "machine_id": "25",
+    "nik": "1671010023",
+    "full_name": "NUR PADMI TYASTUTI, S.Pd, M.T",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 23,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-24",
+    "machine_id": "33",
+    "nik": "1671010024",
+    "full_name": "ERPADELLAH, S.Pd",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 24,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-25",
+    "machine_id": "92",
+    "nik": "1671010025",
+    "full_name": "ELIZAH, S.Pd",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 25,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-26",
+    "machine_id": "95",
+    "nik": "1671010026",
+    "full_name": "NENENG KHAIRANI, M.Pd",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 26,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-27",
+    "machine_id": "79",
+    "nik": "1671010027",
+    "full_name": "DIAN NOVITA, S.Pd",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 27,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-28",
+    "machine_id": "85",
+    "nik": "1671010028",
+    "full_name": "RAMADANSYAH, S.Pd",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 28,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-29",
+    "machine_id": "86",
+    "nik": "1671010029",
+    "full_name": "MALISA OKTARINA, S.Pd",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 29,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-30",
+    "machine_id": "227",
+    "nik": "1671010030",
+    "full_name": "SAMARI, S.Pd.,M.Pd.",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 30,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-31",
+    "machine_id": "130",
+    "nik": "1671010031",
+    "full_name": "MUHAMMAD RIFQI, M.Pd.",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 31,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-32",
+    "machine_id": "142",
+    "nik": "1671010032",
+    "full_name": "NOVIANTI ISLAHIAH, S.Pd.,M.Ed.",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 32,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-33",
+    "machine_id": "141",
+    "nik": "1671010033",
+    "full_name": "EGA NIRMALA, S.Pd",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 33,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-34",
+    "machine_id": "145",
+    "nik": "1671010034",
+    "full_name": "MADIYANSYAH, S.Sos.I.,M.Pd.I",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 34,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-35",
+    "machine_id": "140",
+    "nik": "1671010035",
+    "full_name": "RANANDA VINSIAH, S.Pd.,M.Si",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 35,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-36",
+    "machine_id": "143",
+    "nik": "1671010036",
+    "full_name": "SUCI WULANDARY, S.Pd",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 36,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-37",
+    "machine_id": "13",
+    "nik": "1671010037",
+    "full_name": "ARMANSYAH,S.Kom. M.Pd",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 37,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-38",
+    "machine_id": "15",
+    "nik": "1671010038",
+    "full_name": "RIEFKA ANNISA PRILYTA, S.Pd",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 38,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-39",
+    "machine_id": "135",
+    "nik": "1671010039",
+    "full_name": "BAGUS ABDILLAH, M.Pd",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 39,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-40",
+    "machine_id": "153",
+    "nik": "1671010040",
+    "full_name": "SRI MULYATI, S.Pd.,M.Hum.",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 40,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-41",
+    "machine_id": "186",
+    "nik": "1671010041",
+    "full_name": "RAHMA TRI KUSUMA, S.Pd",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 41,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-42",
+    "machine_id": "1042",
+    "nik": "1671010042",
+    "full_name": "ARESTI RANDIKA, M.Pd",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 42,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-43",
+    "machine_id": "209",
+    "nik": "1671010043",
+    "full_name": "YUNI EKA SARI, S.Pd.",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 43,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-44",
+    "machine_id": "1044",
+    "nik": "1671010044",
+    "full_name": "ANISAH RAHMADAN PUTRI, S.Pd.",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 44,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-45",
+    "machine_id": "1045",
+    "nik": "1671010045",
+    "full_name": "WANDA LISTYANINGSIH, S.SI., M.Sc.",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 45,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-46",
+    "machine_id": "212",
+    "nik": "1671010046",
+    "full_name": "SINTA HELYAWAN, S.Pd.",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 46,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-47",
+    "machine_id": "213",
+    "nik": "1671010047",
+    "full_name": "RANDI PUTRA RAMADHON, S.Pd.",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 47,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-48",
+    "machine_id": "229",
+    "nik": "1671010048",
+    "full_name": "LARAS RASMITA, S.Psi.",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 48,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-49",
+    "machine_id": "238",
+    "nik": "1671010049",
+    "full_name": "LEONARDO JONATHAN SHINARIKO, M.Pd.",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 49,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-50",
+    "machine_id": "236",
+    "nik": "1671010050",
+    "full_name": "ANNISA SEPTIANI, S.Pd.",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 50,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-51",
+    "machine_id": "35",
+    "nik": "1671010051",
+    "full_name": "FARIDA HASMI, S.E",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 51,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-52",
+    "machine_id": "48",
+    "nik": "1671010052",
+    "full_name": "NANAK SUPRIYATNA",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 52,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-53",
+    "machine_id": "58",
+    "nik": "1671010053",
+    "full_name": "OLIN REYNALDI",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 53,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-54",
+    "machine_id": "43",
+    "nik": "1671010054",
+    "full_name": "DEBBY LEONELLA, A.Md",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 54,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-55",
+    "machine_id": "54",
+    "nik": "1671010055",
+    "full_name": "MICO RUSWANTO",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 55,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-56",
+    "machine_id": "55",
+    "nik": "1671010056",
+    "full_name": "IRFAN DWI CAHYA",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 56,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-57",
+    "machine_id": "60",
+    "nik": "1671010057",
+    "full_name": "BASRI",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 57,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-58",
+    "machine_id": "174",
+    "nik": "1671010058",
+    "full_name": "AGAM AULIA FAHLEVI, S.Pd., M.M.",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 58,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-59",
+    "machine_id": "177",
+    "nik": "1671010059",
+    "full_name": "DEWI KRISNAWATI, S.IP",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 59,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-60",
+    "machine_id": "182",
+    "nik": "1671010060",
+    "full_name": "AHMAD ARIYADI, S.Ag",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 60,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-61",
+    "machine_id": "241",
+    "nik": "1671010061",
+    "full_name": "LUSI LESTARI, S. Ag",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 61,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-62",
+    "machine_id": "239",
+    "nik": "1671010062",
+    "full_name": "AHYU KHURIN NUROH, S.Pd",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 62,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-63",
+    "machine_id": "242",
+    "nik": "1671010063",
+    "full_name": "REZA GUNAWAN",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 63,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-64",
+    "machine_id": "243",
+    "nik": "1671010064",
+    "full_name": "MUHAMMAD RIFKI FERNIARDO",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 64,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-65",
+    "machine_id": "244",
+    "nik": "1671010065",
+    "full_name": "FETA LARA SARI",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 65,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-66",
+    "machine_id": "1066",
+    "nik": "1671010066",
+    "full_name": "TIO SULTAN IBRANOV",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 66,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-67",
+    "machine_id": "1067",
+    "nik": "1671010067",
+    "full_name": "CHITIA MAURINDA PUTRI, S.Ag",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 67,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-68",
+    "machine_id": "200",
+    "nik": "1671010068",
+    "full_name": "DIAN JULIA SILVIANI, A.Md.",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 68,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-69",
+    "machine_id": "204",
+    "nik": "1671010069",
+    "full_name": "Bdn. KHALDA TIARA PUTRI, S.Tr.Keb.",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 69,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-70",
+    "machine_id": "234",
+    "nik": "1671010070",
+    "full_name": "Bdn. MALA RISPA, S.Tr.Keb.",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 70,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-71",
+    "machine_id": "217",
+    "nik": "1671010071",
+    "full_name": "ADELIA RAMADANTHI, A.Md.T",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 71,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-72",
+    "machine_id": "210",
+    "nik": "1671010072",
+    "full_name": "ANNISA HIDAYATI, S.Tr.T",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 72,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-73",
+    "machine_id": "240",
+    "nik": "1671010073",
+    "full_name": "JIHAN YULIANTI, S.IP.",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 73,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-74",
+    "machine_id": "81",
+    "nik": "1671010074",
+    "full_name": "ARIS WIBOWO, M.Kom.",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 74,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-75",
+    "machine_id": "207",
+    "nik": "1671010075",
+    "full_name": "RILLO ABYUDAYA",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 75,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-76",
+    "machine_id": "84",
+    "nik": "1671010076",
+    "full_name": "ADE FEBRI AFRINANTO",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 76,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-77",
+    "machine_id": "62",
+    "nik": "1671010077",
+    "full_name": "SOBIRIN",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 77,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-78",
+    "machine_id": "101",
+    "nik": "1671010078",
+    "full_name": "KMS. FANI HASYIM",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 78,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-79",
+    "machine_id": "1079",
+    "nik": "1671010079",
+    "full_name": "MULYA",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 79,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-80",
+    "machine_id": "108",
+    "nik": "1671010080",
+    "full_name": "GUSTI AGUSTINA",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 80,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-81",
+    "machine_id": "221",
+    "nik": "1671010081",
+    "full_name": "AZZAM PASAH",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 81,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-82",
+    "machine_id": "249",
+    "nik": "1671010082",
+    "full_name": "IIS GUNAWAN",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 82,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-83",
+    "machine_id": "250",
+    "nik": "1671010083",
+    "full_name": "AKMAL NAZIR",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 83,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-84",
+    "machine_id": "70",
+    "nik": "1671010084",
+    "full_name": "ADI CANDRA",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 84,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-85",
+    "machine_id": "1085",
+    "nik": "1671010085",
+    "full_name": "BAGUS TRIWAHYU",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 85,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-86",
+    "machine_id": "83",
+    "nik": "1671010086",
+    "full_name": "MARDIANTO",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 86,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-87",
+    "machine_id": "67",
+    "nik": "1671010087",
+    "full_name": "ERWIN SETYONO",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 87,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-88",
+    "machine_id": "194",
+    "nik": "1671010088",
+    "full_name": "MARTANDI",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 88,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-89",
+    "machine_id": "166",
+    "nik": "1671010089",
+    "full_name": "SINGGIH BINTANG, A.Md.Par",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 89,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-90",
+    "machine_id": "224",
+    "nik": "1671010090",
+    "full_name": "MUH. MIFTACHUDIN, S.E.Sy",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 90,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-91",
+    "machine_id": "190",
+    "nik": "1671010091",
+    "full_name": "LIEYANA",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 91,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-92",
+    "machine_id": "165",
+    "nik": "1671010092",
+    "full_name": "ROHANA",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 92,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-93",
+    "machine_id": "171",
+    "nik": "1671010093",
+    "full_name": "YENI VIFI KUSUMAWATI",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 93,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-94",
+    "machine_id": "1094",
+    "nik": "1671010094",
+    "full_name": "HIDAYATULLAH",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 94,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-95",
+    "machine_id": "175",
+    "nik": "1671010095",
+    "full_name": "ANDRI",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 95,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-96",
+    "machine_id": "176",
+    "nik": "1671010096",
+    "full_name": "YULIANSYAH",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 96,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-97",
+    "machine_id": "1097",
+    "nik": "1671010097",
+    "full_name": "MOEHAMMAD NAJIRIN",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 97,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-98",
+    "machine_id": "188",
+    "nik": "1671010098",
+    "full_name": "MEIYADI",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 98,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-99",
+    "machine_id": "1099",
+    "nik": "1671010099",
+    "full_name": "WINARTI, A.Ma.Pust.",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 99,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-100",
+    "machine_id": "252",
+    "nik": "1671010100",
+    "full_name": "FERIANTO",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 100,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-101",
+    "machine_id": "256",
+    "nik": "1671010101",
+    "full_name": "DEWI SUSANTI",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 101,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-102",
+    "machine_id": "255",
+    "nik": "1671010102",
+    "full_name": "WIRASWASTANA",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 102,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-103",
+    "machine_id": "69",
+    "nik": "1671010103",
+    "full_name": "SUPRIADI",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 103,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-104",
+    "machine_id": "219",
+    "nik": "1671010104",
+    "full_name": "BAYU AJI NURCAHYANTO",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 104,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-105",
+    "machine_id": "220",
+    "nik": "1671010105",
+    "full_name": "CHANDRA ADI KIRANA",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 105,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-106",
+    "machine_id": "225",
+    "nik": "1671010106",
+    "full_name": "NOVIE TRI ARDIANSYAH",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 106,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-107",
+    "machine_id": "226",
+    "nik": "1671010107",
+    "full_name": "AGUNG PRIBADI",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 107,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-108",
+    "machine_id": "247",
+    "nik": "1671010108",
+    "full_name": "M. KHAIDIR",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 108,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-109",
+    "machine_id": "251",
+    "nik": "1671010109",
+    "full_name": "DENI PRATAMA",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 109,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-110",
+    "machine_id": "254",
+    "nik": "1671010110",
+    "full_name": "M IQBAL RIZKY",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 110,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-111",
+    "machine_id": "71",
+    "nik": "1671010111",
+    "full_name": "HERI IRAWAN",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 111,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-extra-63",
+    "machine_id": "63",
+    "nik": "1671010112",
+    "full_name": "WAWAN",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 112,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-extra-184",
+    "machine_id": "184",
+    "nik": "1671010113",
+    "full_name": "ZIE",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 113,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-extra-193",
+    "machine_id": "193",
+    "nik": "1671010114",
+    "full_name": "TITI",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 114,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-extra-202",
+    "machine_id": "202",
+    "nik": "1671010115",
+    "full_name": "TATI",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 115,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-extra-222",
+    "machine_id": "222",
+    "nik": "1671010116",
+    "full_name": "USWATUN",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 116,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-extra-257",
+    "machine_id": "257",
+    "nik": "1671010117",
+    "full_name": "ANNISA (LAB)",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 117,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-extra-258",
+    "machine_id": "258",
+    "nik": "1671010118",
+    "full_name": "ILHAM MEE",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 118,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-extra-259",
+    "machine_id": "259",
+    "nik": "1671010119",
+    "full_name": "MIFTA OCTAVIANDIE",
+    "department": "Tenaga Kependidikan (TU)",
+    "excel_row_index": 119,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-extra-260",
+    "machine_id": "260",
+    "nik": "1671010120",
+    "full_name": "TRI SECURITY",
+    "department": "Tenaga Keamanan (Security)",
+    "excel_row_index": 120,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-extra-261",
+    "machine_id": "261",
+    "nik": "1671010121",
+    "full_name": "Pegawai 261",
+    "department": "Pegawai",
+    "excel_row_index": 121,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-extra-262",
+    "machine_id": "262",
+    "nik": "1671010122",
+    "full_name": "Pegawai 262",
+    "department": "Pegawai",
+    "excel_row_index": 122,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  },
+  {
+    "id": "emp-extra-155",
+    "machine_id": "155",
+    "nik": "1671010123",
+    "full_name": "BAGUS ABDILLAH, M.Pd",
+    "department": "Tenaga Pendidik (Guru)",
+    "excel_row_index": 123,
+    "is_active": true,
+    "created_at": "2026-09-01T00:00:00Z"
+  }
+];
+
+export function getEmployeeByMachineId(machineId: string, employeeList: Employee[] = INITIAL_EMPLOYEES): Employee | undefined {
+  const cleanId = String(machineId || '').trim().replace(/\.0$/, '');
+  return employeeList.find(e => e.machine_id === cleanId);
+}
+
+export function getEmployeeByRowIndex(rowIndex: number, employeeList: Employee[] = INITIAL_EMPLOYEES): Employee | undefined {
+  return employeeList.find(e => e.excel_row_index === rowIndex);
+}

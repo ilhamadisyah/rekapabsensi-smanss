@@ -1,0 +1,129 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #f8fafc;
+    --foreground: #0f172a;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-plus-jakarta), 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Force all form elements and webkit date/time pickers to use Plus Jakarta Sans */
+input,
+button,
+select,
+textarea,
+input[type="date"],
+input[type="time"],
+input[type="date"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  font-family: var(--font-plus-jakarta), 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+/* Custom Scrollbar for large attendance matrix */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Sticky styles for table */
+.sticky-col-1 {
+  position: sticky;
+  left: 0;
+  width: 56px;
+  min-width: 56px;
+  max-width: 56px;
+  box-sizing: border-box;
+  z-index: 20;
+}
+
+.sticky-col-2 {
+  position: sticky;
+  left: 56px;
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
+  box-sizing: border-box;
+  z-index: 20;
+}
+
+.sticky-col-3 {
+  position: sticky;
+  left: 276px;
+  width: 110px;
+  min-width: 110px;
+  max-width: 110px;
+  box-sizing: border-box;
+  z-index: 20;
+}
+
+/* Header Row 1 (Day Names) - Height exactly 32px */
+.header-row-1 th {
+  position: sticky;
+  top: 0;
+  height: 32px;
+  max-height: 32px;
+  box-sizing: border-box;
+  z-index: 30;
+}
+
+.header-row-1 th.sticky-col-1,
+.header-row-1 th.sticky-col-2,
+.header-row-1 th.sticky-col-3 {
+  z-index: 45;
+}
+
+/* Header Row 2 (Day Numbers & Skor) - Height exactly 32px, Top 32px */
+.header-row-2 th {
+  position: sticky;
+  top: 32px;
+  height: 32px;
+  max-height: 32px;
+  box-sizing: border-box;
+  z-index: 30;
+}
+
+.header-row-2 th.sticky-col-1,
+.header-row-2 th.sticky-col-2,
+.header-row-2 th.sticky-col-3 {
+  z-index: 45;
+}
+
+/* Weekend pattern */
+.bg-weekend-pattern {
+  background-color: #f1f5f9;
+  background-image: repeating-linear-gradient(
+    45deg,
+    #e2e8f0,
+    #e2e8f0 4px,
+    #f1f5f9 4px,
+    #f1f5f9 8px
+  );
+}
