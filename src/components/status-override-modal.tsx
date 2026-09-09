@@ -218,8 +218,9 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
         {/* Form Container with Scrollable Body & Fixed Footer */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
-            {/* Employee & Date Information Card */}
+            {/* Employee & Schedule Information Card */}
             <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-200 space-y-2.5">
+              {/* Employee Header */}
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center font-bold text-xs shrink-0 border border-blue-200">
@@ -240,29 +241,71 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                 </span>
               </div>
 
-              {/* Date & Machine Tap Badges */}
+              {/* Tanggal & Shift Info */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-200/60 text-[11px]">
                 <div className="flex items-center gap-1.5 text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/60">
                   <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                   <span className="truncate">{formatDateLabel(dateStr, dayNumber)}</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/60">
-                  <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                  <Clock className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                   <span className="truncate">
-                    Tap:{' '}
-                    <strong>
-                      {currentAttendance?.first_in || '--:--'} s/d{' '}
-                      {currentAttendance?.last_out || '--:--'}
-                    </strong>{' '}
+                    Shift: <strong className="text-indigo-950">{currentAttendance?.shift_name || (currentAttendance?.is_off_day ? 'Libur Shift' : (currentAttendance?.is_holiday ? 'Hari Libur' : 'Jam Kerja Normal'))}</strong>
+                  </span>
+                </div>
+              </div>
+
+              {/* Jam Kerja Wajib & Log Tap Mesin */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                <div className="flex items-center justify-between gap-1.5 text-slate-800 bg-blue-50/70 px-2.5 py-1.5 rounded-lg border border-blue-200/70">
+                  <span className="text-slate-600">Jam Kerja Wajib:</span>
+                  <strong className="text-blue-900 font-bold">
+                    {currentAttendance?.is_off_day
+                      ? 'Libur Shift'
+                      : currentAttendance?.is_holiday
+                      ? 'Hari Libur'
+                      : `${currentAttendance?.scheduled_start?.substring(0, 5) || '07:30'} - ${currentAttendance?.scheduled_end?.substring(0, 5) || '16:00'} WIB`}
+                  </strong>
+                </div>
+
+                <div className="flex items-center justify-between gap-1.5 text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200/60">
+                  <span className="truncate">
+                    Tap: <strong>{currentAttendance?.first_in || '--:--'} s/d {currentAttendance?.last_out || '--:--'}</strong>
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-medium shrink-0">
                     ({currentAttendance?.tap_count || 0} tap)
                   </span>
                 </div>
               </div>
 
-              {currentAttendance?.system_status === 'TIDAK_HADIR' && (
+              {/* Status Evaluasi Jam Kerja Dinamis Untuk Setiap Detail */}
+              {currentAttendance?.is_off_day ? (
+                <div className="text-[11px] text-slate-700 bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-300 flex items-center gap-1.5">
+                  <Info className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                  <span>
+                    <strong>Jadwal Libur Shift:</strong> Pegawai dijadwalkan bebas tugas pada hari ini (tidak dikenakan denda keterlambatan/Alpha).
+                  </span>
+                </div>
+              ) : currentAttendance?.is_holiday ? (
+                <div className="text-[11px] text-rose-800 bg-rose-50 px-2.5 py-1.5 rounded-lg border border-rose-200/80 flex items-center gap-1.5">
+                  <Info className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                  <span>
+                    <strong>Hari Libur Resmi:</strong> Ditetapkan sebagai {currentAttendance?.shift_name || 'Hari Libur'} (bebas tugas reguler).
+                  </span>
+                </div>
+              ) : currentAttendance?.system_status === 'HADIR' ? (
+                <div className="text-[11px] text-emerald-800 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200/80 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>
+                    <strong>Memenuhi Jam Kerja:</strong> Sesuai shift {currentAttendance?.shift_name || 'Normal'} (Masuk &le; {currentAttendance?.scheduled_start?.substring(0, 5) || '07:30'} &amp; Pulang &ge; {currentAttendance?.scheduled_end?.substring(0, 5) || '16:00'} WIB).
+                  </span>
+                </div>
+              ) : (
                 <div className="text-[11px] text-amber-800 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200/80 flex items-center gap-1.5">
                   <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span>Sistem mendeteksi tap log tidak memenuhi syarat Hadir Penuh (07:30 - 16:00).</span>
+                  <span>
+                    <strong>Belum Memenuhi Jam Kerja:</strong> Syarat shift {currentAttendance?.shift_name || 'Normal'} ({currentAttendance?.scheduled_start?.substring(0, 5) || '07:30'} - {currentAttendance?.scheduled_end?.substring(0, 5) || '16:00'} WIB) adalah masuk &le; {currentAttendance?.scheduled_start?.substring(0, 5) || '07:30'} &amp; pulang &ge; {currentAttendance?.scheduled_end?.substring(0, 5) || '16:00'} WIB (min. 2 tap).
+                  </span>
                 </div>
               )}
             </div>

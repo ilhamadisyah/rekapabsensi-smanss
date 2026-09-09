@@ -713,14 +713,33 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                       const hasAssignedDuty = Boolean(rec?.shift_id || rec?.scheduled_start || rec?.is_custom_schedule);
                       const isRecorded = recordedDays.length > 0 ? recordedDays.includes(d.day) : true;
                       const isManuallyVerified = rec && rec.is_verified;
+                      const isOff = Boolean(rec?.is_off_day || rec?.final_status === 'OFF');
+                      const isHol = Boolean(rec?.is_holiday || d.holiday || rec?.final_status === 'LIBUR');
+                      const sStart = rec?.scheduled_start?.substring(0, 5) || '07:30';
+                      const sEnd = rec?.scheduled_end?.substring(0, 5) || '16:00';
+                      const cellWorkingHours = isOff
+                        ? 'Libur Shift (Bebas Tugas)'
+                        : isHol
+                        ? `Hari Libur (${d.holiday?.name || rec?.shift_name || 'Libur Resmi'})`
+                        : `${sStart} s/d ${sEnd} WIB`;
 
                       // 1. Weekend WITHOUT assigned shift duty, no punches, and not manually verified
                       if (isWeekend && !hasAssignedDuty && !rec?.first_in && !isManuallyVerified) {
                         return (
                           <td
                             key={`cell-${emp.id}-${d.day}`}
+                            onMouseEnter={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setHoveredCell({
+                                empId: emp.id,
+                                day: d.day,
+                                x: rect.left,
+                                y: rect.top,
+                              });
+                            }}
+                            onMouseLeave={() => setHoveredCell(null)}
                             className="w-[42px] min-w-[42px] max-w-[42px] p-0 text-center border-r border-slate-200 bg-weekend-pattern opacity-60 cursor-not-allowed select-none box-border"
-                            title={`Akhir Pekan (${d.dayName}) - Libur Rutin`}
+                            title={`${emp.full_name} | Tgl ${d.day}: Akhir Pekan (${d.dayName}) - Libur Rutin | Jam Kerja: Bebas Tugas`}
                           >
                             <span className="text-[9px] text-slate-400 select-none">•</span>
                           </td>
@@ -736,8 +755,18 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                               if (userRole === 'pimpinan') return;
                               onCellClick(emp, d, rec || null);
                             }}
+                            onMouseEnter={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setHoveredCell({
+                                empId: emp.id,
+                                day: d.day,
+                                x: rect.left,
+                                y: rect.top,
+                              });
+                            }}
+                            onMouseLeave={() => setHoveredCell(null)}
                             className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-200 bg-slate-100/90 hover:bg-slate-200 transition-all font-semibold select-none cursor-pointer box-border"
-                            title={`${emp.full_name} | Tgl ${d.day}: Libur Shift / Bebas Tugas (Klik untuk ganti shift/izin)`}
+                            title={`${emp.full_name} | Tgl ${d.day}: Libur Shift / Bebas Tugas | Jam Kerja: Bebas Tugas (Klik untuk ganti shift/izin)`}
                           >
                             <div className="w-full h-full flex flex-col items-center justify-center">
                               <span className="px-1 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-600 border border-slate-300 shadow-2xs">
@@ -761,8 +790,18 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                               if (userRole === 'pimpinan') return;
                               onCellClick(emp, d, rec || null);
                             }}
+                            onMouseEnter={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setHoveredCell({
+                                empId: emp.id,
+                                day: d.day,
+                                x: rect.left,
+                                y: rect.top,
+                              });
+                            }}
+                            onMouseLeave={() => setHoveredCell(null)}
                             className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-200 bg-rose-50/70 hover:bg-rose-100 transition-all font-semibold select-none cursor-pointer box-border"
-                            title={`${emp.full_name} | Tgl ${d.day}: ${d.holiday?.name || rec?.shift_name || 'Hari Libur'} (Bebas Tugas)`}
+                            title={`${emp.full_name} | Tgl ${d.day}: ${d.holiday?.name || rec?.shift_name || 'Hari Libur'} | Jam Kerja: Hari Libur (Bebas Tugas)`}
                           >
                             <div className="w-full h-full flex flex-col items-center justify-center">
                               <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200 shadow-2xs">
@@ -783,8 +822,18 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                               if (userRole === 'pimpinan') return;
                               onCellClick(emp, d, rec || null);
                             }}
+                            onMouseEnter={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setHoveredCell({
+                                empId: emp.id,
+                                day: d.day,
+                                x: rect.left,
+                                y: rect.top,
+                              });
+                            }}
+                            onMouseLeave={() => setHoveredCell(null)}
                             className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-200 bg-slate-100/70 hover:bg-slate-200/70 transition-all font-medium select-none cursor-pointer box-border relative group/cell"
-                            title={`${emp.full_name} | Tgl ${d.day}: Belum Terekap ${rec?.shift_name ? `(Jadwal: ${rec.shift_name})` : ''}`}
+                            title={`${emp.full_name} | Tgl ${d.day}: Belum Terekap | Shift: ${rec?.shift_name || 'Jam Kerja Normal'} | Jam Kerja: ${cellWorkingHours}`}
                           >
                             <div className="w-full h-full flex flex-col items-center justify-center">
                               <span className="text-[11px] font-semibold text-slate-300 select-none">
@@ -823,7 +872,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                               empId: emp.id,
                               day: d.day,
                               x: rect.left,
-                              y: rect.bottom + window.scrollY,
+                              y: rect.top,
                             });
                           }}
                           onMouseLeave={() => setHoveredCell(null)}
@@ -834,7 +883,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                               ? 'bg-[#FFC7CE] text-[#9C0006] hover:brightness-95 animate-pulse-subtle'
                               : 'bg-[#FFEB9C] text-[#9C6500] hover:brightness-95'
                           }`}
-                          title={`${emp.full_name} | Tgl ${d.day}: ${statusInfo?.label || finalStatus}${rec?.shift_name ? ` (${rec.shift_name})` : ''}`}
+                          title={`${emp.full_name} | Tgl ${d.day}: ${statusInfo?.label || finalStatus} | Shift: ${rec?.shift_name || 'Jam Kerja Normal'} | Jam Kerja: ${cellWorkingHours} | Tap: ${rec?.first_in || '--:--'} s/d ${rec?.last_out || '--:--'}`}
                         >
                           <div className="w-full h-full flex flex-col items-center justify-center">
                             {isHadir ? (
@@ -863,6 +912,74 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
             )}
           </tbody>
         </table>
+
+        {/* Floating Cell Details Hover Popover */}
+        {hoveredCell && (() => {
+          const hEmp = employees.find((e) => e.id === hoveredCell.empId || e.machine_id === hoveredCell.empId);
+          const hDay = days.find((d) => d.day === hoveredCell.day);
+          if (!hEmp || !hDay) return null;
+
+          const hRec = attendanceMap[hEmp.machine_id]?.[hDay.day];
+          const isOff = hRec?.is_off_day || hRec?.final_status === 'OFF';
+          const isHol = hRec?.is_holiday || Boolean(hDay.holiday) || hRec?.final_status === 'LIBUR';
+          const shiftTitle = hRec?.shift_name || (isOff ? 'Libur Shift (Bebas Tugas)' : isHol ? (hDay.holiday?.name || 'Hari Libur') : 'Jam Kerja Normal (Reguler)');
+          const sTime = hRec?.scheduled_start ? hRec.scheduled_start.substring(0, 5) : '07:30';
+          const eTime = hRec?.scheduled_end ? hRec.scheduled_end.substring(0, 5) : '16:00';
+          const workingHoursStr = isOff ? 'Bebas Tugas (Libur Shift)' : isHol ? 'Hari Libur Resmi' : `${sTime} s/d ${eTime} WIB`;
+          const fStatus = hRec ? hRec.final_status : (hDay.isWeekend ? '-' : (isOff ? 'OFF' : (isHol ? 'LIBUR' : 'A')));
+          const stInfo = ATTENDANCE_STATUS_MAP[fStatus as AttendanceCode];
+
+          return (
+            <div
+              className="fixed z-50 pointer-events-none transform -translate-x-1/2 -translate-y-full mb-2 transition-all duration-150"
+              style={{
+                left: Math.min(window.innerWidth - 170, Math.max(170, hoveredCell.x + 21)),
+                top: Math.max(80, hoveredCell.y - 8),
+              }}
+            >
+              <div className="bg-slate-900/95 text-white text-xs rounded-xl p-3 shadow-2xl border border-slate-700/80 backdrop-blur-md max-w-xs min-w-[250px] animate-in fade-in zoom-in-95 duration-100">
+                <div className="font-bold text-slate-100 text-[12px] truncate border-b border-slate-700/60 pb-1.5 mb-1.5 flex items-center justify-between gap-2">
+                  <span className="truncate">{hEmp.full_name}</span>
+                  <span className="text-[10px] text-slate-400 shrink-0">ID: {hEmp.machine_id}</span>
+                </div>
+
+                <div className="space-y-1.5 text-[11px]">
+                  <div className="flex items-center justify-between text-slate-300">
+                    <span className="text-slate-400">Tanggal:</span>
+                    <strong className="text-slate-100">{hDay.dayName}, {hDay.day} {getMonthName(selectedMonth)}</strong>
+                  </div>
+
+                  <div className="flex items-center justify-between text-slate-300">
+                    <span className="text-slate-400">Shift Kerja:</span>
+                    <strong className="text-blue-300 truncate max-w-[150px]">{shiftTitle}</strong>
+                  </div>
+
+                  <div className="flex items-center justify-between text-slate-300 bg-slate-800/90 px-2 py-1.5 rounded-lg border border-slate-700/60">
+                    <span className="text-amber-300 font-semibold flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-amber-400" />
+                      Jam Kerja Wajib:
+                    </span>
+                    <strong className="text-white font-bold">{workingHoursStr}</strong>
+                  </div>
+
+                  <div className="flex items-center justify-between text-slate-300">
+                    <span className="text-slate-400">Log Mesin:</span>
+                    <span className="text-slate-200 font-mono text-[10px]">
+                      {hRec?.first_in || '--:--'} s/d {hRec?.last_out || '--:--'} ({hRec?.tap_count || 0} tap)
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-700/60 text-slate-300">
+                    <span className="text-slate-400">Status Kehadiran:</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-amber-300 border border-slate-700">
+                      {stInfo?.label || fStatus}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Table Footer & Legend Bar */}
