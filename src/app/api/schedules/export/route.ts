@@ -107,12 +107,11 @@ export async function GET(request: NextRequest) {
       sheet.getColumn(colIdx).width = 6;
 
       let fillArgb = 'FFF8FAFC';
-      if (isHoliday) fillArgb = 'FFFFE4E6'; // Rose for holiday
-      else if (isWeekend) fillArgb = 'FFF1F5F9'; // Light slate for weekend
+      if (isHoliday || isWeekend) fillArgb = isHoliday ? 'FFFFE4E6' : 'FFFFF1F2';
 
       [cellTop, cellBot].forEach(c => {
         c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillArgb } };
-        c.font = { name: 'Calibri', size: 9, bold: true, color: { argb: isHoliday ? 'FFE11D48' : isWeekend ? 'FF94A3B8' : 'FF1E293B' } };
+        c.font = { name: 'Calibri', size: 9, bold: true, color: { argb: (isHoliday || isWeekend) ? 'FFE11D48' : 'FF1E293B' } };
         c.alignment = { horizontal: 'center', vertical: 'middle' };
         c.border = {
           top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
@@ -191,8 +190,17 @@ export async function GET(request: NextRequest) {
             workDaysCount++;
           }
         } else {
-          cell.value = isHoliday ? 'LIBUR' : 'OFF';
-          cell.font = { name: 'Calibri', size: 8, color: { argb: 'FF94A3B8' } };
+          const isRedDay = isHoliday || isWeekend;
+          cell.value = isRedDay ? 'LIBUR' : 'OFF';
+          cell.font = {
+            name: 'Calibri',
+            size: 8,
+            bold: isRedDay,
+            color: { argb: isRedDay ? 'FFE11D48' : 'FF94A3B8' },
+          };
+          if (isRedDay) {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF1F2' } };
+          }
           offDaysCount++;
         }
 

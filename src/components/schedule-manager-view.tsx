@@ -747,33 +747,36 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                     <th className="sticky left-10 z-40 bg-slate-50 px-3 py-3 font-bold text-slate-700 min-w-[220px] max-w-[260px] border-r border-slate-200">
                       Identitas Pegawai
                     </th>
-                    {monthDays.map((d) => (
-                      <th
-                        key={d.day}
-                        className={`px-1.5 py-2 text-center border-r border-slate-200 min-w-[56px] ${
-                          d.holiday
-                            ? 'bg-rose-100/70 text-rose-900'
-                            : d.isWeekend
-                            ? 'bg-slate-100 text-slate-600'
-                            : 'text-slate-700'
-                        }`}
-                        title={d.holiday ? `Hari Libur: ${d.holiday.name}` : undefined}
-                      >
-                        <div className="font-extrabold text-[12px]">{d.day}</div>
-                        <div
-                          className={`text-[9px] font-bold uppercase ${
-                            d.holiday ? 'text-rose-700' : d.isWeekend ? 'text-slate-400' : 'text-slate-500'
+                    {monthDays.map((d) => {
+                      const isRedDay = Boolean(d.holiday || d.isWeekend);
+                      return (
+                        <th
+                          key={d.day}
+                          className={`px-1.5 py-2 text-center border-r border-slate-200 min-w-[56px] ${
+                            d.holiday
+                              ? 'bg-rose-100/70 text-rose-900'
+                              : d.isWeekend
+                              ? 'bg-rose-50/70 text-rose-800'
+                              : 'text-slate-700'
                           }`}
+                          title={d.holiday ? `Hari Libur: ${d.holiday.name}` : d.isWeekend ? 'Akhir Pekan (Libur)' : undefined}
                         >
-                          {d.dayName}
-                        </div>
-                        {d.holiday && (
-                          <div className="text-[8px] font-extrabold text-rose-700 truncate max-w-[50px] mx-auto">
-                            LIBUR
+                          <div className="font-extrabold text-[12px]">{d.day}</div>
+                          <div
+                            className={`text-[9px] font-bold uppercase ${
+                              isRedDay ? 'text-rose-700' : 'text-slate-500'
+                            }`}
+                          >
+                            {d.dayName}
                           </div>
-                        )}
-                      </th>
-                    ))}
+                          {isRedDay && (
+                            <div className="text-[8px] font-extrabold text-rose-700 truncate max-w-[50px] mx-auto">
+                              LIBUR
+                            </div>
+                          )}
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
 
@@ -831,8 +834,9 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                           const hasCustomHours = Boolean(
                             customSchedule?.custom_start_time || customSchedule?.custom_end_time
                           );
+                          const isRedDay = Boolean(d.holiday || d.isWeekend);
                           const displayShift =
-                            assignedShift || (d.isWeekend || d.holiday ? null : defaultShift);
+                            assignedShift || (isRedDay ? null : defaultShift);
 
                           return (
                             <td
@@ -840,9 +844,9 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                               onClick={() => handleCellClick(emp, d, customSchedule)}
                               className={`p-1 text-center border-r border-slate-100 cursor-pointer transition-all hover:ring-2 hover:ring-blue-500 hover:z-10 ${
                                 d.holiday
-                                  ? 'bg-rose-50/50'
+                                  ? 'bg-rose-50/60'
                                   : d.isWeekend
-                                  ? 'bg-slate-50/50'
+                                  ? 'bg-rose-50/30'
                                   : 'bg-white'
                               }`}
                               title={`Ubah shift ${emp.full_name} (Tgl ${d.day})`}
@@ -859,12 +863,12 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                               ) : (
                                 <div
                                   className={`py-1 px-1 rounded-md text-[10px] font-sans font-bold tracking-normal uppercase text-center ${
-                                    d.holiday
+                                    isRedDay
                                       ? 'text-rose-700 bg-rose-100/90 border border-rose-200/80 font-extrabold'
                                       : 'text-slate-400 bg-slate-100'
                                   }`}
                                 >
-                                  {d.holiday ? 'LIB' : 'OFF'}
+                                  {isRedDay ? 'LIBUR' : 'OFF'}
                                 </div>
                               )}
                             </td>
@@ -901,9 +905,9 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
 
                 <div className="flex items-center gap-1.5 text-xs text-rose-800 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200">
                   <span className="px-1.5 py-0.5 bg-rose-600 text-white font-sans font-bold text-[10px] rounded-md">
-                    LIB
+                    LIBUR
                   </span>
-                  <span className="font-semibold text-[11px]">Hari Libur Tambahan</span>
+                  <span className="font-semibold text-[11px]">Hari Libur / Akhir Pekan</span>
                 </div>
               </div>
             </div>
@@ -1046,9 +1050,11 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
               </p>
               <p className="text-[11px] text-slate-500 mt-0.5">
                 Tanggal: {activeCell.dateStr} (Hari ke-{activeCell.day})
-                {activeCell.holiday && (
+                {activeCell.holiday ? (
                   <span className="ml-1 text-rose-600 font-bold">• Libur: {activeCell.holiday.name}</span>
-                )}
+                ) : activeCell.isWeekend ? (
+                  <span className="ml-1 text-rose-600 font-bold">• Libur Akhir Pekan</span>
+                ) : null}
               </p>
             </div>
 

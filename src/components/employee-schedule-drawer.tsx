@@ -277,7 +277,7 @@ export const EmployeeScheduleDrawer: React.FC<EmployeeScheduleDrawerProps> = ({
                     item.holiday
                       ? 'bg-rose-50/40'
                       : item.isWeekend
-                      ? 'bg-slate-50/60'
+                      ? 'bg-rose-50/20'
                       : 'bg-white'
                   }`}
                 >
@@ -288,7 +288,7 @@ export const EmployeeScheduleDrawer: React.FC<EmployeeScheduleDrawerProps> = ({
                         item.holiday
                           ? 'bg-rose-100 text-rose-800 border border-rose-200'
                           : item.isWeekend
-                          ? 'bg-slate-200 text-slate-600'
+                          ? 'bg-rose-50 text-rose-700 border border-rose-200'
                           : 'bg-blue-50 text-blue-700 border border-blue-100'
                       }`}
                     >
@@ -345,9 +345,9 @@ export const EmployeeScheduleDrawer: React.FC<EmployeeScheduleDrawerProps> = ({
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1.5 text-slate-400 text-xs">
-                        <Coffee className="w-3.5 h-3.5 text-slate-300" />
-                        <span>{item.holiday ? 'Libur Tambahan' : 'Libur Akhir Pekan (OFF)'}</span>
+                      <div className="flex items-center gap-1.5 text-rose-700 text-xs font-medium">
+                        <Coffee className="w-3.5 h-3.5 text-rose-500" />
+                        <span>{item.holiday ? `Hari Libur: ${item.holiday.name}` : 'Libur Akhir Pekan'}</span>
                       </div>
                     )}
                   </div>
