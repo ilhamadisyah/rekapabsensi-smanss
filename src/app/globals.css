@@ -128,7 +128,7 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   );
 }
 
-/* Attendance Matrix Table Grid Lines - Pertegas batas sel agar terlihat jelas & terstruktur */
+/* Attendance Matrix Table Grid Lines - Lembut, rapi, terlihat jelas tanpa terlalu gelap */
 .attendance-matrix-table {
   border-collapse: separate;
   border-spacing: 0;
@@ -136,27 +136,26 @@ input[type="date"]::-webkit-datetime-edit-year-field {
 
 .attendance-matrix-table th,
 .attendance-matrix-table td {
-  border-color: #94a3b8 !important;
+  border-color: #cbd5e1 !important;
 }
 
 .attendance-matrix-table thead tr.header-row-1 th {
-  border-right: 1px solid #94a3b8 !important;
-  border-bottom: 1px solid #94a3b8 !important;
+  border-right: 1px solid #cbd5e1 !important;
+  border-bottom: 1px solid #cbd5e1 !important;
 }
 
 .attendance-matrix-table thead tr.header-row-2 th {
-  border-right: 1px solid #94a3b8 !important;
-  border-bottom: 2px solid #64748b !important;
+  border-right: 1px solid #cbd5e1 !important;
+  border-bottom: 1px solid #cbd5e1 !important;
 }
 
 .attendance-matrix-table tbody td {
-  border-right: 1px solid #94a3b8 !important;
-  border-bottom: 1px solid #94a3b8 !important;
+  border-right: 1px solid #cbd5e1 !important;
+  border-bottom: 1px solid #cbd5e1 !important;
 }
 
-/* Sticky column 3 separator for distinction between employee profile and calendar grid */
 .attendance-matrix-table th.sticky-col-3,
 .attendance-matrix-table td.sticky-col-3 {
-  border-right: 2px solid #64748b !important;
+  border-right: 1px solid #cbd5e1 !important;
 }
 
