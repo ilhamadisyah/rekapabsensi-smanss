@@ -69,16 +69,36 @@ export const supabaseStore = {
     const monthPad = String(month).padStart(2, '0');
     const prefix = `${year}-${monthPad}`;
 
-    const { data, error } = await client
-      .from('daily_attendance')
-      .select('*')
-      .like('attendance_date', `${prefix}%`);
+    const allRecords: DailyAttendance[] = [];
+    const pageSize = 1000;
+    let from = 0;
+    let hasMore = true;
 
-    if (error) {
-      console.error('[Supabase] Error getAttendanceForMonth:', error);
-      return [];
+    while (hasMore) {
+      const { data, error } = await client
+        .from('daily_attendance')
+        .select('*')
+        .like('attendance_date', `${prefix}%`)
+        .range(from, from + pageSize - 1);
+
+      if (error) {
+        console.error('[Supabase] Error getAttendanceForMonth:', error);
+        break;
+      }
+
+      if (data && data.length > 0) {
+        allRecords.push(...data);
+        if (data.length < pageSize) {
+          hasMore = false;
+        } else {
+          from += pageSize;
+        }
+      } else {
+        hasMore = false;
+      }
     }
-    return data || [];
+
+    return allRecords;
   },
 
   async saveAttendanceBatch(
@@ -424,16 +444,36 @@ export const supabaseStore = {
     const client = getSupabaseServerClient();
     if (!client) return [];
 
-    let query = client.from('employee_schedules').select('*');
-    if (month && year) {
-      const monthPad = String(month).padStart(2, '0');
-      query = query.like('date', `${year}-${monthPad}%`);
-    }
+    const monthPad = month ? String(month).padStart(2, '0') : null;
+    const prefix = month && year ? `${year}-${monthPad}` : null;
 
-    const { data, error } = await query;
-    if (error) {
-      console.error('[Supabase] Error getEmployeeSchedules:', error);
-      return [];
+    const allRecords: any[] = [];
+    const pageSize = 1000;
+    let from = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      let query = client.from('employee_schedules').select('*');
+      if (prefix) {
+        query = query.like('date', `${prefix}%`);
+      }
+      const { data, error } = await query.range(from, from + pageSize - 1);
+
+      if (error) {
+        console.error('[Supabase] Error getEmployeeSchedules:', error);
+        break;
+      }
+
+      if (data && data.length > 0) {
+        allRecords.push(...data);
+        if (data.length < pageSize) {
+          hasMore = false;
+        } else {
+          from += pageSize;
+        }
+      } else {
+        hasMore = false;
+      }
     }
 
     const shifts = await this.getShiftTemplates();
@@ -441,7 +481,7 @@ export const supabaseStore = {
     const employees = await this.getEmployees();
     const empMap = new Map(employees.map((e) => [e.machine_id, e.full_name]));
 
-    return (data || []).map((s) => {
+    return allRecords.map((s) => {
       const shift = shiftMap.get(s.shift_id);
       return {
         ...s,
