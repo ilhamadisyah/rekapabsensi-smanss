@@ -1013,7 +1013,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
       </div>
     )}
 
-    {/* Floating Cell Details Hover Popover (Rendered at top-level with z-[9999] so never clipped or covered) */}
+    {/* Floating Cell Details Hover Popover (Clean White Minimalist Design) */}
     {hoveredCell && (() => {
       const hEmp = employees.find((e) => e.id === hoveredCell.empId || e.machine_id === hoveredCell.empId);
       const hDay = days.find((d) => d.day === hoveredCell.day);
@@ -1022,12 +1022,44 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
       const hRec = attendanceMap[hEmp.machine_id]?.[hDay.day];
       const isOff = hRec?.is_off_day || hRec?.final_status === 'OFF';
       const isHol = hRec?.is_holiday || Boolean(hDay.holiday) || hRec?.final_status === 'LIBUR';
-      const shiftTitle = hRec?.shift_name || (isHol ? (hDay.holiday?.name || 'Hari Libur Resmi') : isOff ? 'Libur Shift (Bebas Tugas)' : 'Jam Kerja Normal (Reguler)');
       const sTime = hRec?.scheduled_start ? hRec.scheduled_start.substring(0, 5) : '07:30';
       const eTime = hRec?.scheduled_end ? hRec.scheduled_end.substring(0, 5) : '16:00';
-      const workingHoursStr = isHol ? 'Hari Libur Resmi' : isOff ? 'Bebas Tugas (Libur Shift)' : `${sTime} s/d ${eTime} WIB`;
+      const workingHoursStr = isHol ? 'Hari Libur Resmi' : isOff ? 'Libur Shift' : `${sTime} - ${eTime} WIB`;
       const fStatus = hRec ? hRec.final_status : (hDay.isWeekend ? '-' : (isHol ? 'LIBUR' : (isOff ? 'OFF' : 'A')));
-      const stInfo = ATTENDANCE_STATUS_MAP[fStatus as AttendanceCode];
+
+      // Clean, concise status badge
+      const getCleanStatusBadge = (code: string) => {
+        switch (code) {
+          case 'HADIR':
+            return { label: 'Hadir', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+          case 'A':
+            return { label: 'Alpha', badge: 'bg-rose-50 text-rose-700 border-rose-200' };
+          case 'LIBUR':
+            return { label: 'Hari Libur', badge: 'bg-rose-50 text-rose-700 border-rose-200' };
+          case 'OFF':
+            return { label: 'Libur Shift', badge: 'bg-slate-100 text-slate-700 border-slate-200' };
+          case 'DL':
+            return { label: 'Dinas Luar', badge: 'bg-sky-50 text-sky-700 border-sky-200' };
+          case 'IL':
+            return { label: 'Sakit (Dokter)', badge: 'bg-teal-50 text-teal-700 border-teal-200' };
+          case 'I':
+            return { label: 'Sakit', badge: 'bg-amber-50 text-amber-700 border-amber-200' };
+          case 'PM':
+            return { label: 'Izin', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' };
+          case 'AL':
+            return { label: 'Cuti Tahunan', badge: 'bg-blue-50 text-blue-700 border-blue-200' };
+          case 'OTL':
+            return { label: 'Cuti Khusus', badge: 'bg-cyan-50 text-cyan-700 border-cyan-200' };
+          case 'HIP':
+            return { label: 'Izin Pagi', badge: 'bg-amber-50 text-amber-700 border-amber-200' };
+          case 'HIS':
+            return { label: 'Izin Siang', badge: 'bg-amber-50 text-amber-700 border-amber-200' };
+          default:
+            return { label: hDay.isWeekend ? 'Akhir Pekan' : 'Belum Terekap', badge: 'bg-slate-100 text-slate-500 border-slate-200' };
+        }
+      };
+
+      const statusBadge = getCleanStatusBadge(isHol ? 'LIBUR' : fStatus);
 
       // Smart vertical positioning: if near top of window (< 220px), show BELOW cell, else show ABOVE cell
       const showBelow = hoveredCell.y < 220;
@@ -1038,46 +1070,40 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
         <div
           className={`fixed z-[9999] pointer-events-none transform ${transformClass} mb-2 transition-all duration-75`}
           style={{
-            left: Math.min(window.innerWidth - 170, Math.max(170, hoveredCell.x + 21)),
+            left: Math.min(window.innerWidth - 150, Math.max(150, hoveredCell.x + 21)),
             top: topPos,
           }}
         >
-          <div className="bg-slate-900/95 text-white text-xs rounded-xl p-3 shadow-2xl border border-slate-700/80 backdrop-blur-md max-w-xs min-w-[250px] animate-in fade-in zoom-in-95 duration-100 ring-1 ring-white/10">
-            <div className="font-bold text-slate-100 text-[12px] truncate border-b border-slate-700/60 pb-1.5 mb-1.5 flex items-center justify-between gap-2">
-              <span className="truncate">{hEmp.full_name}</span>
-              <span className="text-[10px] text-slate-400 shrink-0">ID: {hEmp.machine_id}</span>
+          <div className="bg-white text-slate-800 text-xs rounded-xl p-3 shadow-xl border border-slate-200/90 max-w-xs min-w-[210px] animate-in fade-in zoom-in-95 duration-75">
+            <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-1.5 mb-2">
+              <span className="font-bold text-slate-900 text-xs truncate">{hEmp.full_name}</span>
+              <span className="text-[10px] text-slate-400 font-sans font-medium shrink-0">ID: {hEmp.machine_id}</span>
             </div>
 
             <div className="space-y-1.5 text-[11px]">
-              <div className="flex items-center justify-between text-slate-300">
+              <div className="flex items-center justify-between text-slate-600">
                 <span className="text-slate-400">Tanggal:</span>
-                <strong className="text-slate-100">{hDay.dayName}, {hDay.day} {getMonthName(selectedMonth)}</strong>
+                <span className="font-medium text-slate-800">{hDay.day} {getMonthName(selectedMonth)} ({hDay.dayName})</span>
               </div>
 
-              <div className="flex items-center justify-between text-slate-300">
-                <span className="text-slate-400">Shift Kerja:</span>
-                <strong className={isHol ? "text-rose-300 truncate max-w-[150px]" : "text-blue-300 truncate max-w-[150px]"}>{shiftTitle}</strong>
-              </div>
-
-              <div className="flex items-center justify-between text-slate-300 bg-slate-800/90 px-2 py-1.5 rounded-lg border border-slate-700/60">
-                <span className="text-amber-300 font-semibold flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-amber-400" />
-                  Jam Kerja Wajib:
-                </span>
-                <strong className={isHol ? "text-rose-300 font-bold" : "text-white font-bold"}>{workingHoursStr}</strong>
-              </div>
-
-              <div className="flex items-center justify-between text-slate-300">
-                <span className="text-slate-400">Log Mesin:</span>
-                <span className="text-slate-200 font-mono text-[10px]">
-                  {hRec?.first_in || '--:--'} s/d {hRec?.last_out || '--:--'} ({hRec?.tap_count || 0} tap)
+              <div className="flex items-center justify-between text-slate-600">
+                <span className="text-slate-400">Jam Kerja:</span>
+                <span className={`font-semibold ${isHol ? 'text-rose-600' : 'text-slate-800'}`}>
+                  {workingHoursStr}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between pt-1 border-t border-slate-700/60 text-slate-300">
-                <span className="text-slate-400">Status Kehadiran:</span>
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${isHol ? 'bg-rose-950 text-rose-300 border border-rose-800' : 'bg-slate-800 text-amber-300 border border-slate-700'}`}>
-                  {isHol ? 'LIBUR' : (stInfo?.label || fStatus)}
+              <div className="flex items-center justify-between text-slate-600">
+                <span className="text-slate-400">Tap Mesin:</span>
+                <span className="font-mono text-slate-700 text-[10px]">
+                  {hRec?.first_in ? `${hRec.first_in} s/d ${hRec.last_out || '--:--'} (${hRec.tap_count} tap)` : '0 tap'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between pt-1.5 border-t border-slate-100">
+                <span className="text-slate-400">Status:</span>
+                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${statusBadge.badge}`}>
+                  {statusBadge.label}
                 </span>
               </div>
             </div>
