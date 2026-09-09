@@ -230,6 +230,8 @@ export interface ShiftTemplate {
   start_time: string; // "HH:mm:ss"
   end_time: string; // "HH:mm:ss"
   grace_period_minutes: number;
+  check_in_window_minutes?: number; // Menit sebelum start_time tap mulai diterima (default: 120)
+  check_out_window_minutes?: number; // Menit setelah end_time tap masih diterima (default: 240)
   is_overnight: boolean;
   is_off_day: boolean;
   color: string;

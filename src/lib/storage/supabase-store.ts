@@ -454,6 +454,8 @@ export const supabaseStore = {
       start_time: template.start_time || '07:30:00',
       end_time: template.end_time || '16:00:00',
       grace_period_minutes: Number(template.grace_period_minutes || 0),
+      check_in_window_minutes: typeof template.check_in_window_minutes === 'number' ? template.check_in_window_minutes : 120,
+      check_out_window_minutes: typeof template.check_out_window_minutes === 'number' ? template.check_out_window_minutes : 240,
       is_overnight: Boolean(template.is_overnight),
       is_off_day: Boolean(template.is_off_day),
       color: template.color || '#2563eb',
@@ -463,7 +465,13 @@ export const supabaseStore = {
       updated_at: now,
     };
 
-    const { error } = await client.from('shift_templates').upsert(fullTemplate, { onConflict: 'id' });
+    let { error } = await client.from('shift_templates').upsert(fullTemplate, { onConflict: 'id' });
+    if (error && (error.message.includes('check_in_window_minutes') || error.message.includes('check_out_window_minutes') || error.code === 'PGRST204')) {
+      console.warn('[Supabase] Window columns not found in shift_templates schema cache, falling back to basic columns');
+      const { check_in_window_minutes, check_out_window_minutes, ...legacyTemplate } = fullTemplate;
+      const res = await client.from('shift_templates').upsert(legacyTemplate, { onConflict: 'id' });
+      error = res.error;
+    }
     if (error) {
       console.error('[Supabase] Error saveShiftTemplate:', error);
       throw new Error(error.message);

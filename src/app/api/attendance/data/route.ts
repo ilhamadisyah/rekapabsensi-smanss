@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/storage/store';
 import { AttendanceMatrixDay, MonthlyAttendanceSummary } from '@/lib/types';
 import { getEmployeeNameByMachineId } from '@/lib/attendance/employee-mapping';
-import { evaluateAttendanceStatus } from '@/lib/attendance/parser';
+import { evaluateAttendanceStatus, addMinutesToTime } from '@/lib/attendance/parser';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -33,6 +33,8 @@ export async function GET(request: NextRequest) {
         start_time: '07:30:00',
         end_time: '16:00:00',
         grace_period_minutes: 0,
+        check_in_window_minutes: 120,
+        check_out_window_minutes: 240,
         is_overnight: false,
         is_off_day: false,
         color: '#2563eb',
@@ -142,7 +144,9 @@ export async function GET(request: NextRequest) {
         const startTime = sched?.custom_start_time || shift?.start_time || defaultShift.start_time;
         const endTime = sched?.custom_end_time || shift?.end_time || defaultShift.end_time;
         const gracePeriod = shift?.grace_period_minutes ?? defaultShift.grace_period_minutes;
-        const isOvernight = shift?.is_overnight ?? defaultShift.is_overnight;
+        const checkInWindowMinutes = shift?.check_in_window_minutes ?? defaultShift.check_in_window_minutes ?? 120;
+        const checkOutWindowMinutes = shift?.check_out_window_minutes ?? defaultShift.check_out_window_minutes ?? 240;
+        const isOvernight = Boolean(shift?.is_overnight ?? defaultShift.is_overnight ?? (startTime > endTime));
         const shiftCode = sched?.shift_code || shift?.code || (isHoliday ? 'LIBUR' : (d.isWeekend ? 'LIBUR' : defaultShift.code));
         const shiftName = sched?.shift_name || shift?.name || (isHoliday ? (hol?.name || 'Hari Libur Resmi') : (d.isWeekend ? 'Akhir Pekan' : defaultShift.name));
         const shiftColor = shift?.color || (isHoliday ? '#f43f5e' : (d.isWeekend ? '#94a3b8' : defaultShift.color));
@@ -166,9 +170,14 @@ export async function GET(request: NextRequest) {
             // Dynamic Cross-Day Punch Pairing for overnight shifts:
             // An overnight shift MUST pair with the next calendar day (beda hari)!
             if (isOvernight) {
-              if (rec.first_in && rec.first_in >= '17:00:00' && (!rec.last_out || rec.last_out >= '15:00:00' || rec.tap_count < 2)) {
+              const earliestEveningIn = addMinutesToTime(startTime, -checkInWindowMinutes);
+              const latestMorningOut = addMinutesToTime(endTime, checkOutWindowMinutes);
+
+              // Only pair if starting punch is legitimately in the evening window (>= earliestEveningIn)
+              // If punch was in the daytime (e.g. 06:22), it is NEVER an overnight shift!
+              if (rec.first_in && rec.first_in >= earliestEveningIn && (!rec.last_out || rec.last_out >= '15:00:00' || rec.tap_count < 2)) {
                 const nextDayRec = attendanceMap[emp.machine_id]?.[d.day + 1];
-                if (nextDayRec && nextDayRec.first_in && nextDayRec.first_in <= '10:30:00') {
+                if (nextDayRec && nextDayRec.first_in && nextDayRec.first_in >= endTime && nextDayRec.first_in <= latestMorningOut) {
                   rec.last_out = nextDayRec.first_in;
                   rec.tap_count = Math.max(rec.tap_count || 1, 2);
                   isCrossDaySession = true;
@@ -182,6 +191,8 @@ export async function GET(request: NextRequest) {
               startTime,
               endTime,
               gracePeriodMinutes: gracePeriod,
+              checkInWindowMinutes,
+              checkOutWindowMinutes,
               isOvernight,
               isOffDay,
               isHoliday,

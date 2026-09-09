@@ -150,4 +150,6 @@ ON CONFLICT (id) DO NOTHING;
 
 -- 11. Kolom Tambahan (Migrasi Skema Opsional)
 ALTER TABLE daily_attendance ADD COLUMN IF NOT EXISTS is_cross_day BOOLEAN DEFAULT FALSE;
+ALTER TABLE shift_templates ADD COLUMN IF NOT EXISTS check_in_window_minutes INT DEFAULT 120;
+ALTER TABLE shift_templates ADD COLUMN IF NOT EXISTS check_out_window_minutes INT DEFAULT 240;
 

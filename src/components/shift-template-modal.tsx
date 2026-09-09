@@ -37,6 +37,8 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
   const [formStartTime, setFormStartTime] = useState('07:30');
   const [formEndTime, setFormEndTime] = useState('16:00');
   const [formGracePeriod, setFormGracePeriod] = useState<number>(0);
+  const [formCheckInWindow, setFormCheckInWindow] = useState<number>(120);
+  const [formCheckOutWindow, setFormCheckOutWindow] = useState<number>(240);
   const [formIsOvernight, setFormIsOvernight] = useState<boolean>(false);
   const [formIsOffDay, setFormIsOffDay] = useState<boolean>(false);
   const [formColor, setFormColor] = useState('#2563eb');
@@ -56,6 +58,8 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
     setFormStartTime('07:30');
     setFormEndTime('16:00');
     setFormGracePeriod(0);
+    setFormCheckInWindow(120);
+    setFormCheckOutWindow(240);
     setFormIsOvernight(false);
     setFormIsOffDay(false);
     setFormColor('#2563eb');
@@ -72,6 +76,8 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
     setFormStartTime(t.start_time.substring(0, 5));
     setFormEndTime(t.end_time.substring(0, 5));
     setFormGracePeriod(t.grace_period_minutes || 0);
+    setFormCheckInWindow(typeof t.check_in_window_minutes === 'number' ? t.check_in_window_minutes : 120);
+    setFormCheckOutWindow(typeof t.check_out_window_minutes === 'number' ? t.check_out_window_minutes : 240);
     setFormIsOvernight(t.is_overnight);
     setFormIsOffDay(t.is_off_day);
     setFormColor(t.color || '#2563eb');
@@ -111,6 +117,8 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
           start_time: formIsOffDay ? '00:00:00' : sTime,
           end_time: formIsOffDay ? '00:00:00' : eTime,
           grace_period_minutes: formGracePeriod,
+          check_in_window_minutes: formCheckInWindow,
+          check_out_window_minutes: formCheckOutWindow,
           is_overnight: formIsOvernight,
           is_off_day: formIsOffDay,
           color: formColor,
@@ -290,6 +298,59 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                       onChange={(e) => setFormGracePeriod(Number(e.target.value))}
                       className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                  </div>
+                </div>
+              )}
+
+              {/* Time Windows Settings */}
+              {!formIsOffDay && (
+                <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-800">Pengaturan Jendela Waktu Tap (Proteksi & Keamanan)</span>
+                    <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-medium border border-blue-100">
+                      Anti-Absen Diluar Jam
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                        <span>Jendela Buka Tap Masuk</span>
+                        <span className="text-[10px] text-blue-700 font-bold">{(formCheckInWindow / 60).toFixed(1)} jam sebelum</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min={15}
+                          max={360}
+                          step={15}
+                          value={formCheckInWindow}
+                          onChange={(e) => setFormCheckInWindow(Number(e.target.value))}
+                          className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="absolute right-3 top-1.5 text-[11px] text-slate-400">menit</span>
+                      </div>
+                      <p className="text-[9px] text-slate-500 mt-1">Tap masuk paling awal diakui {formCheckInWindow} mnt sebelum jam masuk.</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                        <span>Batas Akhir Tap Pulang</span>
+                        <span className="text-[10px] text-blue-700 font-bold">{(formCheckOutWindow / 60).toFixed(1)} jam setelah</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min={30}
+                          max={480}
+                          step={15}
+                          value={formCheckOutWindow}
+                          onChange={(e) => setFormCheckOutWindow(Number(e.target.value))}
+                          className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="absolute right-3 top-1.5 text-[11px] text-slate-400">menit</span>
+                      </div>
+                      <p className="text-[9px] text-slate-500 mt-1">Tap pulang paling lambat diakui {formCheckOutWindow} mnt setelah jam pulang.</p>
+                    </div>
                   </div>
                 </div>
               )}

@@ -46,6 +46,8 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
   const [startTime, setStartTime] = useState('07:30');
   const [endTime, setEndTime] = useState('16:00');
   const [gracePeriod, setGracePeriod] = useState<number>(0);
+  const [checkInWindow, setCheckInWindow] = useState<number>(120);
+  const [checkOutWindow, setCheckOutWindow] = useState<number>(240);
   const [isOvernight, setIsOvernight] = useState(false);
   const [isOffDay, setIsOffDay] = useState(false);
   const [color, setColor] = useState('#2563eb');
@@ -62,6 +64,8 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
     setStartTime('07:30');
     setEndTime('16:00');
     setGracePeriod(0);
+    setCheckInWindow(120);
+    setCheckOutWindow(240);
     setIsOvernight(false);
     setIsOffDay(false);
     setColor('#2563eb');
@@ -78,6 +82,8 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
     setStartTime(t.start_time.substring(0, 5));
     setEndTime(t.end_time.substring(0, 5));
     setGracePeriod(t.grace_period_minutes || 0);
+    setCheckInWindow(typeof t.check_in_window_minutes === 'number' ? t.check_in_window_minutes : 120);
+    setCheckOutWindow(typeof t.check_out_window_minutes === 'number' ? t.check_out_window_minutes : 240);
     setIsOvernight(t.is_overnight);
     setIsOffDay(t.is_off_day);
     setColor(t.color || '#2563eb');
@@ -128,6 +134,8 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
           start_time: isOffDay ? '00:00:00' : sTime,
           end_time: isOffDay ? '00:00:00' : eTime,
           grace_period_minutes: Number(gracePeriod) || 0,
+          check_in_window_minutes: Number(checkInWindow) || 120,
+          check_out_window_minutes: Number(checkOutWindow) || 240,
           is_overnight: isOvernight,
           is_off_day: isOffDay,
           color,
@@ -459,6 +467,57 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                           Shift Lintas Hari (Overnight / Malam)
                         </span>
                       </label>
+                    </div>
+                  </div>
+
+                  {/* Configurable Time Windows */}
+                  <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800">Jendela Waktu Presensi (Proteksi & Keamanan)</span>
+                      <span className="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded font-bold border border-blue-200">
+                        Anti-Absen Diluar Jam
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                          <span>Jendela Buka Tap Masuk</span>
+                          <span className="text-[10px] text-blue-600 font-bold">{(checkInWindow / 60).toFixed(1)} jam sebelum</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min={15}
+                            max={360}
+                            step={15}
+                            value={checkInWindow}
+                            onChange={(e) => setCheckInWindow(Number(e.target.value))}
+                            className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <span className="absolute right-3 top-1.5 text-[11px] text-slate-400">menit</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-1">Tap masuk paling awal diakui {checkInWindow} mnt sebelum jam masuk.</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                          <span>Batas Akhir Tap Pulang</span>
+                          <span className="text-[10px] text-blue-600 font-bold">{(checkOutWindow / 60).toFixed(1)} jam setelah</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min={30}
+                            max={480}
+                            step={15}
+                            value={checkOutWindow}
+                            onChange={(e) => setCheckOutWindow(Number(e.target.value))}
+                            className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <span className="absolute right-3 top-1.5 text-[11px] text-slate-400">menit</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-1">Tap pulang paling lambat diakui {checkOutWindow} mnt setelah jam pulang.</p>
+                      </div>
                     </div>
                   </div>
                 </>

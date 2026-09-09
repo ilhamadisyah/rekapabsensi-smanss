@@ -24,6 +24,8 @@ export const DEFAULT_SHIFT_TEMPLATES: ShiftTemplate[] = [
     start_time: '07:30:00',
     end_time: '16:00:00',
     grace_period_minutes: 0,
+    check_in_window_minutes: 120,
+    check_out_window_minutes: 240,
     is_overnight: false,
     is_off_day: false,
     color: '#2563eb', // Blue
@@ -39,6 +41,8 @@ export const DEFAULT_SHIFT_TEMPLATES: ShiftTemplate[] = [
     start_time: '06:00:00',
     end_time: '14:00:00',
     grace_period_minutes: 0,
+    check_in_window_minutes: 60,
+    check_out_window_minutes: 240,
     is_overnight: false,
     is_off_day: false,
     color: '#059669', // Emerald
@@ -54,6 +58,8 @@ export const DEFAULT_SHIFT_TEMPLATES: ShiftTemplate[] = [
     start_time: '14:00:00',
     end_time: '22:00:00',
     grace_period_minutes: 0,
+    check_in_window_minutes: 60,
+    check_out_window_minutes: 240,
     is_overnight: false,
     is_off_day: false,
     color: '#d97706', // Amber
@@ -69,6 +75,8 @@ export const DEFAULT_SHIFT_TEMPLATES: ShiftTemplate[] = [
     start_time: '20:00:00',
     end_time: '06:00:00',
     grace_period_minutes: 0,
+    check_in_window_minutes: 120,
+    check_out_window_minutes: 240,
     is_overnight: true,
     is_off_day: false,
     color: '#7c3aed', // Purple
@@ -84,6 +92,8 @@ export const DEFAULT_SHIFT_TEMPLATES: ShiftTemplate[] = [
     start_time: '00:00:00',
     end_time: '00:00:00',
     grace_period_minutes: 0,
+    check_in_window_minutes: 0,
+    check_out_window_minutes: 0,
     is_overnight: false,
     is_off_day: true,
     color: '#64748b', // Slate
@@ -475,6 +485,8 @@ const localDb = {
       start_time: template.start_time || '07:30:00',
       end_time: template.end_time || '16:00:00',
       grace_period_minutes: Number(template.grace_period_minutes || 0),
+      check_in_window_minutes: typeof template.check_in_window_minutes === 'number' ? template.check_in_window_minutes : 120,
+      check_out_window_minutes: typeof template.check_out_window_minutes === 'number' ? template.check_out_window_minutes : 240,
       is_overnight: Boolean(template.is_overnight),
       is_off_day: Boolean(template.is_off_day),
       color: template.color || '#2563eb',

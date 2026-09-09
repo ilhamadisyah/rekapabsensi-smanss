@@ -369,7 +369,12 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                 const isOvernight = (scheduledStart > scheduledEnd) || currentAttendance?.shift_code === 'MALAM';
                 const isCrossDay = Boolean(currentAttendance?.is_cross_day);
 
-                if (currentAttendance?.system_status === 'HADIR') {
+                // Anti-daytime cheat verification for overnight:
+                // Check if firstIn is actually in evening (>= 17:00) and lastOut in morning (<= 11:00)
+                const isLegitimateNightShiftTaps = isOvernight && isCrossDay && Boolean(firstIn && firstIn >= '17:00:00' && lastOut && lastOut <= '11:00:00');
+                const isDaytimeTapsOnNightShift = isOvernight && Boolean(firstIn && (firstIn < '17:00:00' || (lastOut && lastOut > '12:00:00') || !isCrossDay));
+
+                if (currentAttendance?.system_status === 'HADIR' && (!isOvernight || isLegitimateNightShiftTaps)) {
                   if (isOvernight) {
                     return (
                       <div className="text-[11px] text-emerald-900 bg-emerald-50/90 p-2.5 rounded-lg border border-emerald-200 flex items-start gap-2">
@@ -414,6 +419,24 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                         </div>
                         <div className="text-rose-800 mt-0.5 leading-relaxed">
                           Tidak ditemukan rekaman tap mesin pada tanggal ini. Jam kerja yang berlaku adalah <strong>{scheduledStart} s/d {scheduledEnd} WIB</strong>. Silakan pilih status override (DL, Sakit, Izin, Cuti) jika ada dokumen pendukung.
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // If assigned overnight shift but taps occurred in daytime / not legitimate night shift
+                if (isOvernight && isDaytimeTapsOnNightShift) {
+                  return (
+                    <div className="text-[11px] text-rose-900 bg-rose-50/90 p-2.5 rounded-lg border border-rose-200 flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-bold text-rose-950 flex items-center gap-1.5">
+                          <span>Notifikasi Sistem: Jam Tap Di Luar Jendela Shift Malam</span>
+                          <span className="px-1.5 py-0.5 bg-rose-200 text-rose-900 rounded text-[9px] font-bold">Tap Siang Tidak Sah</span>
+                        </div>
+                        <div className="text-rose-800 mt-0.5 leading-relaxed">
+                          Pegawai terjadwal <strong>{currentAttendance?.shift_name || 'Shift Malam'} ({scheduledStart} s/d {scheduledEnd} WIB)</strong>, namun tap presensi tercatat pada <strong>jam siang</strong> (masuk: <strong>{firstIn}</strong>, pulang: <strong>{lastOut}</strong>). Sistem menolak tap siang untuk shift malam karena pegawai tidak hadir pada jam kerja malam wajib.
                         </div>
                       </div>
                     </div>

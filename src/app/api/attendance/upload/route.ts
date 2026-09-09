@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/storage/store';
-import { parseAttendanceFile } from '@/lib/attendance/parser';
+import { parseAttendanceFile, ParseAttendanceOptions } from '@/lib/attendance/parser';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     let year = parseInt(yearStr || '', 10);
 
     // Optional: Pre-load shift schedules to enhance cross-day pairing accuracy
-    let scheduleMap: Map<string, { isOvernight?: boolean; startTime?: string; endTime?: string; isOffDay?: boolean }> | undefined;
+    let scheduleMap: ParseAttendanceOptions['scheduleMap'];
     try {
       const [schedules, shifts] = await Promise.all([
         db.getEmployeeSchedules(month || undefined, year || undefined),
@@ -42,6 +42,9 @@ export async function POST(request: NextRequest) {
           startTime: sc.custom_start_time || sh?.start_time,
           endTime: sc.custom_end_time || sh?.end_time,
           isOffDay: Boolean(sh?.is_off_day),
+          gracePeriodMinutes: sh?.grace_period_minutes,
+          checkInWindowMinutes: sh?.check_in_window_minutes,
+          checkOutWindowMinutes: sh?.check_out_window_minutes,
         });
       }
     } catch {

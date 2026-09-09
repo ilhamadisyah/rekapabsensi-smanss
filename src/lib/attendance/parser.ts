@@ -305,10 +305,33 @@ export function formatTime(d: Date): string {
   return `${hours}:${minutes}:${seconds}`;
 }
 
+/**
+ * Adds or subtracts minutes from a time string ("HH:mm:ss" or "HH:mm")
+ * Normalized strictly within 00:00:00 - 23:59:59.
+ */
+export function addMinutesToTime(timeStr: string, minutes: number): string {
+  const parts = timeStr.split(':').map(Number);
+  const h = parts[0] || 0;
+  const m = parts[1] || 0;
+  const s = parts[2] || 0;
+  let totalMin = h * 60 + m + minutes;
+  totalMin = ((totalMin % (24 * 60)) + (24 * 60)) % (24 * 60);
+  const newH = Math.floor(totalMin / 60);
+  const newM = totalMin % 60;
+  return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+export function timeToMinutes(timeStr: string): number {
+  const parts = timeStr.split(':').map(Number);
+  return (parts[0] || 0) * 60 + (parts[1] || 0);
+}
+
 export interface ScheduleEvaluationContext {
   startTime?: string;
   endTime?: string;
   gracePeriodMinutes?: number;
+  checkInWindowMinutes?: number; // Menit sebelum startTime tap mulai diterima
+  checkOutWindowMinutes?: number; // Menit setelah endTime tap masih diterima
   isOvernight?: boolean;
   isOffDay?: boolean;
   isHoliday?: boolean;
@@ -319,7 +342,7 @@ export interface ScheduleEvaluationContext {
 
 /**
  * Evaluates attendance condition according to PRD FR-04 & dynamic shift schedule:
- * Hadir iff N >= 2 AND Tin <= startTime (+grace) AND Tout >= endTime
+ * Hadir iff N >= 2 AND Tin <= startTime (+grace) AND Tout >= endTime within configurable time windows.
  */
 export function evaluateAttendanceStatus(
   firstIn: string | null,
@@ -363,46 +386,43 @@ export function evaluateAttendanceStatus(
     return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
   }
 
-  let checkInLimit = scheduleContext?.startTime || '07:30:00';
-  let checkOutLimit = scheduleContext?.endTime || '16:00:00';
+  let startTime = scheduleContext?.startTime || '07:30:00';
+  let endTime = scheduleContext?.endTime || '16:00:00';
+  if (startTime.length === 5) startTime += ':00';
+  if (endTime.length === 5) endTime += ':00';
 
-  // Apply grace period if configured
-  if (scheduleContext?.gracePeriodMinutes && scheduleContext.gracePeriodMinutes > 0) {
-    const parts = checkInLimit.split(':').map(Number);
-    const h = parts[0] || 0;
-    const m = parts[1] || 0;
-    const s = parts[2] || 0;
-    const totalMinutes = h * 60 + m + scheduleContext.gracePeriodMinutes;
-    const newH = Math.floor(totalMinutes / 60) % 24;
-    const newM = totalMinutes % 60;
-    checkInLimit = `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  }
+  const gracePeriod = scheduleContext?.gracePeriodMinutes || 0;
+  const checkInWindowMinutes = typeof scheduleContext?.checkInWindowMinutes === 'number' ? scheduleContext.checkInWindowMinutes : 120;
+  const checkOutWindowMinutes = typeof scheduleContext?.checkOutWindowMinutes === 'number' ? scheduleContext.checkOutWindowMinutes : 240;
 
-  if (checkInLimit.length === 5) checkInLimit += ':00';
-  if (checkOutLimit.length === 5) checkOutLimit += ':00';
-
-  let isCheckInValid = firstIn <= checkInLimit;
-  let isCheckOutValid = lastOut >= checkOutLimit;
+  // An overnight shift is explicitly marked isOvernight OR startTime > endTime (e.g. 20:00 > 06:00)
+  const isOvernight = Boolean(scheduleContext?.isOvernight || (startTime > endTime));
 
   // Handle overnight shift support (e.g. 20:00 - 06:00)
-  if (scheduleContext?.isOvernight) {
-    // An overnight shift MUST be across different days (beda hari):
-    // 1. If isCrossDaySession is explicitly false, both taps were on the same calendar day -> INVALID!
-    if (scheduleContext.isCrossDaySession === false) {
+  if (isOvernight) {
+    // 1. Mandatory Cross-Day Requirement:
+    // Both taps on the same calendar day CANNOT be an overnight shift!
+    if (scheduleContext?.isCrossDaySession === false) {
       return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
     }
 
-    // 2. Daytime tap trap: If firstIn is daytime (< 16:00) and lastOut is afternoon/evening (< 20:00):
-    // This is a daytime session on the SAME day (e.g. 06:22 s/d 17:45), NEVER a night shift!
-    if (firstIn < '16:00:00' && lastOut < '20:00:00') {
-      return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
-    }
+    // 2. Window Check-In (Malam/Sore):
+    // Earliest check-in is (startTime - checkInWindowMinutes). E.g. 20:00 - 120m = 18:00:00
+    // Latest check-in for on-time is (startTime + gracePeriod). E.g. 20:00 + 0 = 20:00:00
+    const earliestCheckIn = addMinutesToTime(startTime, -checkInWindowMinutes);
+    const checkInLimit = addMinutesToTime(startTime, gracePeriod);
 
-    // 3. Valid overnight check-in: Must be in starting evening/night (>= 17:00:00 and <= checkInLimit)
-    isCheckInValid = firstIn >= '17:00:00' && firstIn <= checkInLimit;
+    // 3. Window Check-Out (Pagi/Subuh pada Hari Berikutnya):
+    // Earliest check-out is endTime. E.g. 06:00:00
+    // Latest check-out is (endTime + checkOutWindowMinutes). E.g. 06:00 + 240m = 10:00:00
+    const checkOutLimit = endTime;
+    const latestCheckOut = addMinutesToTime(endTime, checkOutWindowMinutes);
 
-    // 4. Valid overnight check-out: Must be in next morning/subuh (< 12:00:00 and >= checkOutLimit)
-    isCheckOutValid = lastOut < '12:00:00' && lastOut >= checkOutLimit;
+    // Verify firstIn is in the evening window (NOT a daytime punch like 06:22 or 12:00)
+    const isCheckInValid = firstIn >= earliestCheckIn && firstIn <= checkInLimit;
+
+    // Verify lastOut is in the morning subuh window (NOT afternoon/evening like 17:45)
+    const isCheckOutValid = lastOut >= checkOutLimit && lastOut <= latestCheckOut;
 
     if (isCheckInValid && isCheckOutValid) {
       return { systemStatus: 'HADIR', finalStatus: 'HADIR' };
@@ -410,6 +430,15 @@ export function evaluateAttendanceStatus(
 
     return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
   }
+
+  // Regular daytime shift (e.g. 07:30 - 16:00)
+  const earliestCheckIn = addMinutesToTime(startTime, -checkInWindowMinutes);
+  const checkInLimit = addMinutesToTime(startTime, gracePeriod);
+  const checkOutLimit = endTime;
+  const latestCheckOut = addMinutesToTime(endTime, checkOutWindowMinutes);
+
+  const isCheckInValid = firstIn >= earliestCheckIn && firstIn <= checkInLimit;
+  const isCheckOutValid = lastOut >= checkOutLimit && lastOut <= latestCheckOut;
 
   if (isCheckInValid && isCheckOutValid) {
     return { systemStatus: 'HADIR', finalStatus: 'HADIR' };
@@ -419,7 +448,15 @@ export function evaluateAttendanceStatus(
 }
 
 export interface ParseAttendanceOptions {
-  scheduleMap?: Map<string, { isOvernight?: boolean; startTime?: string; endTime?: string; isOffDay?: boolean }>;
+  scheduleMap?: Map<string, {
+    isOvernight?: boolean;
+    startTime?: string;
+    endTime?: string;
+    isOffDay?: boolean;
+    gracePeriodMinutes?: number;
+    checkInWindowMinutes?: number;
+    checkOutWindowMinutes?: number;
+  }>;
   enableCrossDayPairing?: boolean;
 }
 
@@ -612,10 +649,13 @@ export function parseAttendanceFile(
         const sched = options?.scheduleMap?.get(`${machineId}___${dateStr}`);
 
         // Check if this punch is candidate for beginning an overnight shift:
-        // Either scheduled as isOvernight = true, or punch occurs in the evening (>= 17:00:00)
-        const isExplicitOvernight = Boolean(sched?.isOvernight);
-        const isEveningPunch = punch.timeStr >= '17:00:00';
-        const isOvernightCandidate = enableCrossDayPairing && (isExplicitOvernight || isEveningPunch);
+        // Must be scheduled as overnight AND punch must be in the evening/night window (not daytime)!
+        const checkInWindowMin = sched?.checkInWindowMinutes ?? 120;
+        const schedStart = sched?.startTime || '20:00:00';
+        const earliestEveningIn = addMinutesToTime(schedStart, -checkInWindowMin);
+        const isEveningPunch = punch.timeStr >= earliestEveningIn;
+        const isExplicitOvernight = Boolean(sched?.isOvernight || schedStart > (sched?.endTime || '06:00:00'));
+        const isOvernightCandidate = Boolean(enableCrossDayPairing && isExplicitOvernight && isEveningPunch);
 
         let isOvernightSession = false;
         const sessionPunches: RawPunchRecord[] = [punch];
@@ -639,14 +679,18 @@ export function parseAttendanceFile(
           dNext.setDate(dNext.getDate() + 1);
           const nextDateStr = formatDate(dNext);
 
-          // Find morning checkout punches on next day
+          // Find morning checkout punches on next day within configured checkout window
+          const checkOutWindowMin = sched?.checkOutWindowMinutes ?? 240;
+          const schedEnd = sched?.endTime || '06:00:00';
+          const latestMorningOut = addMinutesToTime(schedEnd, checkOutWindowMin);
+
           const nextDayMorningPunches: { index: number; punch: RawPunchRecord }[] = [];
           for (let j = i + 1; j < punches.length; j++) {
             if (consumedIndices.has(j)) continue;
             const pNext = punches[j];
-            if (pNext.dateStr === nextDateStr && pNext.timeStr <= '10:30:00') {
+            if (pNext.dateStr === nextDateStr && pNext.timeStr >= schedEnd && pNext.timeStr <= latestMorningOut) {
               const diffHours = (pNext.timestamp.getTime() - punch.timestamp.getTime()) / (1000 * 60 * 60);
-              if (diffHours >= 4 && diffHours <= 18) {
+              if (diffHours >= 4 && diffHours <= 16) {
                 nextDayMorningPunches.push({ index: j, punch: pNext });
               }
             } else if (pNext.dateStr > nextDateStr) {
@@ -690,6 +734,9 @@ export function parseAttendanceFile(
         const scheduleContext: ScheduleEvaluationContext = {
           startTime: sched?.startTime,
           endTime: sched?.endTime,
+          gracePeriodMinutes: sched?.gracePeriodMinutes,
+          checkInWindowMinutes: sched?.checkInWindowMinutes,
+          checkOutWindowMinutes: sched?.checkOutWindowMinutes,
           isOvernight: isOvernightSession || Boolean(sched?.isOvernight),
           isOffDay: sched?.isOffDay,
           isCrossDaySession: isOvernightSession,
@@ -721,7 +768,7 @@ export function parseAttendanceFile(
           system_status: systemStatus,
           final_status: finalStatus,
           is_cross_day: isOvernightSession,
-          is_verified: finalStatus === 'HADIR',
+          is_verified: false,
           updated_at: new Date().toISOString(),
         });
       }

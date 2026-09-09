@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/storage/store';
-import { evaluateAttendanceStatus } from '@/lib/attendance/parser';
+import { evaluateAttendanceStatus, addMinutesToTime } from '@/lib/attendance/parser';
 import { AttendanceCode, DailyAttendance } from '@/lib/types';
 import { getSupabaseServerClient, isSupabaseConfigured } from '@/lib/supabase/server';
 import { sanitizeDailyAttendanceForDb } from '@/lib/storage/supabase-store';
@@ -25,6 +25,8 @@ export async function POST(request: NextRequest) {
       start_time: '07:30',
       end_time: '16:00',
       grace_period_minutes: 0,
+      check_in_window_minutes: 120,
+      check_out_window_minutes: 240,
       is_overnight: false,
       is_off_day: false,
     };
@@ -83,7 +85,9 @@ export async function POST(request: NextRequest) {
         const startTime = sched?.custom_start_time || shift?.start_time || defaultShift.start_time;
         const endTime = sched?.custom_end_time || shift?.end_time || defaultShift.end_time;
         const gracePeriod = shift?.grace_period_minutes ?? defaultShift.grace_period_minutes;
-        const isOvernight = shift?.is_overnight ?? defaultShift.is_overnight;
+        const checkInWindowMinutes = shift?.check_in_window_minutes ?? defaultShift.check_in_window_minutes ?? 120;
+        const checkOutWindowMinutes = shift?.check_out_window_minutes ?? defaultShift.check_out_window_minutes ?? 240;
+        const isOvernight = Boolean(shift?.is_overnight ?? defaultShift.is_overnight ?? (startTime > endTime));
 
         const existing = attendanceMap.get(key);
 
@@ -123,17 +127,22 @@ export async function POST(request: NextRequest) {
           let effectiveTapCount = existing.tap_count;
           let isCrossDaySession = Boolean(existing.is_cross_day);
 
-          if (isOvernight && effectiveFirstIn && effectiveFirstIn >= '17:00:00' && (!effectiveLastOut || effectiveLastOut >= '15:00:00' || effectiveTapCount < 2)) {
-            // Look up next day's record for morning checkout
-            const dNext = new Date(dateStr + 'T00:00:00');
-            dNext.setDate(dNext.getDate() + 1);
-            const nextDateStr = `${dNext.getFullYear()}-${String(dNext.getMonth() + 1).padStart(2, '0')}-${String(dNext.getDate()).padStart(2, '0')}`;
-            const nextKey = `${emp.machine_id}___${nextDateStr}`;
-            const nextRec = attendanceMap.get(nextKey);
-            if (nextRec && nextRec.first_in && nextRec.first_in <= '10:30:00') {
-              effectiveLastOut = nextRec.first_in;
-              effectiveTapCount = Math.max(effectiveTapCount || 1, 2);
-              isCrossDaySession = true;
+          if (isOvernight) {
+            const earliestEveningIn = addMinutesToTime(startTime, -checkInWindowMinutes);
+            const latestMorningOut = addMinutesToTime(endTime, checkOutWindowMinutes);
+
+            if (effectiveFirstIn && effectiveFirstIn >= earliestEveningIn && (!effectiveLastOut || effectiveLastOut >= '15:00:00' || effectiveTapCount < 2)) {
+              // Look up next day's record for morning checkout
+              const dNext = new Date(dateStr + 'T00:00:00');
+              dNext.setDate(dNext.getDate() + 1);
+              const nextDateStr = `${dNext.getFullYear()}-${String(dNext.getMonth() + 1).padStart(2, '0')}-${String(dNext.getDate()).padStart(2, '0')}`;
+              const nextKey = `${emp.machine_id}___${nextDateStr}`;
+              const nextRec = attendanceMap.get(nextKey);
+              if (nextRec && nextRec.first_in && nextRec.first_in >= endTime && nextRec.first_in <= latestMorningOut) {
+                effectiveLastOut = nextRec.first_in;
+                effectiveTapCount = Math.max(effectiveTapCount || 1, 2);
+                isCrossDaySession = true;
+              }
             }
           }
 
@@ -142,6 +151,8 @@ export async function POST(request: NextRequest) {
             startTime,
             endTime,
             gracePeriodMinutes: gracePeriod,
+            checkInWindowMinutes,
+            checkOutWindowMinutes,
             isOvernight,
             isOffDay: isExplicitOffShift,
             isHoliday,
