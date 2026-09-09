@@ -109,8 +109,9 @@ export async function POST(request: NextRequest) {
           let effectiveFirstIn = existing.first_in;
           let effectiveLastOut = existing.last_out;
           let effectiveTapCount = existing.tap_count;
+          let isCrossDaySession = Boolean(existing.is_cross_day);
 
-          if (isOvernight && effectiveFirstIn && effectiveFirstIn >= '15:00:00' && (!effectiveLastOut || effectiveLastOut >= '15:00:00' || effectiveTapCount < 2)) {
+          if (isOvernight && effectiveFirstIn && effectiveFirstIn >= '17:00:00' && (!effectiveLastOut || effectiveLastOut >= '15:00:00' || effectiveTapCount < 2)) {
             // Look up next day's record for morning checkout
             const dNext = new Date(dateStr + 'T00:00:00');
             dNext.setDate(dNext.getDate() + 1);
@@ -120,6 +121,7 @@ export async function POST(request: NextRequest) {
             if (nextRec && nextRec.first_in && nextRec.first_in <= '10:30:00') {
               effectiveLastOut = nextRec.first_in;
               effectiveTapCount = Math.max(effectiveTapCount || 1, 2);
+              isCrossDaySession = true;
             }
           }
 
@@ -133,6 +135,7 @@ export async function POST(request: NextRequest) {
             isHoliday,
             holidayName: hol?.name,
             hasAssignedDuty,
+            isCrossDaySession,
           };
 
           const evaluated = evaluateAttendanceStatus(
@@ -159,6 +162,7 @@ export async function POST(request: NextRequest) {
             tap_count: effectiveTapCount,
             system_status: systemStatus,
             final_status: finalStatus,
+            is_cross_day: isCrossDaySession,
             is_verified: false,
             updated_at: new Date().toISOString(),
           });

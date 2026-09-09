@@ -366,7 +366,27 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                   );
                 }
 
+                const isOvernight = (scheduledStart > scheduledEnd) || currentAttendance?.shift_code === 'MALAM';
+                const isCrossDay = Boolean(currentAttendance?.is_cross_day);
+
                 if (currentAttendance?.system_status === 'HADIR') {
+                  if (isOvernight) {
+                    return (
+                      <div className="text-[11px] text-emerald-900 bg-emerald-50/90 p-2.5 rounded-lg border border-emerald-200 flex items-start gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <div>
+                          <div className="font-bold text-emerald-950 flex items-center gap-1.5">
+                            <span>Notifikasi Sistem: Jam Kerja Shift Malam Terpenuhi</span>
+                            <span className="px-1.5 py-0.5 bg-emerald-200 text-emerald-900 rounded text-[9px] font-bold">Lintas Hari (Valid)</span>
+                          </div>
+                          <div className="text-emerald-800 mt-0.5 leading-relaxed">
+                            Tap presensi memenuhi jam kerja wajib shift <strong>{currentAttendance?.shift_name || 'Shift Malam'}</strong> (<strong>{scheduledStart} s/d {scheduledEnd} WIB</strong>). Pegawai tercatat masuk malam pukul <strong>{firstIn}</strong> dan pulang subuh pukul <strong>{lastOut}</strong> pada keesokan harinya (<strong>beda hari terverifikasi</strong>) dengan total {tapCount} tap.
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div className="text-[11px] text-emerald-900 bg-emerald-50/90 p-2.5 rounded-lg border border-emerald-200 flex items-start gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
@@ -400,10 +420,30 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                   );
                 }
 
+                // If assigned overnight shift but taps occurred on the SAME DAY (not cross-day)
+                if (isOvernight && !isCrossDay && firstIn && lastOut) {
+                  return (
+                    <div className="text-[11px] text-rose-900 bg-rose-50/90 p-2.5 rounded-lg border border-rose-200 flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-bold text-rose-950 flex items-center gap-1.5">
+                          <span>Notifikasi Sistem: Jam Tap Tidak Sesuai Shift Malam</span>
+                          <span className="px-1.5 py-0.5 bg-rose-200 text-rose-900 rounded text-[9px] font-bold">Bukan Beda Hari</span>
+                        </div>
+                        <div className="text-rose-800 mt-0.5 leading-relaxed">
+                          Pegawai tercatat melakukan tap pada <strong>hari yang sama</strong> (masuk pukul <strong>{firstIn}</strong> dan pulang pukul <strong>{lastOut}</strong>). Shift <strong>{currentAttendance?.shift_name || 'Shift Malam'}</strong> ({scheduledStart} s/d {scheduledEnd} WIB) merupakan shift lintas hari yang mewajibkan tap masuk pada malam hari dan tap pulang subuh pada keesokan harinya (<strong>beda hari</strong>).
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
                 // tapCount > 0 but not HADIR
                 let reason = `Tap presensi belum memenuhi ketentuan jam kerja penuh (${scheduledStart} s/d ${scheduledEnd} WIB).`;
                 if (tapCount === 1) {
-                  reason = `Pegawai hanya melakukan 1 kali tap (${firstIn}). Kehadiran penuh mewajibkan minimal 2 tap (masuk & pulang).`;
+                  reason = isOvernight
+                    ? `Pegawai hanya melakukan 1 kali tap (${firstIn}). Shift Malam mewajibkan tap masuk malam dan tap pulang subuh pada keesokan harinya (beda hari).`
+                    : `Pegawai hanya melakukan 1 kali tap (${firstIn}). Kehadiran penuh mewajibkan minimal 2 tap (masuk & pulang).`;
                 } else if (firstIn && firstIn > scheduledStart && lastOut && lastOut < scheduledEnd) {
                   reason = `Masuk terlambat (${firstIn} > ${scheduledStart}) dan pulang mendahului (${lastOut} < ${scheduledEnd}).`;
                 } else if (firstIn && firstIn > scheduledStart) {

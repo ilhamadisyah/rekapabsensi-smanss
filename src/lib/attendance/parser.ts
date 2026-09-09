@@ -244,6 +244,7 @@ export interface ScheduleEvaluationContext {
   isHoliday?: boolean;
   holidayName?: string;
   hasAssignedDuty?: boolean;
+  isCrossDaySession?: boolean;
 }
 
 /**
@@ -315,11 +316,29 @@ export function evaluateAttendanceStatus(
 
   // Handle overnight shift support (e.g. 20:00 - 06:00)
   if (scheduleContext?.isOvernight) {
-    // Overnight shift: check-in on starting evening, check-out on next morning
-    // Valid check-in: arrived on time (firstIn <= checkInLimit) during starting evening (firstIn >= 15:00:00)
-    isCheckInValid = firstIn >= '15:00:00' && firstIn <= checkInLimit;
-    // Valid check-out: stayed until scheduled end (lastOut >= checkOutLimit) in morning (< 14:00:00)
-    isCheckOutValid = lastOut < '14:00:00' && lastOut >= checkOutLimit;
+    // An overnight shift MUST be across different days (beda hari):
+    // 1. If isCrossDaySession is explicitly false, both taps were on the same calendar day -> INVALID!
+    if (scheduleContext.isCrossDaySession === false) {
+      return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
+    }
+
+    // 2. Daytime tap trap: If firstIn is daytime (< 16:00) and lastOut is afternoon/evening (< 20:00):
+    // This is a daytime session on the SAME day (e.g. 06:22 s/d 17:45), NEVER a night shift!
+    if (firstIn < '16:00:00' && lastOut < '20:00:00') {
+      return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
+    }
+
+    // 3. Valid overnight check-in: Must be in starting evening/night (>= 17:00:00 and <= checkInLimit)
+    isCheckInValid = firstIn >= '17:00:00' && firstIn <= checkInLimit;
+
+    // 4. Valid overnight check-out: Must be in next morning/subuh (< 12:00:00 and >= checkOutLimit)
+    isCheckOutValid = lastOut < '12:00:00' && lastOut >= checkOutLimit;
+
+    if (isCheckInValid && isCheckOutValid) {
+      return { systemStatus: 'HADIR', finalStatus: 'HADIR' };
+    }
+
+    return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
   }
 
   if (isCheckInValid && isCheckOutValid) {
@@ -636,6 +655,7 @@ export function parseAttendanceFile(
           endTime: sched?.endTime,
           isOvernight: isOvernightSession || Boolean(sched?.isOvernight),
           isOffDay: sched?.isOffDay,
+          isCrossDaySession: isOvernightSession,
         };
 
         const { systemStatus, finalStatus } = evaluateAttendanceStatus(
@@ -663,6 +683,7 @@ export function parseAttendanceFile(
           tap_count: tapCount,
           system_status: systemStatus,
           final_status: finalStatus,
+          is_cross_day: isOvernightSession,
           is_verified: finalStatus === 'HADIR',
           updated_at: new Date().toISOString(),
         });

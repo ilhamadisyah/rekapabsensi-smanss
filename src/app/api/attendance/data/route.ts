@@ -162,15 +162,19 @@ export async function GET(request: NextRequest) {
           rec.is_custom_schedule = Boolean(sched);
 
           if (!rec.is_verified) {
+            let isCrossDaySession = Boolean(rec.is_cross_day);
             // Dynamic Cross-Day Punch Pairing for overnight shifts:
-            // If this record has evening check-in (>= 15:00) and lacks morning checkout (or first_in === last_out),
-            // check if the next day has an early morning punch (<= 10:30)
-            if (isOvernight && rec.first_in && rec.first_in >= '15:00:00' && (!rec.last_out || rec.last_out >= '15:00:00' || rec.tap_count < 2)) {
-              const nextDayRec = attendanceMap[emp.machine_id]?.[d.day + 1];
-              if (nextDayRec && nextDayRec.first_in && nextDayRec.first_in <= '10:30:00') {
-                rec.last_out = nextDayRec.first_in;
-                rec.tap_count = Math.max(rec.tap_count || 1, 2);
+            // An overnight shift MUST pair with the next calendar day (beda hari)!
+            if (isOvernight) {
+              if (rec.first_in && rec.first_in >= '17:00:00' && (!rec.last_out || rec.last_out >= '15:00:00' || rec.tap_count < 2)) {
+                const nextDayRec = attendanceMap[emp.machine_id]?.[d.day + 1];
+                if (nextDayRec && nextDayRec.first_in && nextDayRec.first_in <= '10:30:00') {
+                  rec.last_out = nextDayRec.first_in;
+                  rec.tap_count = Math.max(rec.tap_count || 1, 2);
+                  isCrossDaySession = true;
+                }
               }
+              rec.is_cross_day = isCrossDaySession;
             }
 
             // Dynamic evaluation according to assigned shift rules
@@ -183,6 +187,7 @@ export async function GET(request: NextRequest) {
               isHoliday,
               holidayName: hol?.name,
               hasAssignedDuty,
+              isCrossDaySession,
             };
 
             const evaluated = evaluateAttendanceStatus(
