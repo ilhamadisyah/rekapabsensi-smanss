@@ -735,7 +735,10 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                     {days.map((d) => {
                       const rec = empAttendance[d.day];
                       const isWeekend = d.isWeekend;
-                      const hasAssignedDuty = Boolean(rec?.shift_id || rec?.scheduled_start || rec?.is_custom_schedule);
+                      const hasAssignedDuty = Boolean(
+                        rec?.has_assigned_duty ||
+                        (rec?.is_custom_schedule && !rec?.is_off_day && rec?.shift_code !== 'OFF' && rec?.shift_code !== 'LIBUR' && rec?.final_status !== 'LIBUR')
+                      );
                       const isRecorded = recordedDays.length > 0 ? recordedDays.includes(d.day) : true;
                       const isManuallyVerified = rec && rec.is_verified;
                       const isOff = Boolean(rec?.is_off_day || rec?.final_status === 'OFF');
@@ -750,7 +753,8 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
 
                       // 1. Weekend or Holiday WITHOUT assigned active work duty, and not tapped / verified
                       const isWeekendOrHoliday = isWeekend || isHol || rec?.final_status === 'LIBUR';
-                      if (isWeekendOrHoliday && !hasAssignedDuty && !rec?.first_in && !isManuallyVerified) {
+                      const isVerifiedWork = Boolean(isManuallyVerified && !['LIBUR', 'OFF'].includes(rec?.final_status));
+                      if (isWeekendOrHoliday && !hasAssignedDuty && !rec?.first_in && !isVerifiedWork) {
                         return (
                           <td
                             key={`cell-${emp.id}-${d.day}`}

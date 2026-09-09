@@ -216,6 +216,7 @@ export interface DailyAttendance {
   scheduled_start?: string | null;
   scheduled_end?: string | null;
   is_custom_schedule?: boolean;
+  has_assigned_duty?: boolean;
   is_cross_day?: boolean;
   checkout_date?: string;
   is_verified: boolean;

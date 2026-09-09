@@ -300,11 +300,10 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                       setFormIsOffDay(false);
                       setFormIsOvernight(false);
                     }}
-                    className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                      !formIsOffDay && !formIsOvernight
-                        ? 'bg-white text-blue-700 shadow-xs font-bold border border-slate-200/80'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                    }`}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${!formIsOffDay && !formIsOvernight
+                      ? 'bg-white text-blue-700 shadow-xs font-bold border border-slate-200/80'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                      }`}
                   >
                     <Sun className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                     <span className="truncate">Reguler (Harian)</span>
@@ -316,11 +315,10 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                       setFormIsOffDay(false);
                       setFormIsOvernight(true);
                     }}
-                    className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                      !formIsOffDay && formIsOvernight
-                        ? 'bg-white text-indigo-700 shadow-xs font-bold border border-slate-200/80'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                    }`}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${!formIsOffDay && formIsOvernight
+                      ? 'bg-white text-indigo-700 shadow-xs font-bold border border-slate-200/80'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                      }`}
                   >
                     <Moon className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
                     <span className="truncate">Shift Malam</span>
@@ -332,11 +330,10 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                       setFormIsOffDay(true);
                       setFormIsOvernight(false);
                     }}
-                    className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                      formIsOffDay
-                        ? 'bg-white text-slate-900 shadow-xs font-bold border border-slate-200/80'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                    }`}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${formIsOffDay
+                      ? 'bg-white text-slate-900 shadow-xs font-bold border border-slate-200/80'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                      }`}
                   >
                     <Coffee className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                     <span className="truncate">Bebas Tugas</span>
@@ -408,20 +405,17 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                           <Shield className="w-3 h-3" />
                         </div>
                         <span className="text-[11px] font-bold text-slate-800">
-                          Jendela Waktu Presensi (Proteksi Keamanan)
+                          Batas Waktu Presensi
                         </span>
                       </div>
-                      <span className="text-[10px] text-blue-700 bg-blue-100/70 border border-blue-200/60 px-2 py-0.5 rounded-full font-bold">
-                        Anti-Absen Diluar Jam
-                      </span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="bg-white border border-slate-200/80 rounded-lg p-2.5 shadow-2xs space-y-1.5">
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-semibold text-slate-700">Jendela Buka Masuk</span>
+                          <span className="font-semibold text-slate-700">Batas Maksimal Absen Masuk</span>
                           <span className="text-blue-600 font-bold text-[10px]">
-                            {(formCheckInWindow / 60).toFixed(1)} jam sblm
+                            {(formCheckInWindow / 60).toFixed(1)} jam sebelum
                           </span>
                         </div>
                         <div className="relative">
@@ -439,16 +433,16 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                         <div className="text-[10px] text-slate-600 flex items-center gap-1 bg-slate-50 px-2 py-1 rounded border border-slate-100">
                           <Clock className="w-3 h-3 text-blue-500 shrink-0" />
                           <span className="truncate">
-                            Sah mulai: <strong className="text-slate-800 font-bold">{formatTimeOffset(formStartTime, -formCheckInWindow)}</strong>
+                            Absen dimulai: <strong className="text-slate-800 font-bold">{formatTimeOffset(formStartTime, -formCheckInWindow)}</strong>
                           </span>
                         </div>
                       </div>
 
                       <div className="bg-white border border-slate-200/80 rounded-lg p-2.5 shadow-2xs space-y-1.5">
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-semibold text-slate-700">Batas Akhir Pulang</span>
+                          <span className="font-semibold text-slate-700">Batas Maksimal Absen Pulang</span>
                           <span className="text-blue-600 font-bold text-[10px]">
-                            {(formCheckOutWindow / 60).toFixed(1)} jam stlh
+                            {(formCheckOutWindow / 60).toFixed(1)} jam setelah
                           </span>
                         </div>
                         <div className="relative">
@@ -466,7 +460,7 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                         <div className="text-[10px] text-slate-600 flex items-center gap-1 bg-slate-50 px-2 py-1 rounded border border-slate-100">
                           <Clock className="w-3 h-3 text-blue-500 shrink-0" />
                           <span className="truncate">
-                            Sah hingga: <strong className="text-slate-800 font-bold">{formatTimeOffset(formEndTime, formCheckOutWindow, formIsOvernight)}</strong>
+                            Absen diterima hingga: <strong className="text-slate-800 font-bold">{formatTimeOffset(formEndTime, formCheckOutWindow, formIsOvernight)}</strong>
                           </span>
                         </div>
                       </div>

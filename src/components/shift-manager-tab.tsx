@@ -562,9 +562,9 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                         {/* Jendela Buka Tap Masuk */}
                         <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs space-y-1.5">
                           <div className="flex items-center justify-between text-[11px]">
-                            <span className="font-bold text-slate-700">Jendela Buka Masuk</span>
+                            <span className="font-bold text-slate-700">Batas Maksimal Absen Masuk</span>
                             <span className="text-blue-600 font-bold text-[10px]">
-                              {(checkInWindow / 60).toFixed(1)} jam sblm
+                              {(checkInWindow / 60).toFixed(1)} jam sebelum
                             </span>
                           </div>
 
@@ -586,7 +586,7 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                           <div className="text-[10.5px] text-slate-600 flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
                             <Clock className="w-3 h-3 text-blue-500 shrink-0" />
                             <span className="truncate">
-                              Sah mulai: <strong className="text-slate-800 font-bold">{formatTimeOffset(startTime, -checkInWindow)}</strong>
+                              Absen dimulai: <strong className="text-slate-800 font-bold">{formatTimeOffset(startTime, -checkInWindow)}</strong>
                             </span>
                           </div>
                         </div>
@@ -594,9 +594,9 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                         {/* Batas Akhir Tap Pulang */}
                         <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs space-y-1.5">
                           <div className="flex items-center justify-between text-[11px]">
-                            <span className="font-bold text-slate-700">Batas Akhir Pulang</span>
+                            <span className="font-bold text-slate-700">Batas Maksimal Absen Pulang</span>
                             <span className="text-blue-600 font-bold text-[10px]">
-                              {(checkOutWindow / 60).toFixed(1)} jam stlh
+                              {(checkOutWindow / 60).toFixed(1)} jam setelah
                             </span>
                           </div>
 
@@ -618,7 +618,7 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                           <div className="text-[10.5px] text-slate-600 flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
                             <Clock className="w-3 h-3 text-blue-500 shrink-0" />
                             <span className="truncate">
-                              Sah hingga: <strong className="text-slate-800 font-bold">{formatTimeOffset(endTime, checkOutWindow, isOvernight)}</strong>
+                              Absen diterima hingga: <strong className="text-slate-800 font-bold">{formatTimeOffset(endTime, checkOutWindow, isOvernight)}</strong>
                             </span>
                           </div>
                         </div>

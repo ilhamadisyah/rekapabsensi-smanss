@@ -159,11 +159,12 @@ export async function GET(request: NextRequest) {
           rec.shift_code = shiftCode;
           rec.shift_name = shiftName;
           rec.shift_color = shiftColor;
-          rec.scheduled_start = startTime;
-          rec.scheduled_end = endTime;
-          rec.is_off_day = isOffDay;
-          rec.is_holiday = isHoliday;
+          rec.scheduled_start = isWorkRequired ? startTime : null;
+          rec.scheduled_end = isWorkRequired ? endTime : null;
+          rec.is_off_day = isOffDay || isWeekendLibur;
+          rec.is_holiday = isHoliday || isWeekendLibur;
           rec.is_custom_schedule = Boolean(sched);
+          rec.has_assigned_duty = hasAssignedDuty;
 
           if (!rec.is_verified) {
             let isCrossDaySession = Boolean(rec.is_cross_day);
