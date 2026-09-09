@@ -584,19 +584,22 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
               <th className="sticky-col-3 bg-slate-100 px-2 h-8 border-b border-r border-slate-300 text-center font-bold text-xs text-slate-700 box-border">
                 Ringkasan
               </th>
-              {days.map((d) => (
-                <th
-                  key={`day-name-${d.day}`}
-                  className={`w-[42px] min-w-[42px] max-w-[42px] h-8 p-0 text-center border-b border-r border-slate-200 text-[10px] box-border ${
-                    d.isWeekend ? 'bg-rose-50/90 text-rose-700 font-black' : 'bg-slate-100 text-slate-600 font-bold'
-                  }`}
-                  title={d.isWeekend ? `Akhir Pekan (${d.dayName})` : d.dayName}
-                >
-                  <div className="w-full h-8 flex items-center justify-center font-bold tracking-tight">
-                    {d.dayName}
-                  </div>
-                </th>
-              ))}
+              {days.map((d) => {
+                const isRedDay = d.isWeekend || Boolean(d.holiday);
+                return (
+                  <th
+                    key={`day-name-${d.day}`}
+                    className={`w-[42px] min-w-[42px] max-w-[42px] h-8 p-0 text-center border-b border-r border-slate-200 text-[10px] box-border ${
+                      isRedDay ? 'bg-rose-50/90 text-rose-700 font-black' : 'bg-slate-100 text-slate-600 font-bold'
+                    }`}
+                    title={d.holiday ? `Hari Libur: ${d.holiday.name}` : d.isWeekend ? `Akhir Pekan (${d.dayName})` : d.dayName}
+                  >
+                    <div className="w-full h-8 flex items-center justify-center font-bold tracking-tight">
+                      {d.dayName}
+                    </div>
+                  </th>
+                );
+              })}
             </tr>
 
             {/* ROW 2: Day Numbers (1 s/d 30) & Skor */}
@@ -614,18 +617,22 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                 <span className="text-slate-400 font-normal mx-0.5">/</span>
                 <span className="text-amber-600">I</span>
               </th>
-              {days.map((d) => (
-                <th
-                  key={`day-num-${d.day}`}
-                  className={`w-[42px] min-w-[42px] max-w-[42px] h-8 p-0 text-center border-b-2 border-r border-slate-300 text-xs font-black box-border ${
-                    d.isWeekend ? 'bg-rose-100/90 text-rose-800' : 'bg-slate-200 text-slate-900'
-                  }`}
-                >
-                  <div className="w-full h-8 flex items-center justify-center font-black">
-                    {d.day}
-                  </div>
-                </th>
-              ))}
+              {days.map((d) => {
+                const isRedDay = d.isWeekend || Boolean(d.holiday);
+                return (
+                  <th
+                    key={`day-num-${d.day}`}
+                    className={`w-[42px] min-w-[42px] max-w-[42px] h-8 p-0 text-center border-b-2 border-r border-slate-300 text-xs font-black box-border ${
+                      isRedDay ? 'bg-rose-100/90 text-rose-800' : 'bg-slate-200 text-slate-900'
+                    }`}
+                    title={d.holiday ? `Hari Libur: ${d.holiday.name}` : d.isWeekend ? `Akhir Pekan (${d.dayName})` : `Tanggal ${d.day}`}
+                  >
+                    <div className="w-full h-8 flex items-center justify-center font-black">
+                      {d.day}
+                    </div>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
 
@@ -746,7 +753,44 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                         );
                       }
 
-                      // 2. Explicit OFF day (Libur Shift / Bebas Tugas)
+                      // 2. Holiday (Hari Libur Resmi / Nasional) WITHOUT active assigned work duty
+                      const isHolidayDate = rec?.final_status === 'LIBUR' || rec?.is_holiday || Boolean(d.holiday);
+                      if (
+                        isHolidayDate &&
+                        !hasAssignedDuty &&
+                        !rec?.first_in &&
+                        !isManuallyVerified
+                      ) {
+                        return (
+                          <td
+                            key={`cell-${emp.id}-${d.day}`}
+                            onClick={() => {
+                              if (userRole === 'pimpinan') return;
+                              onCellClick(emp, d, rec || null);
+                            }}
+                            onMouseEnter={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setHoveredCell({
+                                empId: emp.id,
+                                day: d.day,
+                                x: rect.left,
+                                y: rect.top,
+                              });
+                            }}
+                            onMouseLeave={() => setHoveredCell(null)}
+                            className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-rose-200/80 bg-rose-50/90 hover:bg-rose-100/90 transition-all font-semibold select-none cursor-pointer box-border"
+                            title={`${emp.full_name} | Tgl ${d.day}: ${d.holiday?.name || rec?.shift_name || 'Hari Libur Resmi'} | Jam Kerja: Hari Libur (Bebas Tugas)`}
+                          >
+                            <div className="w-full h-full flex flex-col items-center justify-center">
+                              <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200 shadow-2xs">
+                                LIBUR
+                              </span>
+                            </div>
+                          </td>
+                        );
+                      }
+
+                      // 3. Explicit OFF day (Libur Shift / Bebas Tugas)
                       if (rec?.final_status === 'OFF' || rec?.is_off_day) {
                         return (
                           <td
@@ -771,41 +815,6 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                             <div className="w-full h-full flex flex-col items-center justify-center">
                               <span className="px-1 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-600 border border-slate-300 shadow-2xs">
                                 OFF
-                              </span>
-                            </div>
-                          </td>
-                        );
-                      }
-
-                      // 3. Holiday (Hari Libur Tambahan / Nasional) without active work duty
-                      if (
-                        (rec?.final_status === 'LIBUR' || (d.holiday && !hasAssignedDuty)) &&
-                        !rec?.first_in &&
-                        !isManuallyVerified
-                      ) {
-                        return (
-                          <td
-                            key={`cell-${emp.id}-${d.day}`}
-                            onClick={() => {
-                              if (userRole === 'pimpinan') return;
-                              onCellClick(emp, d, rec || null);
-                            }}
-                            onMouseEnter={(e) => {
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              setHoveredCell({
-                                empId: emp.id,
-                                day: d.day,
-                                x: rect.left,
-                                y: rect.top,
-                              });
-                            }}
-                            onMouseLeave={() => setHoveredCell(null)}
-                            className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-200 bg-rose-50/70 hover:bg-rose-100 transition-all font-semibold select-none cursor-pointer box-border"
-                            title={`${emp.full_name} | Tgl ${d.day}: ${d.holiday?.name || rec?.shift_name || 'Hari Libur'} | Jam Kerja: Hari Libur (Bebas Tugas)`}
-                          >
-                            <div className="w-full h-full flex flex-col items-center justify-center">
-                              <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200 shadow-2xs">
-                                LIBUR
                               </span>
                             </div>
                           </td>
@@ -912,74 +921,6 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
             )}
           </tbody>
         </table>
-
-        {/* Floating Cell Details Hover Popover */}
-        {hoveredCell && (() => {
-          const hEmp = employees.find((e) => e.id === hoveredCell.empId || e.machine_id === hoveredCell.empId);
-          const hDay = days.find((d) => d.day === hoveredCell.day);
-          if (!hEmp || !hDay) return null;
-
-          const hRec = attendanceMap[hEmp.machine_id]?.[hDay.day];
-          const isOff = hRec?.is_off_day || hRec?.final_status === 'OFF';
-          const isHol = hRec?.is_holiday || Boolean(hDay.holiday) || hRec?.final_status === 'LIBUR';
-          const shiftTitle = hRec?.shift_name || (isOff ? 'Libur Shift (Bebas Tugas)' : isHol ? (hDay.holiday?.name || 'Hari Libur') : 'Jam Kerja Normal (Reguler)');
-          const sTime = hRec?.scheduled_start ? hRec.scheduled_start.substring(0, 5) : '07:30';
-          const eTime = hRec?.scheduled_end ? hRec.scheduled_end.substring(0, 5) : '16:00';
-          const workingHoursStr = isOff ? 'Bebas Tugas (Libur Shift)' : isHol ? 'Hari Libur Resmi' : `${sTime} s/d ${eTime} WIB`;
-          const fStatus = hRec ? hRec.final_status : (hDay.isWeekend ? '-' : (isOff ? 'OFF' : (isHol ? 'LIBUR' : 'A')));
-          const stInfo = ATTENDANCE_STATUS_MAP[fStatus as AttendanceCode];
-
-          return (
-            <div
-              className="fixed z-50 pointer-events-none transform -translate-x-1/2 -translate-y-full mb-2 transition-all duration-150"
-              style={{
-                left: Math.min(window.innerWidth - 170, Math.max(170, hoveredCell.x + 21)),
-                top: Math.max(80, hoveredCell.y - 8),
-              }}
-            >
-              <div className="bg-slate-900/95 text-white text-xs rounded-xl p-3 shadow-2xl border border-slate-700/80 backdrop-blur-md max-w-xs min-w-[250px] animate-in fade-in zoom-in-95 duration-100">
-                <div className="font-bold text-slate-100 text-[12px] truncate border-b border-slate-700/60 pb-1.5 mb-1.5 flex items-center justify-between gap-2">
-                  <span className="truncate">{hEmp.full_name}</span>
-                  <span className="text-[10px] text-slate-400 shrink-0">ID: {hEmp.machine_id}</span>
-                </div>
-
-                <div className="space-y-1.5 text-[11px]">
-                  <div className="flex items-center justify-between text-slate-300">
-                    <span className="text-slate-400">Tanggal:</span>
-                    <strong className="text-slate-100">{hDay.dayName}, {hDay.day} {getMonthName(selectedMonth)}</strong>
-                  </div>
-
-                  <div className="flex items-center justify-between text-slate-300">
-                    <span className="text-slate-400">Shift Kerja:</span>
-                    <strong className="text-blue-300 truncate max-w-[150px]">{shiftTitle}</strong>
-                  </div>
-
-                  <div className="flex items-center justify-between text-slate-300 bg-slate-800/90 px-2 py-1.5 rounded-lg border border-slate-700/60">
-                    <span className="text-amber-300 font-semibold flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-amber-400" />
-                      Jam Kerja Wajib:
-                    </span>
-                    <strong className="text-white font-bold">{workingHoursStr}</strong>
-                  </div>
-
-                  <div className="flex items-center justify-between text-slate-300">
-                    <span className="text-slate-400">Log Mesin:</span>
-                    <span className="text-slate-200 font-mono text-[10px]">
-                      {hRec?.first_in || '--:--'} s/d {hRec?.last_out || '--:--'} ({hRec?.tap_count || 0} tap)
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-1 border-t border-slate-700/60 text-slate-300">
-                    <span className="text-slate-400">Status Kehadiran:</span>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-amber-300 border border-slate-700">
-                      {stInfo?.label || fStatus}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
       </div>
 
       {/* Table Footer & Legend Bar */}
@@ -1071,6 +1012,79 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
         </button>
       </div>
     )}
+
+    {/* Floating Cell Details Hover Popover (Rendered at top-level with z-[9999] so never clipped or covered) */}
+    {hoveredCell && (() => {
+      const hEmp = employees.find((e) => e.id === hoveredCell.empId || e.machine_id === hoveredCell.empId);
+      const hDay = days.find((d) => d.day === hoveredCell.day);
+      if (!hEmp || !hDay) return null;
+
+      const hRec = attendanceMap[hEmp.machine_id]?.[hDay.day];
+      const isOff = hRec?.is_off_day || hRec?.final_status === 'OFF';
+      const isHol = hRec?.is_holiday || Boolean(hDay.holiday) || hRec?.final_status === 'LIBUR';
+      const shiftTitle = hRec?.shift_name || (isHol ? (hDay.holiday?.name || 'Hari Libur Resmi') : isOff ? 'Libur Shift (Bebas Tugas)' : 'Jam Kerja Normal (Reguler)');
+      const sTime = hRec?.scheduled_start ? hRec.scheduled_start.substring(0, 5) : '07:30';
+      const eTime = hRec?.scheduled_end ? hRec.scheduled_end.substring(0, 5) : '16:00';
+      const workingHoursStr = isHol ? 'Hari Libur Resmi' : isOff ? 'Bebas Tugas (Libur Shift)' : `${sTime} s/d ${eTime} WIB`;
+      const fStatus = hRec ? hRec.final_status : (hDay.isWeekend ? '-' : (isHol ? 'LIBUR' : (isOff ? 'OFF' : 'A')));
+      const stInfo = ATTENDANCE_STATUS_MAP[fStatus as AttendanceCode];
+
+      // Smart vertical positioning: if near top of window (< 220px), show BELOW cell, else show ABOVE cell
+      const showBelow = hoveredCell.y < 220;
+      const topPos = showBelow ? hoveredCell.y + 40 : hoveredCell.y - 8;
+      const transformClass = showBelow ? '-translate-x-1/2' : '-translate-x-1/2 -translate-y-full';
+
+      return (
+        <div
+          className={`fixed z-[9999] pointer-events-none transform ${transformClass} mb-2 transition-all duration-75`}
+          style={{
+            left: Math.min(window.innerWidth - 170, Math.max(170, hoveredCell.x + 21)),
+            top: topPos,
+          }}
+        >
+          <div className="bg-slate-900/95 text-white text-xs rounded-xl p-3 shadow-2xl border border-slate-700/80 backdrop-blur-md max-w-xs min-w-[250px] animate-in fade-in zoom-in-95 duration-100 ring-1 ring-white/10">
+            <div className="font-bold text-slate-100 text-[12px] truncate border-b border-slate-700/60 pb-1.5 mb-1.5 flex items-center justify-between gap-2">
+              <span className="truncate">{hEmp.full_name}</span>
+              <span className="text-[10px] text-slate-400 shrink-0">ID: {hEmp.machine_id}</span>
+            </div>
+
+            <div className="space-y-1.5 text-[11px]">
+              <div className="flex items-center justify-between text-slate-300">
+                <span className="text-slate-400">Tanggal:</span>
+                <strong className="text-slate-100">{hDay.dayName}, {hDay.day} {getMonthName(selectedMonth)}</strong>
+              </div>
+
+              <div className="flex items-center justify-between text-slate-300">
+                <span className="text-slate-400">Shift Kerja:</span>
+                <strong className={isHol ? "text-rose-300 truncate max-w-[150px]" : "text-blue-300 truncate max-w-[150px]"}>{shiftTitle}</strong>
+              </div>
+
+              <div className="flex items-center justify-between text-slate-300 bg-slate-800/90 px-2 py-1.5 rounded-lg border border-slate-700/60">
+                <span className="text-amber-300 font-semibold flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-amber-400" />
+                  Jam Kerja Wajib:
+                </span>
+                <strong className={isHol ? "text-rose-300 font-bold" : "text-white font-bold"}>{workingHoursStr}</strong>
+              </div>
+
+              <div className="flex items-center justify-between text-slate-300">
+                <span className="text-slate-400">Log Mesin:</span>
+                <span className="text-slate-200 font-mono text-[10px]">
+                  {hRec?.first_in || '--:--'} s/d {hRec?.last_out || '--:--'} ({hRec?.tap_count || 0} tap)
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between pt-1 border-t border-slate-700/60 text-slate-300">
+                <span className="text-slate-400">Status Kehadiran:</span>
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${isHol ? 'bg-rose-950 text-rose-300 border border-rose-800' : 'bg-slate-800 text-amber-300 border border-slate-700'}`}>
+                  {isHol ? 'LIBUR' : (stInfo?.label || fStatus)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
   </div>
   );
 };

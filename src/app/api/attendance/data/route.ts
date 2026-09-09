@@ -131,21 +131,19 @@ export async function GET(request: NextRequest) {
         const hol = holidayMap.get(d.dateStr);
         const shift = sched ? shiftMap.get(sched.shift_id) : null;
 
-        const isOffDay = sched
-          ? (shift?.is_off_day === true || shift?.code === 'OFF')
-          : (Boolean(hol) || d.isWeekend);
-
         const isHoliday = Boolean(hol);
-        const hasAssignedDuty = Boolean(sched && !isOffDay);
+        const isExplicitOffShift = Boolean(sched && (shift?.is_off_day === true || shift?.code === 'OFF'));
+        const hasAssignedDuty = Boolean(sched && !isExplicitOffShift);
+        const isOffDay = isExplicitOffShift || (!sched && d.isWeekend);
 
-        const isWorkRequired = sched ? !isOffDay : (!d.isWeekend && !isHoliday);
+        const isWorkRequired = sched ? !isExplicitOffShift : (!d.isWeekend && !isHoliday);
 
         const startTime = sched?.custom_start_time || shift?.start_time || defaultShift.start_time;
         const endTime = sched?.custom_end_time || shift?.end_time || defaultShift.end_time;
         const gracePeriod = shift?.grace_period_minutes ?? defaultShift.grace_period_minutes;
         const isOvernight = shift?.is_overnight ?? defaultShift.is_overnight;
         const shiftCode = sched?.shift_code || shift?.code || (isHoliday ? 'LIBUR' : (d.isWeekend ? 'LIBUR' : defaultShift.code));
-        const shiftName = sched?.shift_name || shift?.name || (isHoliday ? hol?.name : (d.isWeekend ? 'Akhir Pekan' : defaultShift.name));
+        const shiftName = sched?.shift_name || shift?.name || (isHoliday ? (hol?.name || 'Hari Libur Resmi') : (d.isWeekend ? 'Akhir Pekan' : defaultShift.name));
         const shiftColor = shift?.color || (isHoliday ? '#f43f5e' : (d.isWeekend ? '#94a3b8' : defaultShift.color));
 
         let rec = attendanceMap[emp.machine_id]?.[d.day];
@@ -172,6 +170,7 @@ export async function GET(request: NextRequest) {
               isOffDay,
               isHoliday,
               holidayName: hol?.name,
+              hasAssignedDuty,
             };
 
             const evaluated = evaluateAttendanceStatus(
@@ -188,30 +187,8 @@ export async function GET(request: NextRequest) {
         } else {
           // No record in biometric logs
           if (isRecordedDay) {
-            if (isOffDay) {
-              rec = {
-                id: `att-off-${emp.machine_id}-${d.dateStr}`,
-                upload_id: 'virtual-schedule',
-                employee_id: emp.machine_id,
-                employee_name: emp.full_name,
-                attendance_date: d.dateStr,
-                first_in: null,
-                last_out: null,
-                tap_count: 0,
-                system_status: 'HADIR',
-                final_status: 'OFF',
-                is_off_day: true,
-                is_holiday: isHoliday,
-                shift_id: sched?.shift_id,
-                shift_code: 'OFF',
-                shift_name: shiftName || 'Libur Shift (Bebas Tugas)',
-                shift_color: '#64748b',
-                is_verified: false,
-                is_custom_schedule: Boolean(sched),
-                updated_at: new Date().toISOString(),
-              };
-              attendanceMap[emp.machine_id][d.day] = rec;
-            } else if (isHoliday && !hasAssignedDuty) {
+            if (isHoliday && !hasAssignedDuty) {
+              // Designated Holiday without assigned active duty -> LIBUR
               rec = {
                 id: `att-hol-${emp.machine_id}-${d.dateStr}`,
                 upload_id: 'virtual-holiday',
@@ -226,10 +203,34 @@ export async function GET(request: NextRequest) {
                 is_off_day: true,
                 is_holiday: true,
                 shift_code: 'LIBUR',
-                shift_name: hol?.name || 'Hari Libur',
+                shift_name: hol?.name || 'Hari Libur Resmi',
                 shift_color: '#f43f5e',
                 is_verified: false,
                 is_custom_schedule: false,
+                updated_at: new Date().toISOString(),
+              };
+              attendanceMap[emp.machine_id][d.day] = rec;
+            } else if (isOffDay) {
+              // Explicit OFF shift schedule -> OFF
+              rec = {
+                id: `att-off-${emp.machine_id}-${d.dateStr}`,
+                upload_id: 'virtual-schedule',
+                employee_id: emp.machine_id,
+                employee_name: emp.full_name,
+                attendance_date: d.dateStr,
+                first_in: null,
+                last_out: null,
+                tap_count: 0,
+                system_status: 'HADIR',
+                final_status: 'OFF',
+                is_off_day: true,
+                is_holiday: false,
+                shift_id: sched?.shift_id,
+                shift_code: 'OFF',
+                shift_name: shiftName || 'Libur Shift (Bebas Tugas)',
+                shift_color: '#64748b',
+                is_verified: false,
+                is_custom_schedule: Boolean(sched),
                 updated_at: new Date().toISOString(),
               };
               attendanceMap[emp.machine_id][d.day] = rec;

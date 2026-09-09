@@ -243,6 +243,7 @@ export interface ScheduleEvaluationContext {
   isOffDay?: boolean;
   isHoliday?: boolean;
   holidayName?: string;
+  hasAssignedDuty?: boolean;
 }
 
 /**
@@ -256,26 +257,26 @@ export function evaluateAttendanceStatus(
   isWeekend: boolean,
   scheduleContext?: ScheduleEvaluationContext
 ): { systemStatus: 'HADIR' | 'TIDAK_HADIR'; finalStatus: AttendanceCode } {
-  // 1. If schedule explicitly designates this as an OFF day (libur shift)
-  if (scheduleContext?.isOffDay) {
-    if (firstIn && (lastOut || tapCount >= 1)) {
-      return { systemStatus: 'HADIR', finalStatus: 'HADIR' };
-    }
-    return { systemStatus: 'HADIR', finalStatus: 'OFF' };
-  }
-
-  // 2. If date is a designated Blackout Holiday (Hari Libur Tambahan / Nasional / Sekolah)
+  // 1. If date is a designated Blackout Holiday (Hari Libur Tambahan / Nasional / Sekolah)
   if (scheduleContext?.isHoliday) {
     // Case A: Employee came to work on the holiday (has biometric taps) -> Recognized as HADIR
     if (firstIn && (lastOut || tapCount >= 1)) {
       return { systemStatus: 'HADIR', finalStatus: 'HADIR' };
     }
     // Case B: Employee was specifically assigned a duty shift on the holiday, but failed to tap -> Alpa
-    if (scheduleContext.startTime && (!firstIn || !lastOut || tapCount < 2)) {
+    if (scheduleContext.hasAssignedDuty && (!firstIn || !lastOut || tapCount < 2)) {
       return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
     }
-    // Case C: Regular employee without duty shift on holiday -> Exempt from Alpha penalty
+    // Case C: Regular employee without duty shift on holiday -> Exempt from Alpha penalty & status is LIBUR
     return { systemStatus: 'HADIR', finalStatus: 'LIBUR' };
+  }
+
+  // 2. If schedule explicitly designates this as an OFF day (libur shift)
+  if (scheduleContext?.isOffDay) {
+    if (firstIn && (lastOut || tapCount >= 1)) {
+      return { systemStatus: 'HADIR', finalStatus: 'HADIR' };
+    }
+    return { systemStatus: 'HADIR', finalStatus: 'OFF' };
   }
 
   // 3. Regular weekend with no assigned active work shift
