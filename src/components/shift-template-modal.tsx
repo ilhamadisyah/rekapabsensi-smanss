@@ -2,7 +2,38 @@
 
 import React, { useState } from 'react';
 import { ShiftTemplate } from '@/lib/types';
-import { X, Plus, Edit2, Trash2, Clock, Check, AlertCircle, Sparkles, Shield } from 'lucide-react';
+import { X, Plus, Edit2, Trash2, Clock, Check, AlertCircle, Sparkles, Shield, Sun, Moon, Coffee } from 'lucide-react';
+
+function formatTimeOffset(baseTime: string, offsetMinutes: number, isNextDay?: boolean): string {
+  if (!baseTime) return '--:--';
+  const [hStr, mStr] = baseTime.split(':');
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10) || 0;
+  if (isNaN(h)) return '--:--';
+
+  let totalMinutes = h * 60 + m + offsetMinutes;
+  let dayOffset = 0;
+  while (totalMinutes < 0) {
+    totalMinutes += 24 * 60;
+    dayOffset -= 1;
+  }
+  while (totalMinutes >= 24 * 60) {
+    totalMinutes -= 24 * 60;
+    dayOffset += 1;
+  }
+
+  const newH = Math.floor(totalMinutes / 60);
+  const newM = totalMinutes % 60;
+  const timeStr = `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')} WIB`;
+
+  if (isNextDay || dayOffset > 0) {
+    return `${timeStr} (+1 hari)`;
+  }
+  if (dayOffset < 0) {
+    return `${timeStr} (-1 hari)`;
+  }
+  return timeStr;
+}
 
 interface ShiftTemplateModalProps {
   isOpen: boolean;
@@ -257,136 +288,204 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                 </div>
               </div>
 
-              {/* Time pickers */}
-              {!formIsOffDay && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      Jam Masuk (Batas Datang)
-                    </label>
-                    <input
-                      type="time"
-                      value={formStartTime}
-                      onChange={(e) => setFormStartTime(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      Jam Pulang (Batas Pulang)
-                    </label>
-                    <input
-                      type="time"
-                      value={formEndTime}
-                      onChange={(e) => setFormEndTime(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      Toleransi Terlambat (Menit)
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={60}
-                      value={formGracePeriod}
-                      onChange={(e) => setFormGracePeriod(Number(e.target.value))}
-                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Time Windows Settings */}
-              {!formIsOffDay && (
-                <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-800">Pengaturan Jendela Waktu Tap (Proteksi & Keamanan)</span>
-                    <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-medium border border-blue-100">
-                      Anti-Absen Diluar Jam
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                        <span>Jendela Buka Tap Masuk</span>
-                        <span className="text-[10px] text-blue-700 font-bold">{(formCheckInWindow / 60).toFixed(1)} jam sebelum</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min={15}
-                          max={360}
-                          step={15}
-                          value={formCheckInWindow}
-                          onChange={(e) => setFormCheckInWindow(Number(e.target.value))}
-                          className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <span className="absolute right-3 top-1.5 text-[11px] text-slate-400">menit</span>
-                      </div>
-                      <p className="text-[9px] text-slate-500 mt-1">Tap masuk paling awal diakui {formCheckInWindow} mnt sebelum jam masuk.</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                        <span>Batas Akhir Tap Pulang</span>
-                        <span className="text-[10px] text-blue-700 font-bold">{(formCheckOutWindow / 60).toFixed(1)} jam setelah</span>
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min={30}
-                          max={480}
-                          step={15}
-                          value={formCheckOutWindow}
-                          onChange={(e) => setFormCheckOutWindow(Number(e.target.value))}
-                          className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <span className="absolute right-3 top-1.5 text-[11px] text-slate-400">menit</span>
-                      </div>
-                      <p className="text-[9px] text-slate-500 mt-1">Tap pulang paling lambat diakui {formCheckOutWindow} mnt setelah jam pulang.</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Toggles */}
-              <div className="flex flex-wrap items-center gap-5 pt-1">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={formIsOvernight}
-                    disabled={formIsOffDay}
-                    onChange={(e) => setFormIsOvernight(e.target.checked)}
-                    className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-                  />
-                  <span className="text-[11px] font-medium text-slate-700">
-                    Shift Lintas Hari (Overnight / Malam)
-                  </span>
+              {/* Tipe Shift Kerja: 3-Segmented Pill Selector */}
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1.5">
+                  Tipe Shift Kerja
                 </label>
-
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={formIsOffDay}
-                    onChange={(e) => {
-                      setFormIsOffDay(e.target.checked);
-                      if (e.target.checked) {
-                        setFormIsOvernight(false);
-                      }
+                <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100/80 rounded-xl border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormIsOffDay(false);
+                      setFormIsOvernight(false);
                     }}
-                    className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-                  />
-                  <span className="text-[11px] font-medium text-slate-700">
-                    Hari Libur Shift (Bebas Tugas / OFF)
-                  </span>
-                </label>
+                    className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      !formIsOffDay && !formIsOvernight
+                        ? 'bg-white text-blue-700 shadow-xs font-bold border border-slate-200/80'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    }`}
+                  >
+                    <Sun className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span className="truncate">Reguler (Harian)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormIsOffDay(false);
+                      setFormIsOvernight(true);
+                    }}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      !formIsOffDay && formIsOvernight
+                        ? 'bg-white text-indigo-700 shadow-xs font-bold border border-slate-200/80'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    }`}
+                  >
+                    <Moon className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                    <span className="truncate">Shift Malam</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormIsOffDay(true);
+                      setFormIsOvernight(false);
+                    }}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      formIsOffDay
+                        ? 'bg-white text-slate-900 shadow-xs font-bold border border-slate-200/80'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                    }`}
+                  >
+                    <Coffee className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <span className="truncate">Bebas Tugas</span>
+                  </button>
+                </div>
               </div>
+
+              {/* Time pickers & Time Windows */}
+              {!formIsOffDay ? (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Jam Masuk (WIB) <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="time"
+                        value={formStartTime}
+                        onChange={(e) => setFormStartTime(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                        <span>Jam Pulang (WIB) <span className="text-rose-500">*</span></span>
+                        {formIsOvernight && (
+                          <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100">
+                            Besok
+                          </span>
+                        )}
+                      </label>
+                      <input
+                        type="time"
+                        value={formEndTime}
+                        onChange={(e) => setFormEndTime(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Toleransi Telat
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min={0}
+                          max={60}
+                          value={formGracePeriod}
+                          onChange={(e) => setFormGracePeriod(Number(e.target.value))}
+                          className="w-full pl-3 pr-12 py-1.5 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="0"
+                        />
+                        <span className="absolute right-3 top-1.5 text-[10.5px] text-slate-400 font-medium">
+                          menit
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Time Windows Settings */}
+                  <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-200/90 rounded-xl p-3 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-4 h-4 rounded bg-blue-100 flex items-center justify-center text-blue-600">
+                          <Shield className="w-3 h-3" />
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-800">
+                          Jendela Waktu Presensi (Proteksi Keamanan)
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-blue-700 bg-blue-100/70 border border-blue-200/60 px-2 py-0.5 rounded-full font-bold">
+                        Anti-Absen Diluar Jam
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="bg-white border border-slate-200/80 rounded-lg p-2.5 shadow-2xs space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-semibold text-slate-700">Jendela Buka Masuk</span>
+                          <span className="text-blue-600 font-bold text-[10px]">
+                            {(formCheckInWindow / 60).toFixed(1)} jam sblm
+                          </span>
+                        </div>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min={15}
+                            max={360}
+                            step={15}
+                            value={formCheckInWindow}
+                            onChange={(e) => setFormCheckInWindow(Number(e.target.value))}
+                            className="w-full pl-2.5 pr-12 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                          />
+                          <span className="absolute right-2.5 top-1.5 text-[10px] text-slate-400 font-medium">menit</span>
+                        </div>
+                        <div className="text-[10px] text-slate-600 flex items-center gap-1 bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                          <Clock className="w-3 h-3 text-blue-500 shrink-0" />
+                          <span className="truncate">
+                            Sah mulai: <strong className="text-slate-800 font-bold">{formatTimeOffset(formStartTime, -formCheckInWindow)}</strong>
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="bg-white border border-slate-200/80 rounded-lg p-2.5 shadow-2xs space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-semibold text-slate-700">Batas Akhir Pulang</span>
+                          <span className="text-blue-600 font-bold text-[10px]">
+                            {(formCheckOutWindow / 60).toFixed(1)} jam stlh
+                          </span>
+                        </div>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min={30}
+                            max={480}
+                            step={15}
+                            value={formCheckOutWindow}
+                            onChange={(e) => setFormCheckOutWindow(Number(e.target.value))}
+                            className="w-full pl-2.5 pr-12 py-1.5 bg-slate-50 border border-slate-200 rounded-md text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                          />
+                          <span className="absolute right-2.5 top-1.5 text-[10px] text-slate-400 font-medium">menit</span>
+                        </div>
+                        <div className="text-[10px] text-slate-600 flex items-center gap-1 bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                          <Clock className="w-3 h-3 text-blue-500 shrink-0" />
+                          <span className="truncate">
+                            Sah hingga: <strong className="text-slate-800 font-bold">{formatTimeOffset(formEndTime, formCheckOutWindow, formIsOvernight)}</strong>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="p-3 bg-slate-50 border border-dashed border-slate-300 rounded-xl flex items-start gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center text-amber-700 shrink-0 mt-0.5">
+                    <Coffee className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <h4 className="text-[11px] font-bold text-slate-800">Shift Bebas Tugas / Libur (OFF)</h4>
+                    <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
+                      Pegawai dengan shift ini tidak dikenakan kewajiban presensi dan bebas dari alpa serta keterlambatan.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Color Presets */}
               <div>
@@ -399,11 +498,10 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                       key={p.hex}
                       type="button"
                       onClick={() => setFormColor(p.hex)}
-                      className={`w-6 h-6 rounded-full flex items-center justify-center transition-transform cursor-pointer border ${
-                        formColor.toLowerCase() === p.hex.toLowerCase()
-                          ? 'scale-125 ring-2 ring-blue-500 ring-offset-1 border-white shadow-xs'
-                          : 'border-black/10 hover:scale-110'
-                      }`}
+                      className={`w-6 h-6 rounded-full flex items-center justify-center transition-transform cursor-pointer border ${formColor.toLowerCase() === p.hex.toLowerCase()
+                        ? 'scale-125 ring-2 ring-blue-500 ring-offset-1 border-white shadow-xs'
+                        : 'border-black/10 hover:scale-110'
+                        }`}
                       style={{ backgroundColor: p.hex }}
                       title={p.label}
                     >
@@ -501,9 +599,8 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                       <p className="text-[11px] text-slate-500 mt-0.5">
                         {t.is_off_day
                           ? 'Bebas tugas / hari lepas dinas'
-                          : `Jam Kerja: ${t.start_time.substring(0, 5)} s/d ${t.end_time.substring(0, 5)} WIB ${
-                              t.grace_period_minutes > 0 ? `(Toleransi ${t.grace_period_minutes}m)` : ''
-                            }`}
+                          : `Jam Kerja: ${t.start_time.substring(0, 5)} s/d ${t.end_time.substring(0, 5)} WIB ${t.grace_period_minutes > 0 ? `(Toleransi ${t.grace_period_minutes}m)` : ''
+                          }`}
                       </p>
                     </div>
                   </div>

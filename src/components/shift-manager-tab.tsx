@@ -14,7 +14,39 @@ import {
   Moon,
   Coffee,
   Check,
+  Sun,
 } from 'lucide-react';
+
+function formatTimeOffset(baseTime: string, offsetMinutes: number, isNextDay?: boolean): string {
+  if (!baseTime) return '--:--';
+  const [hStr, mStr] = baseTime.split(':');
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10) || 0;
+  if (isNaN(h)) return '--:--';
+
+  let totalMinutes = h * 60 + m + offsetMinutes;
+  let dayOffset = 0;
+  while (totalMinutes < 0) {
+    totalMinutes += 24 * 60;
+    dayOffset -= 1;
+  }
+  while (totalMinutes >= 24 * 60) {
+    totalMinutes -= 24 * 60;
+    dayOffset += 1;
+  }
+
+  const newH = Math.floor(totalMinutes / 60);
+  const newM = totalMinutes % 60;
+  const timeStr = `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')} WIB`;
+
+  if (isNextDay || dayOffset > 0) {
+    return `${timeStr} (+1 hari)`;
+  }
+  if (dayOffset < 0) {
+    return `${timeStr} (-1 hari)`;
+  }
+  return timeStr;
+}
 
 interface ShiftManagerTabProps {
   templates: ShiftTemplate[];
@@ -333,249 +365,339 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
 
       {/* Modal CRUD Shift */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-2xs animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden p-6 space-y-4 animate-in zoom-in-95">
-            <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[92vh]">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div>
-                <h3 className="text-base font-extrabold text-slate-900">
-                  {editingTemplate ? 'Edit Template Shift' : 'Tambah Template Shift Baru'}
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <span>{editingTemplate ? 'Edit Template Shift' : 'Tambah Template Shift Baru'}</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Konfigurasikan jam kerja standar dan toleransi kehadiran.
+                  Konfigurasikan jam kerja standar dan proteksi batas presensi.
                 </p>
               </div>
 
               {/* Live Badge Preview */}
               <div
-                className="px-3 py-1.5 rounded-xl text-xs font-sans font-bold text-white shadow-xs"
+                className="px-3 py-1.5 rounded-xl text-xs font-sans font-bold text-white shadow-xs transition-colors shrink-0"
                 style={{ backgroundColor: color }}
               >
-                {code || 'CODE'}
+                {code || 'KODE'}
               </div>
             </div>
 
-            {formError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                <span>{formError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleSave} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Nama Shift <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Contoh: Shift Pagi Operasional"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-4">
+              {formError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{formError}</span>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Kode Singkatan (Maks 5 Huruf) <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    placeholder="PAGI, NORM, MALAM"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value.toUpperCase())}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase"
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Libur Checkbox */}
-              <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={isOffDay}
-                  onChange={(e) => setIsOffDay(e.target.checked)}
-                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
-                />
-                <div>
-                  <span className="text-xs font-bold text-slate-800 block">
-                    Hari Libur Shift (Bebas Tugas / OFF)
-                  </span>
-                  <span className="text-[11px] text-slate-500">
-                    Pegawai dengan shift ini tidak dikenakan kewajiban presensi / bebas alpa.
-                  </span>
-                </div>
-              </label>
-
-              {!isOffDay && (
-                <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Jam Masuk (WIB)
-                      </label>
-                      <input
-                        type="time"
-                        value={startTime}
-                        onChange={(e) => setStartTime(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Jam Pulang (WIB)
-                      </label>
-                      <input
-                        type="time"
-                        value={endTime}
-                        onChange={(e) => setEndTime(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Toleransi Terlambat (Menit)
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={60}
-                        value={gracePeriod}
-                        onChange={(e) => setGracePeriod(Number(e.target.value))}
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="0"
-                      />
-                    </div>
-
-                    <div className="flex items-center pt-5">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={isOvernight}
-                          onChange={(e) => setIsOvernight(e.target.checked)}
-                          className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
-                        />
-                        <span className="text-xs font-bold text-slate-800">
-                          Shift Lintas Hari (Overnight / Malam)
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Configurable Time Windows */}
-                  <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800">Jendela Waktu Presensi (Proteksi & Keamanan)</span>
-                      <span className="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded font-bold border border-blue-200">
-                        Anti-Absen Diluar Jam
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                          <span>Jendela Buka Tap Masuk</span>
-                          <span className="text-[10px] text-blue-600 font-bold">{(checkInWindow / 60).toFixed(1)} jam sebelum</span>
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            min={15}
-                            max={360}
-                            step={15}
-                            value={checkInWindow}
-                            onChange={(e) => setCheckInWindow(Number(e.target.value))}
-                            className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                          <span className="absolute right-3 top-1.5 text-[11px] text-slate-400">menit</span>
-                        </div>
-                        <p className="text-[10px] text-slate-500 mt-1">Tap masuk paling awal diakui {checkInWindow} mnt sebelum jam masuk.</p>
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-semibold text-slate-700 mb-1 flex items-center justify-between">
-                          <span>Batas Akhir Tap Pulang</span>
-                          <span className="text-[10px] text-blue-600 font-bold">{(checkOutWindow / 60).toFixed(1)} jam setelah</span>
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            min={30}
-                            max={480}
-                            step={15}
-                            value={checkOutWindow}
-                            onChange={(e) => setCheckOutWindow(Number(e.target.value))}
-                            className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                          <span className="absolute right-3 top-1.5 text-[11px] text-slate-400">menit</span>
-                        </div>
-                        <p className="text-[10px] text-slate-500 mt-1">Tap pulang paling lambat diakui {checkOutWindow} mnt setelah jam pulang.</p>
-                      </div>
-                    </div>
-                  </div>
-                </>
               )}
 
-              {/* Color Presets */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Warna Label Badge
-                </label>
-                <div className="flex flex-wrap items-center gap-2">
-                  {COLOR_PRESETS.map((p) => (
-                    <button
-                      key={p.hex}
-                      type="button"
-                      onClick={() => setColor(p.hex)}
-                      className={`w-7 h-7 rounded-lg transition-transform cursor-pointer flex items-center justify-center ${
-                        color === p.hex ? 'ring-2 ring-blue-600 ring-offset-2 scale-110' : ''
-                      }`}
-                      style={{ backgroundColor: p.hex }}
-                      title={p.label}
-                    >
-                      {color === p.hex && <Check className="w-4 h-4 text-white" />}
-                    </button>
-                  ))}
+              <form id="shift-form" onSubmit={handleSave} className="space-y-4">
+                {/* Nama & Kode Singkatan */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Nama Shift <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: Shift Pagi (Piket/Asrama)"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-medium"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Kode Singkatan (Maks 5 Karakter) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      placeholder="PAGI, NORM, MALAM"
+                      value={code}
+                      onChange={(e) => setCode(e.target.value.toUpperCase())}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all uppercase tracking-wider text-slate-800"
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Deskripsi / Catatan (Opsional)
-                </label>
-                <textarea
-                  rows={2}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Keterangan peruntukan shift ini..."
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+                {/* Tipe Shift Kerja: 3-Segmented Pill Selector */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Tipe Shift Kerja
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOffDay(false);
+                        setIsOvernight(false);
+                      }}
+                      className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        !isOffDay && !isOvernight
+                          ? 'bg-white text-blue-700 shadow-xs font-bold border border-slate-200/80'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                      }`}
+                    >
+                      <Sun className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      <span className="truncate">Reguler (Harian)</span>
+                    </button>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
-                >
-                  {isLoading ? 'Menyimpan...' : 'Simpan Shift'}
-                </button>
-              </div>
-            </form>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOffDay(false);
+                        setIsOvernight(true);
+                      }}
+                      className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        !isOffDay && isOvernight
+                          ? 'bg-white text-indigo-700 shadow-xs font-bold border border-slate-200/80'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                      }`}
+                    >
+                      <Moon className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                      <span className="truncate">Shift Malam</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOffDay(true);
+                        setIsOvernight(false);
+                      }}
+                      className={`flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        isOffDay
+                          ? 'bg-white text-slate-900 shadow-xs font-bold border border-slate-200/80'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                      }`}
+                    >
+                      <Coffee className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      <span className="truncate">Bebas Tugas</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Working Hours or Off-day Info */}
+                {!isOffDay ? (
+                  <>
+                    {/* Jam Masuk, Jam Pulang, Toleransi Telat (3 Kolom Seimbang) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Jam Masuk (WIB) <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="time"
+                          value={startTime}
+                          onChange={(e) => setStartTime(e.target.value)}
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                          <span>Jam Pulang (WIB) <span className="text-rose-500">*</span></span>
+                          {isOvernight && (
+                            <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100">
+                              Besok
+                            </span>
+                          )}
+                        </label>
+                        <input
+                          type="time"
+                          value={endTime}
+                          onChange={(e) => setEndTime(e.target.value)}
+                          className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                          Toleransi Telat
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min={0}
+                            max={60}
+                            value={gracePeriod}
+                            onChange={(e) => setGracePeriod(Number(e.target.value))}
+                            className="w-full pl-3 pr-12 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                            placeholder="0"
+                          />
+                          <span className="absolute right-3 top-2 text-[11px] text-slate-400 font-medium">
+                            menit
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Jendela Waktu Presensi Card */}
+                    <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-200/90 rounded-2xl p-3.5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-5 h-5 rounded-md bg-blue-100 flex items-center justify-center text-blue-600">
+                            <Shield className="w-3.5 h-3.5" />
+                          </div>
+                          <span className="text-xs font-bold text-slate-800">
+                            Jendela Waktu Presensi (Proteksi Keamanan)
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-blue-700 bg-blue-100/70 border border-blue-200/60 px-2 py-0.5 rounded-full font-bold">
+                          Anti-Absen Diluar Jam
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* Jendela Buka Tap Masuk */}
+                        <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-bold text-slate-700">Jendela Buka Masuk</span>
+                            <span className="text-blue-600 font-bold text-[10px]">
+                              {(checkInWindow / 60).toFixed(1)} jam sblm
+                            </span>
+                          </div>
+
+                          <div className="relative">
+                            <input
+                              type="number"
+                              min={15}
+                              max={360}
+                              step={15}
+                              value={checkInWindow}
+                              onChange={(e) => setCheckInWindow(Number(e.target.value))}
+                              className="w-full pl-2.5 pr-12 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                            />
+                            <span className="absolute right-2.5 top-1.5 text-[10px] text-slate-400 font-medium">
+                              menit
+                            </span>
+                          </div>
+
+                          <div className="text-[10.5px] text-slate-600 flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+                            <Clock className="w-3 h-3 text-blue-500 shrink-0" />
+                            <span className="truncate">
+                              Sah mulai: <strong className="text-slate-800 font-bold">{formatTimeOffset(startTime, -checkInWindow)}</strong>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Batas Akhir Tap Pulang */}
+                        <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs space-y-1.5">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-bold text-slate-700">Batas Akhir Pulang</span>
+                            <span className="text-blue-600 font-bold text-[10px]">
+                              {(checkOutWindow / 60).toFixed(1)} jam stlh
+                            </span>
+                          </div>
+
+                          <div className="relative">
+                            <input
+                              type="number"
+                              min={30}
+                              max={480}
+                              step={15}
+                              value={checkOutWindow}
+                              onChange={(e) => setCheckOutWindow(Number(e.target.value))}
+                              className="w-full pl-2.5 pr-12 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                            />
+                            <span className="absolute right-2.5 top-1.5 text-[10px] text-slate-400 font-medium">
+                              menit
+                            </span>
+                          </div>
+
+                          <div className="text-[10.5px] text-slate-600 flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+                            <Clock className="w-3 h-3 text-blue-500 shrink-0" />
+                            <span className="truncate">
+                              Sah hingga: <strong className="text-slate-800 font-bold">{formatTimeOffset(endTime, checkOutWindow, isOvernight)}</strong>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-4 bg-slate-50 border border-dashed border-slate-300 rounded-2xl flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 shrink-0 mt-0.5">
+                      <Coffee className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-800">Shift Bebas Tugas / Libur (OFF)</h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                        Pegawai dengan shift ini tidak dikenakan kewajiban presensi datang maupun pulang, serta otomatis dibebaskan dari alpa dan keterlambatan.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Color Presets */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Warna Label Badge
+                  </label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {COLOR_PRESETS.map((p) => (
+                      <button
+                        key={p.hex}
+                        type="button"
+                        onClick={() => setColor(p.hex)}
+                        className={`w-7 h-7 rounded-xl transition-all cursor-pointer flex items-center justify-center border ${
+                          color === p.hex
+                            ? 'ring-2 ring-blue-600 ring-offset-2 scale-110 border-white shadow-xs'
+                            : 'border-black/10 hover:scale-105'
+                        }`}
+                        style={{ backgroundColor: p.hex }}
+                        title={p.label}
+                      >
+                        {color === p.hex && <Check className="w-4 h-4 text-white stroke-[2.5]" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Deskripsi */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Deskripsi / Catatan (Opsional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Keterangan peruntukan shift ini..."
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                  />
+                </div>
+              </form>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                form="shift-form"
+                disabled={isLoading}
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs hover:shadow cursor-pointer disabled:opacity-50"
+              >
+                {isLoading ? 'Menyimpan...' : 'Simpan Shift'}
+              </button>
+            </div>
           </div>
         </div>
       )}
