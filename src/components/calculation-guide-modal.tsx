@@ -36,9 +36,9 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
   const [calcHIS, setCalcHIS] = useState<number>(0);
   const [calcI, setCalcI] = useState<number>(0);
 
-  // Perhitungan Hasil Simulasi
+  // Perhitungan Hasil Simulasi (HIP dan HIS bebas denda / 0 poin pengurang)
   const calcHK = Math.max(0, calcWorkingDays - calcI - calcAlpha);
-  const calcX = Math.max(0, calcHK * 2 - calcHIP * 1 - calcHIS * 1 - calcI * 1 - calcAlpha * 3);
+  const calcX = Math.max(0, calcHK * 2 - calcI * 1 - calcAlpha * 3);
   const calcY = calcWorkingDays * 2;
   const calcPct = calcY > 0 ? Math.min(100, Math.max(0, Math.round((calcX / calcY) * 10000) / 100)) : 0;
 
@@ -148,13 +148,13 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     <td className="p-3 font-bold text-slate-800">Kolom AH</td>
                     <td className="p-3 font-bold text-slate-900">HIP</td>
                     <td className="p-3 text-slate-600">Izin Pagi: Jumlah berapa kali pegawai datang terlambat melewati jam masuk kerja yang ditentukan dengan surat izin.</td>
-                    <td className="p-3 text-slate-500">Dipotong 1 poin. Hari kerja (HK) tetap dihitung hadir.</td>
+                    <td className="p-3 text-emerald-600 font-semibold">Bebas denda (0 poin). Hari kerja (HK) tetap dihitung hadir.</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-slate-800">Kolom AI</td>
                     <td className="p-3 font-bold text-slate-900">HIS</td>
                     <td className="p-3 text-slate-600">Izin Siang: Jumlah berapa kali pegawai pulang lebih awal mendahului jam pulang kerja yang ditentukan dengan surat izin.</td>
-                    <td className="p-3 text-slate-500">Dipotong 1 poin. Hari kerja (HK) tetap dihitung hadir.</td>
+                    <td className="p-3 text-emerald-600 font-semibold">Bebas denda (0 poin). Hari kerja (HK) tetap dihitung hadir.</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-slate-800">Kolom AJ</td>
@@ -296,7 +296,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     <td className="p-3 font-semibold text-slate-900">Izin Datang Terlambat</td>
                     <td className="p-3 text-center font-bold text-slate-700">Kolom AH</td>
                     <td className="p-3 text-slate-600">Datang terlambat melewati jam masuk kerja yang ditentukan dengan membawa surat izin resmi</td>
-                    <td className="p-3 font-bold text-amber-600">Dipotong 1 Poin</td>
+                    <td className="p-3 font-bold text-emerald-600">Tidak Dipotong (0 Poin / Bebas Denda)</td>
                     <td className="p-3 text-slate-600">Tetap dihitung hadir bekerja</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
@@ -304,7 +304,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     <td className="p-3 font-semibold text-slate-900">Izin Pulang Cepat</td>
                     <td className="p-3 text-center font-bold text-slate-700">Kolom AI</td>
                     <td className="p-3 text-slate-600">Pulang lebih awal mendahului jam pulang kerja yang ditentukan dengan membawa surat izin resmi</td>
-                    <td className="p-3 font-bold text-amber-600">Dipotong 1 Poin</td>
+                    <td className="p-3 font-bold text-emerald-600">Tidak Dipotong (0 Poin / Bebas Denda)</td>
                     <td className="p-3 text-slate-600">Tetap dihitung hadir bekerja</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
@@ -410,10 +410,10 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                       <span className="text-slate-500 text-[11px]">Kolom AQ</span>
                     </td>
                     <td className="p-3 font-semibold text-blue-700 bg-slate-50/50">
-                      (Hari Kerja Nyata &times; 2 poin) dikurangi potongan terlambat, pulang cepat, sakit tanpa surat, dan alpa
+                      (Hari Kerja Nyata &times; 2 poin) dikurangi potongan sakit tanpa surat (I) dan alpa (A)
                     </td>
                     <td className="p-3 text-slate-600">
-                      Setiap hari kerja bernilai 2 poin. Terlambat dipotong 1 poin, pulang cepat dipotong 1 poin, dan alpa dipotong 3 poin.
+                      Setiap hari kerja bernilai 2 poin. Sakit tanpa surat (I) dipotong 1 poin, dan alpa dipotong 3 poin. Izin Pagi (HIP) dan Izin Siang (HIS) bebas denda (0 poin / tidak memotong nilai).
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
@@ -581,9 +581,9 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                       min="0"
                       value={calcHIP}
                       onChange={(e) => setCalcHIP(Math.max(0, parseInt(e.target.value) || 0))}
-                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-amber-700 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-emerald-700 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                     />
-                    <span className="text-[10px] text-amber-600 mt-0.5 block">Dipotong 1 poin per kali</span>
+                    <span className="text-[10px] text-emerald-600 font-semibold mt-0.5 block">Bebas denda (0 poin / tidak memotong)</span>
                   </div>
 
                   <div>
@@ -595,9 +595,9 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                       min="0"
                       value={calcHIS}
                       onChange={(e) => setCalcHIS(Math.max(0, parseInt(e.target.value) || 0))}
-                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-amber-700 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-emerald-700 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                     />
-                    <span className="text-[10px] text-amber-600 mt-0.5 block">Dipotong 1 poin per kali</span>
+                    <span className="text-[10px] text-emerald-600 font-semibold mt-0.5 block">Bebas denda (0 poin / tidak memotong)</span>
                   </div>
 
                   <div>
@@ -749,7 +749,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     <tr className="hover:bg-slate-50/80 transition-colors">
                       <td className="p-3 font-bold text-slate-900">Nilai Bersih (Nilai X)</td>
                       <td className="p-3 text-center font-bold text-slate-700">Kolom AQ</td>
-                      <td className="p-3 text-slate-600">({calcHK} hari &times; 2) dikurangi potongan denda ({calcHIP + calcHIS + calcI + calcAlpha * 3} poin)</td>
+                      <td className="p-3 text-slate-600">({calcHK} hari &times; 2) dikurangi potongan denda ({calcI + calcAlpha * 3} poin) — HIP &amp; HIS bebas denda</td>
                       <td className="p-3 text-center font-black text-blue-700 text-sm">{calcX} Poin</td>
                       <td className="p-3 text-slate-500">Poin bersih yang berhasil dikumpulkan</td>
                     </tr>
@@ -834,16 +834,16 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                       <span className="text-[11px] font-normal text-slate-500">Semua Membawa Surat Izin Resmi</span>
                     </td>
                     <td className="p-3 text-slate-600">
-                      Datang terlambat 2 kali dan pulang cepat 1 kali, seluruhnya ada surat izin. Tidak pernah alpa.
+                      Datang terlambat 2 kali (HIP) dan pulang cepat 1 kali (HIS), seluruhnya ada surat izin resmi. Tidak pernah alpa.
                     </td>
                     <td className="p-3 text-[11px] text-slate-700">
-                      Hari Kerja: Tetap 21 hari.<br />
-                      Nilai: 42 dikurangi 2 (izin pagi) dikurangi 1 (izin siang) = <strong>39 Poin</strong>.
+                      Hari Kerja: Tetap 21 hari penuh.<br />
+                      Nilai: 42 poin utuh (izin resmi bebas denda / 0 denda) = <strong>42 Poin</strong>.
                     </td>
-                    <td className="p-3 text-center font-black text-slate-800">92.8%</td>
-                    <td className="p-3 text-center font-black text-slate-900">9</td>
-                    <td className="p-3 text-center font-black text-blue-700">1.8</td>
-                    <td className="p-3 font-semibold text-slate-700">Sangat Baik (Disiplin Terjaga)</td>
+                    <td className="p-3 text-center font-black text-emerald-700">100.0%</td>
+                    <td className="p-3 text-center font-black text-slate-900">10</td>
+                    <td className="p-3 text-center font-black text-blue-700">2.0</td>
+                    <td className="p-3 font-semibold text-emerald-700">Sangat Baik (Bebas Potongan Nilai)</td>
                   </tr>
 
                   <tr className="hover:bg-slate-50/80 transition-colors">
@@ -1207,13 +1207,13 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                 <td className="font-semibold">Kolom AH</td>
                 <td className="font-bold">HIP</td>
                 <td>Izin Datang Terlambat (Melewati jam masuk kerja)</td>
-                <td>Denda -1 poin; Hari kerja (HK) tetap hadir</td>
+                <td>Bebas denda (0 poin); Hari kerja (HK) tetap hadir</td>
               </tr>
               <tr>
                 <td className="font-semibold">Kolom AI</td>
                 <td className="font-bold">HIS</td>
                 <td>Izin Pulang Lebih Cepat (Mendahului jam pulang kerja)</td>
-                <td>Denda -1 poin; Hari kerja (HK) tetap hadir</td>
+                <td>Bebas denda (0 poin); Hari kerja (HK) tetap hadir</td>
               </tr>
               <tr>
                 <td className="font-semibold">Kolom AJ</td>
@@ -1331,7 +1331,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                 <td>Izin Datang Terlambat</td>
                 <td className="text-center font-bold">Kolom AH</td>
                 <td>Datang terlambat melewati jam masuk yang ditentukan dengan surat izin resmi</td>
-                <td>Dipotong 1 Poin</td>
+                <td>Bebas Denda (0 Poin)</td>
                 <td>Tetap terhitung hadir</td>
               </tr>
               <tr>
@@ -1339,7 +1339,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                 <td>Izin Pulang Cepat</td>
                 <td className="text-center font-bold">Kolom AI</td>
                 <td>Pulang lebih awal mendahului jam pulang yang ditentukan dengan surat izin resmi</td>
-                <td>Dipotong 1 Poin</td>
+                <td>Bebas Denda (0 Poin)</td>
                 <td>Tetap terhitung hadir</td>
               </tr>
               <tr>
@@ -1426,7 +1426,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
               <tr>
                 <td className="font-bold">Langkah 2</td>
                 <td>Nilai Bersih (Nilai X) - Kolom AQ</td>
-                <td className="font-semibold">(HK &times; 2) - denda (HIP+HIS+I+A&times;3)</td>
+                <td className="font-semibold">(HK &times; 2) - denda (I + A&times;3) [HIP &amp; HIS bebas denda]</td>
                 <td>Tiap hari kerja bernilai 2 poin dikurangi potongan</td>
               </tr>
               <tr>
@@ -1539,10 +1539,10 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
               <tr>
                 <td className="font-bold">Kasus 2: Izin Pagi &amp; Siang</td>
                 <td>Terlambat 2 kali &amp; pulang cepat 1 kali berizin</td>
-                <td>HK = 21 | X = 42 - 2 - 1 = 39 poin</td>
-                <td className="text-center font-bold">92.8%</td>
-                <td className="text-center font-bold">9</td>
-                <td className="text-center font-bold">1.8</td>
+                <td>HK = 21 | X = 42 poin (bebas denda / 0 denda)</td>
+                <td className="text-center font-bold">100.0%</td>
+                <td className="text-center font-bold">10</td>
+                <td className="text-center font-bold">2.0</td>
               </tr>
               <tr>
                 <td className="font-bold">Kasus 3: 1 Hari Alpa</td>

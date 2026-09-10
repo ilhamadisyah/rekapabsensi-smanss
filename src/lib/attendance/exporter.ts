@@ -598,8 +598,8 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
     const hk = Math.max(0, totalWorkingDays - countI - countA);
 
     // 2. Skor Nilai X:
-    // (HK * 2) - HIP(1) - HIS(1) - I(1) - A(3)
-    const scoreX = Math.max(0, (hk * 2) - (countHIP * 1) - (countHIS * 1) - (countI * 1) - (countA * 3));
+    // (HK * 2) - I(1) - A(3) (Catatan: HIP dan HIS tidak memotong poin / bebas denda)
+    const scoreX = Math.max(0, (hk * 2) - (countI * 1) - (countA * 3));
 
     // 3. Skor Nilai Y: Total poin maksimal hari kerja
     const scoreY = totalWorkingDays * 2;
