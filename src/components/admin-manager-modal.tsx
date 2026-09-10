@@ -156,14 +156,9 @@ export const AdminManagerModal: React.FC<AdminManagerModalProps> = ({
               <Shield className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-white">
-                  Manajemen Akun Admin
-                </h2>
-                <span className="px-2 py-0.5 bg-indigo-500/30 border border-indigo-400/40 text-indigo-200 text-[10px] font-bold rounded-md">
-                  Hak Akses Superadmin
-                </span>
-              </div>
+              <h2 className="text-base font-bold text-white">
+                Manajemen Akun Admin
+              </h2>
               <p className="text-xs text-slate-300">
                 Tambah, kelola, atau hapus akun pengguna sistem AutoAbsen SMANSS
               </p>

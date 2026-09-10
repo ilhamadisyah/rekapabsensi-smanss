@@ -64,9 +64,6 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
               <p className="text-xs text-slate-600">
                 Laporan rekapitulasi kehadiran resmi SMAN Sumatera Selatan terbagi menjadi 4 bagian utama yang tersusun rapi dari Kolom A sampai AU:
               </p>
-              <div className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200/60">
-                Susunan Resmi Laporan SMANSS
-              </div>
             </div>
 
             {/* Tabel Lengkap Susunan Kolom (Bahasa Awam, Tanpa Istilah Teknis) */}
