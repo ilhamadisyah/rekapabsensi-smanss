@@ -147,13 +147,13 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-slate-800">Kolom AH</td>
                     <td className="p-3 font-bold text-slate-900">HIP</td>
-                    <td className="p-3 text-slate-600">Izin Pagi: Jumlah berapa kali pegawai datang terlambat (lewat 07:30) dengan surat izin.</td>
+                    <td className="p-3 text-slate-600">Izin Pagi: Jumlah berapa kali pegawai datang terlambat melewati jam masuk kerja yang ditentukan dengan surat izin.</td>
                     <td className="p-3 text-slate-500">Dipotong 1 poin. Hari kerja (HK) tetap dihitung hadir.</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-slate-800">Kolom AI</td>
                     <td className="p-3 font-bold text-slate-900">HIS</td>
-                    <td className="p-3 text-slate-600">Izin Siang: Jumlah berapa kali pegawai pulang lebih awal (sebelum 16:00) dengan surat izin.</td>
+                    <td className="p-3 text-slate-600">Izin Siang: Jumlah berapa kali pegawai pulang lebih awal mendahului jam pulang kerja yang ditentukan dengan surat izin.</td>
                     <td className="p-3 text-slate-500">Dipotong 1 poin. Hari kerja (HK) tetap dihitung hadir.</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
@@ -254,7 +254,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-slate-600">
-                Jam kerja normal di SMAN Sumatera Selatan adalah <strong>pukul 07:30 sampai 16:00 WIB</strong> (atau sesuai jadwal tugas/shift). Pegawai wajib melakukan absen datang saat masuk dan absen pulang saat selesai bertugas:
+                Pegawai wajib melakukan absen datang saat masuk dan absen pulang saat selesai bertugas sesuai dengan jam kerja yang ditentukan (baik jam kerja reguler maupun jadwal tugas piket/shift):
               </p>
               <div className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200/60">
                 Daftar Arti Keterangan Absen
@@ -279,7 +279,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     <td className="p-3 font-bold text-emerald-700">HADIR</td>
                     <td className="p-3 font-semibold text-slate-900">Hadir Lengkap Tepat Waktu</td>
                     <td className="p-3 text-center text-slate-400">-</td>
-                    <td className="p-3 text-slate-600">Masuk sebelum 07:30 dan pulang setelah 16:00 (absen datang dan pulang lengkap)</td>
+                    <td className="p-3 text-slate-600">Masuk dan pulang sesuai dengan jam kerja yang ditentukan (absen datang dan pulang lengkap)</td>
                     <td className="p-3 font-bold text-emerald-600">Dapat 2 Poin Penuh</td>
                     <td className="p-3 text-emerald-700 font-semibold">Dihitung Hadir Penuh (1 Hari)</td>
                   </tr>
@@ -295,7 +295,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     <td className="p-3 font-bold text-amber-700">HIP</td>
                     <td className="p-3 font-semibold text-slate-900">Izin Datang Terlambat</td>
                     <td className="p-3 text-center font-bold text-slate-700">Kolom AH</td>
-                    <td className="p-3 text-slate-600">Datang lewat dari pukul 07:30 dengan membawa surat izin resmi</td>
+                    <td className="p-3 text-slate-600">Datang terlambat melewati jam masuk kerja yang ditentukan dengan membawa surat izin resmi</td>
                     <td className="p-3 font-bold text-amber-600">Dipotong 1 Poin</td>
                     <td className="p-3 text-slate-600">Tetap dihitung hadir bekerja</td>
                   </tr>
@@ -303,7 +303,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     <td className="p-3 font-bold text-amber-700">HIS</td>
                     <td className="p-3 font-semibold text-slate-900">Izin Pulang Cepat</td>
                     <td className="p-3 text-center font-bold text-slate-700">Kolom AI</td>
-                    <td className="p-3 text-slate-600">Pulang sebelum pukul 16:00 dengan membawa surat izin resmi</td>
+                    <td className="p-3 text-slate-600">Pulang lebih awal mendahului jam pulang kerja yang ditentukan dengan membawa surat izin resmi</td>
                     <td className="p-3 font-bold text-amber-600">Dipotong 1 Poin</td>
                     <td className="p-3 text-slate-600">Tetap dihitung hadir bekerja</td>
                   </tr>
@@ -1206,13 +1206,13 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
               <tr>
                 <td className="font-semibold">Kolom AH</td>
                 <td className="font-bold">HIP</td>
-                <td>Izin Datang Terlambat (&gt; 07:30)</td>
+                <td>Izin Datang Terlambat (Melewati jam masuk kerja)</td>
                 <td>Denda -1 poin; Hari kerja (HK) tetap hadir</td>
               </tr>
               <tr>
                 <td className="font-semibold">Kolom AI</td>
                 <td className="font-bold">HIS</td>
-                <td>Izin Pulang Lebih Cepat (&lt; 16:00)</td>
+                <td>Izin Pulang Lebih Cepat (Mendahului jam pulang kerja)</td>
                 <td>Denda -1 poin; Hari kerja (HK) tetap hadir</td>
               </tr>
               <tr>
@@ -1314,7 +1314,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                 <td className="font-bold">HADIR</td>
                 <td>Hadir Lengkap Tepat Waktu</td>
                 <td className="text-center">-</td>
-                <td>Masuk &le; 07:30 &amp; Pulang &ge; 16:00 (absen datang dan pulang lengkap)</td>
+                <td>Masuk dan pulang sesuai dengan jam kerja yang ditentukan</td>
                 <td>Dapat 2 Poin Penuh</td>
                 <td>Dihitung Hadir (1 Hari)</td>
               </tr>
@@ -1330,7 +1330,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                 <td className="font-bold">HIP</td>
                 <td>Izin Datang Terlambat</td>
                 <td className="text-center font-bold">Kolom AH</td>
-                <td>Datang lewat dari jam 07:30 dengan surat izin resmi</td>
+                <td>Datang terlambat melewati jam masuk yang ditentukan dengan surat izin resmi</td>
                 <td>Dipotong 1 Poin</td>
                 <td>Tetap terhitung hadir</td>
               </tr>
@@ -1338,7 +1338,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                 <td className="font-bold">HIS</td>
                 <td>Izin Pulang Cepat</td>
                 <td className="text-center font-bold">Kolom AI</td>
-                <td>Pulang sebelum jam 16:00 dengan surat izin resmi</td>
+                <td>Pulang lebih awal mendahului jam pulang yang ditentukan dengan surat izin resmi</td>
                 <td>Dipotong 1 Poin</td>
                 <td>Tetap terhitung hadir</td>
               </tr>
