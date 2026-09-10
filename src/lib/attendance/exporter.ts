@@ -104,15 +104,18 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
     throw new Error('Worksheet utama tidak ditemukan dalam template.');
   }
 
-  // 1. Hapus semua sisa note/comment lama template agar tidak muncul segitiga merah
-  for (let r = 1; r <= 140; r++) {
-    const row = worksheet.getRow(r);
-    for (let c = 1; c <= 48; c++) {
-      const cell = row.getCell(c);
+  // 1. Hapus SEMUA sisa note/comment lama template secara mendalam agar tidak muncul segitiga merah
+  worksheet.eachRow({ includeEmpty: true }, (row) => {
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      (cell as any)._comment = undefined;
+      delete (cell as any)._comment;
       delete (cell as any).note;
-      (cell as any).comment = undefined;
-    }
-  }
+      delete (cell as any).comment;
+      if ((cell as any)._value && (cell as any)._value.model) {
+        delete (cell as any)._value.model.comment;
+      }
+    });
+  });
 
   // 2. Lookup Maps untuk hari libur & jadwal khusus
   const holidays = options.holidays || [];
@@ -162,10 +165,10 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
   };
 
   const DEFAULT_BORDER: Partial<ExcelJS.Borders> = {
-    top: { style: 'thin', color: { argb: 'FFD3D3D3' } },
-    left: { style: 'thin', color: { argb: 'FFD3D3D3' } },
-    bottom: { style: 'thin', color: { argb: 'FFD3D3D3' } },
-    right: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+    top: { style: 'thin', color: { argb: 'FF000000' } },
+    left: { style: 'thin', color: { argb: 'FF000000' } },
+    bottom: { style: 'thin', color: { argb: 'FF000000' } },
+    right: { style: 'thin', color: { argb: 'FF000000' } },
   };
 
   const CENTER_ALIGNMENT: Partial<ExcelJS.Alignment> = {
@@ -219,10 +222,83 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
   ag16Cell.value = totalWorkingDays;
   setCellStyle(ag16Cell, {
     font: { name: 'Calibri', size: 10, bold: true },
+    border: DEFAULT_BORDER,
     alignment: CENTER_ALIGNMENT,
   });
 
-  // 6. Update Header Hari (Row 11 s/d 16) sesuai kalender & hari libur bulan yang dipilih
+  // 6. Rapikan Header Tabel (Row 11 s/d 16): Satukan row 11 & 12 agar presisi, rapi, dan border hitam tegas
+  // Kolom A: NO (Merged A11:A15)
+  try { worksheet.unMergeCells('A12:A15'); } catch {}
+  try { worksheet.mergeCells('A11:A15'); } catch {}
+  const a11Cell = worksheet.getCell('A11');
+  a11Cell.value = 'NO';
+  for (let r = 11; r <= 15; r++) {
+    setCellStyle(worksheet.getCell(`A${r}`), {
+      font: BLACK_BOLD_FONT,
+      fill: NONE_FILL,
+      border: DEFAULT_BORDER,
+      alignment: CENTER_ALIGNMENT,
+    });
+  }
+
+  // Kolom B: NAME (Merged B11:B15)
+  try { worksheet.unMergeCells('B12:B15'); } catch {}
+  try { worksheet.mergeCells('B11:B15'); } catch {}
+  const b11Cell = worksheet.getCell('B11');
+  b11Cell.value = 'NAME';
+  for (let r = 11; r <= 15; r++) {
+    setCellStyle(worksheet.getCell(`B${r}`), {
+      font: BLACK_BOLD_FONT,
+      fill: NONE_FILL,
+      border: DEFAULT_BORDER,
+      alignment: CENTER_ALIGNMENT,
+    });
+  }
+
+  // Header Ringkasan Kolom AG..AP: REKAPITULASI KEHADIRAN (Merged AG11:AP12)
+  try { worksheet.unMergeCells('AG12:AP12'); } catch {}
+  try { worksheet.mergeCells('AG11:AP12'); } catch {}
+  const ag11Cell = worksheet.getCell('AG11');
+  ag11Cell.value = 'REKAPITULASI KEHADIRAN';
+  for (let r = 11; r <= 12; r++) {
+    for (let c = 33; c <= 42; c++) {
+      const colLet = worksheet.getColumn(c).letter;
+      setCellStyle(worksheet.getCell(`${colLet}${r}`), {
+        font: BLACK_BOLD_FONT,
+        fill: NONE_FILL,
+        border: DEFAULT_BORDER,
+        alignment: CENTER_ALIGNMENT,
+      });
+    }
+  }
+
+  // Header Ringkasan Kolom AQ..AU: NILAI KEDISIPLINAN (Merged AQ11:AU12)
+  try { worksheet.unMergeCells('AQ12:AU12'); } catch {}
+  try { worksheet.mergeCells('AQ11:AU12'); } catch {}
+  const aq11Cell = worksheet.getCell('AQ11');
+  aq11Cell.value = 'NILAI KEDISIPLINAN';
+  for (let r = 11; r <= 12; r++) {
+    for (let c = 43; c <= 47; c++) {
+      const colLet = worksheet.getColumn(c).letter;
+      setCellStyle(worksheet.getCell(`${colLet}${r}`), {
+        font: BLACK_BOLD_FONT,
+        fill: NONE_FILL,
+        border: DEFAULT_BORDER,
+        alignment: CENTER_ALIGNMENT,
+      });
+    }
+  }
+
+  // Pastikan seluruh baris subheader ringkasan (13 s/d 16 untuk kolom AG..AU) memiliki border rapi
+  for (let r = 13; r <= 16; r++) {
+    for (let c = 33; c <= 47; c++) {
+      const colLet = worksheet.getColumn(c).letter;
+      const cell = worksheet.getCell(`${colLet}${r}`);
+      cell.border = DEFAULT_BORDER;
+    }
+  }
+
+  // Header Hari (Hari 1 s/d 30, Kolom C s/d AF)
   for (let day = 1; day <= 30; day++) {
     const colLetter = getColumnLetterForDay(day);
     const dateObj = new Date(year, month - 1, day);
@@ -233,13 +309,17 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     const isHoliday = Boolean(holiday);
 
+    // Merge baris 11 dan 12 agar label hari menyatu utuh di tengah tanpa garis potong horizontal
+    try { worksheet.mergeCells(`${colLetter}11:${colLetter}12`); } catch {}
+
     const cellRow11 = worksheet.getCell(`${colLetter}11`);
     const cellRow12 = worksheet.getCell(`${colLetter}12`);
     const cellRow13 = worksheet.getCell(`${colLetter}13`);
 
     if (isWeekend || isHoliday) {
       // Libur atau Weekend: Merah pekat dengan teks putih tebal
-      cellRow11.value = isWeekend ? dayName : (holiday?.name && holiday.name.length <= 6 ? holiday.name.toUpperCase() : 'LIBUR');
+      const holidayLabel = holiday?.name && holiday.name.length <= 6 ? holiday.name.toUpperCase() : 'LIBUR';
+      cellRow11.value = isWeekend ? dayName : holidayLabel;
       setCellStyle(cellRow11, {
         font: WHITE_BOLD_FONT,
         fill: RED_FILL,
@@ -247,13 +327,13 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
         alignment: CENTER_ALIGNMENT,
       });
 
-      cellRow12.value = null;
       setCellStyle(cellRow12, {
         fill: RED_FILL,
         border: DEFAULT_BORDER,
         alignment: CENTER_ALIGNMENT,
       });
 
+      // Baris 13: Tanggal (1..30)
       cellRow13.value = day;
       setCellStyle(cellRow13, {
         font: WHITE_BOLD_FONT,
@@ -274,24 +354,24 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
       }
     } else {
       // Hari kerja normal: Bersih, teks hitam, tanpa warna merah template lama
-      cellRow11.value = null;
+      cellRow11.value = dayName;
       setCellStyle(cellRow11, {
-        fill: NONE_FILL,
-        border: DEFAULT_BORDER,
-        alignment: CENTER_ALIGNMENT,
-      });
-
-      cellRow12.value = dayName;
-      setCellStyle(cellRow12, {
         font: BLACK_BOLD_FONT,
         fill: NONE_FILL,
         border: DEFAULT_BORDER,
         alignment: CENTER_ALIGNMENT,
       });
 
+      setCellStyle(cellRow12, {
+        fill: NONE_FILL,
+        border: DEFAULT_BORDER,
+        alignment: CENTER_ALIGNMENT,
+      });
+
+      // Baris 13: Tanggal (1..30)
       cellRow13.value = day;
       setCellStyle(cellRow13, {
-        font: BLACK_REGULAR_FONT,
+        font: BLACK_BOLD_FONT,
         fill: NONE_FILL,
         border: DEFAULT_BORDER,
         alignment: CENTER_ALIGNMENT,
@@ -341,11 +421,17 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
     }
   }
 
-  // 8. Map attendance records for fast lookup: `${employee_id}__${day}`
+  // Urutkan pegawai sesuai urutan resmi master SMANSS (atau urutan excel_row_index)
+  allEmployees.sort((a, b) => (a.excel_row_index || 999) - (b.excel_row_index || 999));
+
+  // 8. Buat lookup map presensi per pegawai dan per hari
   const attendanceMap = new Map<string, DailyAttendance>();
   const recordedDays = new Set<number>();
+
   for (const record of attendanceRecords) {
-    const parts = record.attendance_date.split('-');
+    const rawDate = record.attendance_date || (record as any).date;
+    if (!rawDate) continue;
+    const parts = rawDate.split('-');
     const rYear = parseInt(parts[0], 10);
     const rMonth = parseInt(parts[1], 10);
     const rDay = parseInt(parts[2], 10);
@@ -356,19 +442,22 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
     }
   }
 
-  // 9. Bersihkan baris lama di template dari baris 17 s/d 140 agar bebas dari formula korup & warna lama
-  for (let r = 17; r <= Math.max(130, 17 + allEmployees.length + 15); r++) {
+  // 9. Bersihkan baris lama di template dari baris 17 s/d 140 agar bebas dari formula korup, warna lama, & border sisa
+  const lastEmployeeRow = 17 + allEmployees.length - 1;
+  for (let r = 17; r <= Math.max(140, lastEmployeeRow + 20); r++) {
     const row = worksheet.getRow(r);
     for (let c = 1; c <= 48; c++) {
       const cell = row.getCell(c);
       cell.value = null;
       setCellStyle(cell, {
         fill: NONE_FILL,
-        border: DEFAULT_BORDER,
+        border: undefined,
         alignment: CENTER_ALIGNMENT,
       });
+      (cell as any)._comment = undefined;
+      delete (cell as any)._comment;
       delete (cell as any).note;
-      (cell as any).comment = undefined;
+      delete (cell as any).comment;
     }
   }
 
