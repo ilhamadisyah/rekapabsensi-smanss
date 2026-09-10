@@ -621,6 +621,116 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                 </div>
               </div>
 
+              {/* Card Ringkasan Skor & Kualifikasi Kedisiplinan (Warna Baru & Status Kualifikasi Otomatis) */}
+              {(() => {
+                const getQualificationDetails = (score1: number, pct: number) => {
+                  if (score1 === 0 || pct <= 0) {
+                    return {
+                      label: 'Tidak Pernah Hadir',
+                      cardGradient: 'from-slate-800 via-slate-850 to-slate-900 border-slate-700',
+                      badgeStyle: 'bg-white/15 text-slate-200 border-white/20',
+                      subTextColor: 'text-slate-300',
+                      score2Color: 'text-slate-200',
+                    };
+                  }
+                  if (pct >= 100) {
+                    return {
+                      label: 'Sempurna / Sangat Baik',
+                      cardGradient: 'from-emerald-700 via-teal-800 to-slate-900 border-emerald-600/50',
+                      badgeStyle: 'bg-emerald-400/25 text-emerald-100 border-emerald-300/40',
+                      subTextColor: 'text-emerald-100',
+                      score2Color: 'text-amber-300',
+                    };
+                  }
+                  if (pct >= 90) {
+                    return {
+                      label: 'Sangat Baik',
+                      cardGradient: 'from-blue-700 via-indigo-800 to-slate-900 border-blue-600/50',
+                      badgeStyle: 'bg-blue-400/25 text-blue-100 border-blue-300/40',
+                      subTextColor: 'text-blue-100',
+                      score2Color: 'text-amber-300',
+                    };
+                  }
+                  if (pct >= 80) {
+                    return {
+                      label: 'Baik',
+                      cardGradient: 'from-sky-700 via-blue-800 to-slate-900 border-sky-600/50',
+                      badgeStyle: 'bg-sky-400/25 text-sky-100 border-sky-300/40',
+                      subTextColor: 'text-sky-100',
+                      score2Color: 'text-amber-300',
+                    };
+                  }
+                  if (pct >= 65) {
+                    return {
+                      label: 'Cukup',
+                      cardGradient: 'from-amber-700 via-yellow-800 to-slate-900 border-amber-600/50',
+                      badgeStyle: 'bg-amber-400/25 text-amber-100 border-amber-300/40',
+                      subTextColor: 'text-amber-100',
+                      score2Color: 'text-yellow-200',
+                    };
+                  }
+                  if (pct >= 50) {
+                    return {
+                      label: 'Kurang',
+                      cardGradient: 'from-orange-700 via-rose-800 to-slate-900 border-orange-600/50',
+                      badgeStyle: 'bg-orange-400/25 text-orange-100 border-orange-300/40',
+                      subTextColor: 'text-orange-100',
+                      score2Color: 'text-yellow-200',
+                    };
+                  }
+                  return {
+                    label: 'Sangat Kurang',
+                    cardGradient: 'from-rose-800 via-red-900 to-slate-950 border-rose-700/50',
+                    badgeStyle: 'bg-rose-400/25 text-rose-100 border-rose-300/40',
+                    subTextColor: 'text-rose-100',
+                    score2Color: 'text-yellow-200',
+                  };
+                };
+
+                const qual = getQualificationDetails(calcScore1, calcPct);
+
+                return (
+                  <div
+                    className={`p-4 rounded-xl bg-gradient-to-r ${qual.cardGradient} text-white shadow-md border transition-all duration-300`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span
+                          className={`text-[11px] font-bold ${qual.subTextColor} uppercase tracking-wider`}
+                        >
+                          SCORE 1 (SKALA NILAI 1 S/D 10)
+                        </span>
+                        <div className="text-3xl font-black mt-0.5">{calcScore1}</div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider">
+                          SCORE 2 (BOBOT 20%)
+                        </span>
+                        <div className={`text-3xl font-black mt-0.5 ${qual.score2Color}`}>
+                          {calcScore2.toFixed(1)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-2.5 border-t border-white/20 text-[11px] flex flex-wrap items-center justify-between gap-2">
+                      <div className={qual.subTextColor}>
+                        Target Nilai SKP:{' '}
+                        <strong className="text-white">
+                          Score Kedisiplinan = {calcScore2.toFixed(1)}
+                        </strong>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className={qual.subTextColor}>Status Kualifikasi:</span>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full font-bold text-[11px] border shadow-xs ${qual.badgeStyle}`}
+                        >
+                          {qual.label}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Bagian 2: Tabel Hasil Perhitungan Otomatis */}
               <div className="overflow-x-auto border border-slate-200 rounded-xl">
                 <table className="w-full text-left border-collapse text-xs">
