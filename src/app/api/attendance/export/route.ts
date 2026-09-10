@@ -19,12 +19,18 @@ export async function GET(request: NextRequest) {
     const allEmployees = await db.getEmployees();
     const employees = allEmployees.filter((e) => e.is_active);
     const attendanceRecords = await db.getAttendanceForMonth(month, year);
+    const holidays = await db.getHolidays(month, year);
+    const schedules = await db.getEmployeeSchedules(month, year);
+    const shifts = await db.getShiftTemplates();
 
     const excelBuffer = await generateRekapExcel({
       month,
       year,
       employees,
       attendanceRecords,
+      holidays,
+      schedules,
+      shifts,
       fromDay,
       toDay,
       department,

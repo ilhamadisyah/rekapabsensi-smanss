@@ -196,9 +196,17 @@ export const AdminManagerModal: React.FC<AdminManagerModalProps> = ({
             <button
               type="button"
               onClick={() => setIsAddingOpen(!isAddingOpen)}
-              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+              className={`px-3 py-1.5 text-white text-xs font-bold rounded-xl shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
+                isAddingOpen
+                  ? 'bg-rose-600 hover:bg-rose-700'
+                  : 'bg-indigo-600 hover:bg-indigo-700'
+              }`}
             >
-              <UserPlus className="w-4 h-4" />
+              {isAddingOpen ? (
+                <X className="w-4 h-4" />
+              ) : (
+                <UserPlus className="w-4 h-4" />
+              )}
               <span>{isAddingOpen ? 'Tutup Formulir' : '+ Tambah Admin Baru'}</span>
             </button>
           </div>
