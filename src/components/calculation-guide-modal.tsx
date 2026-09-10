@@ -898,195 +898,697 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
     }
   };
 
-  // JIKA DITAMPILKAN SEBAGAI TAB DI HALAMAN DASHBOARD
-  if (isEmbeddedView) {
-    return (
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col p-6 space-y-6">
-        {/* Header Bersih & Seragam dengan Tab Lainnya */}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
-          <div>
-            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-blue-600" />
-              Panduan Perhitungan &amp; Arti Tabel Rekapitulasi
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Penjelasan susunan kolom laporan, arti keterangan absen, cara hitung nilai kehadiran, dan pedoman nilai kedisiplinan pegawai SMAN Sumatera Selatan.
-            </p>
-          </div>
+  // Print PDF Trigger Helper (Menamai judul file PDF otomatis dan memanggil print dialog)
+  const handlePrintPDF = () => {
+    if (typeof window !== 'undefined') {
+      const originalTitle = document.title;
+      document.title = `SOP_Pedoman_Rekapitulasi_Presensi_SMANSS_${new Date().getFullYear()}`;
+      window.print();
+      setTimeout(() => {
+        document.title = originalTitle;
+      }, 1000);
+    }
+  };
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                if (typeof window !== 'undefined') {
-                  const fullUrl = `${window.location.origin}/panduan`;
-                  navigator.clipboard.writeText(fullUrl);
-                  setLinkCopied(true);
-                  setTimeout(() => setLinkCopied(false), 2500);
-                }
-              }}
-              className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                linkCopied
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
-                  : 'border-slate-200 hover:bg-slate-50 text-slate-700'
-              }`}
-              title="Salin tautan publik tanpa login untuk dibagikan ke seluruh pegawai"
-            >
-              {linkCopied ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="text-emerald-700 font-bold">Link Disalin!</span>
-                </>
-              ) : (
-                <>
-                  <Share2 className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Bagikan Link Publik</span>
-                </>
-              )}
-            </button>
-
-            <a
-              href="/panduan"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer hidden sm:flex"
-              title="Buka tampilan publik di tab baru"
-            >
-              <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-              <span>Buka Halaman Publik</span>
-            </a>
-
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <Printer className="w-3.5 h-3.5 text-slate-500" />
-              <span>Cetak Panduan</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Sub-Navigasi Menggunakan Garis Bawah Aktif (Seragam dengan Menu Atas) */}
-        <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto pb-px">
-          {[
-            { id: 'anatomy', label: '1. Susunan & Arti Kolom', icon: Layers },
-            { id: 'codes', label: '2. Arti Keterangan Absen', icon: CheckCircle2 },
-            { id: 'formulas', label: '3. Cara Hitung & Pedoman Nilai', icon: Percent },
-            { id: 'simulator', label: '4. Simulasi Hitung Nilai', icon: Calculator },
-            { id: 'cases', label: '5. Contoh Nyata Perhitungan', icon: FileSpreadsheet },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`py-2.5 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                  isActive
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Isi Tab */}
-        <div>{renderTabContent()}</div>
-      </div>
-    );
-  }
-
-  // JIKA DITAMPILKAN SEBAGAI JENDELA POPUP (MODAL)
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl max-w-5xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Header Jendela Modal */}
-        <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-blue-100 text-blue-700 rounded-lg">
-              <BookOpen className="w-5 h-5" />
+    <>
+      {/* 1. TAMPILAN INTERAKTIF DI LAYAR (SEMBUNYI SAAT DICETAK/PDF) */}
+      <div className="print:hidden">
+        {isEmbeddedView ? (
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col p-6 space-y-6">
+            {/* Header Bersih & Seragam dengan Tab Lainnya */}
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-blue-600" />
+                  Panduan Perhitungan &amp; Arti Tabel Rekapitulasi
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Penjelasan susunan kolom laporan, arti keterangan absen, cara hitung nilai kehadiran, dan pedoman nilai kedisiplinan pegawai SMAN Sumatera Selatan.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      const fullUrl = `${window.location.origin}/panduan`;
+                      navigator.clipboard.writeText(fullUrl);
+                      setLinkCopied(true);
+                      setTimeout(() => setLinkCopied(false), 2500);
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                    linkCopied
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                      : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                  }`}
+                  title="Salin tautan publik tanpa login untuk dibagikan ke seluruh pegawai"
+                >
+                  {linkCopied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="text-emerald-700 font-bold">Link Disalin!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Bagikan Link Publik</span>
+                    </>
+                  )}
+                </button>
+
+                <a
+                  href="/panduan"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer hidden sm:flex"
+                  title="Buka tampilan publik di tab baru"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Buka Halaman Publik</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={handlePrintPDF}
+                  className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                  title="Cetak atau simpan sebagai dokumen PDF resmi SMANSS"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Cetak Dokumen PDF</span>
+                </button>
+              </div>
             </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900">
-                Panduan Perhitungan &amp; Arti Tabel Rekapitulasi
+
+            {/* Sub-Navigasi Menggunakan Garis Bawah Aktif (Seragam dengan Menu Atas) */}
+            <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto pb-px">
+              {[
+                { id: 'anatomy', label: '1. Susunan & Arti Kolom', icon: Layers },
+                { id: 'codes', label: '2. Arti Keterangan Absen', icon: CheckCircle2 },
+                { id: 'formulas', label: '3. Cara Hitung & Pedoman Nilai', icon: Percent },
+                { id: 'simulator', label: '4. Simulasi Hitung Nilai', icon: Calculator },
+                { id: 'cases', label: '5. Contoh Nyata Perhitungan', icon: FileSpreadsheet },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`py-2.5 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                      isActive
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Isi Tab */}
+            <div>{renderTabContent()}</div>
+          </div>
+        ) : (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl max-w-5xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+              {/* Header Jendela Modal */}
+              <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-blue-100 text-blue-700 rounded-lg">
+                    <BookOpen className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Panduan Perhitungan &amp; Arti Tabel Rekapitulasi
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Pedoman Resmi Penilaian Kehadiran &amp; Kedisiplinan SMAN Sumatera Selatan
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePrintPDF}
+                    className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                    title="Cetak atau simpan sebagai dokumen PDF resmi SMANSS"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Cetak Dokumen PDF</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Sub-Navigasi Modal */}
+              <div className="px-6 border-b border-slate-200 bg-white flex items-center gap-1 overflow-x-auto shrink-0 pb-px">
+                {[
+                  { id: 'anatomy', label: '1. Susunan Kolom', icon: Layers },
+                  { id: 'codes', label: '2. Keterangan Absen', icon: CheckCircle2 },
+                  { id: 'formulas', label: '3. Cara Hitung & Nilai', icon: Percent },
+                  { id: 'simulator', label: '4. Simulasi Hitung', icon: Calculator },
+                  { id: 'cases', label: '5. Contoh Nyata', icon: FileSpreadsheet },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`py-2.5 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                        isActive
+                          ? 'border-blue-600 text-blue-600'
+                          : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Isi Modal */}
+              <div className="flex-1 overflow-y-auto p-6 text-slate-800 text-xs">
+                {renderTabContent()}
+              </div>
+
+              {/* Penutup Modal */}
+              <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
+                <span className="text-xs text-slate-500">AutoAbsen SMANSS &copy; 2026</span>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 transition-colors cursor-pointer shadow-2xs"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 2. DOKUMEN CETAK & PDF RESMI (HANYA MUNCUL SAAT MENCETAK / SIMPAN KE PDF) */}
+      {/* ========================================================================= */}
+      <div className="hidden print:block print-document font-sans text-black">
+        {/* KOP SURAT RESMI DINAS SMANSS */}
+        <div className="text-center pb-2.5 border-b-2 border-slate-900 mb-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="w-16 h-16 rounded-full border-2 border-slate-900 flex items-center justify-center font-black text-[10px] text-center p-1 leading-tight shrink-0">
+              SMANSS
+            </div>
+            <div className="flex-1 text-center">
+              <h4 className="text-[10pt] font-bold uppercase tracking-wider text-slate-800 leading-tight">
+                Pemerintah Provinsi Sumatera Selatan
+              </h4>
+              <h3 className="text-[11pt] font-bold uppercase tracking-wider text-slate-900 leading-tight">
+                Dinas Pendidikan
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Pedoman Resmi Penilaian Kehadiran &amp; Kedisiplinan SMAN Sumatera Selatan
+              <h2 className="text-[14pt] font-black uppercase tracking-tight text-slate-950 leading-tight">
+                SMA Negeri Sumatera Selatan
+              </h2>
+              <p className="text-[8pt] text-slate-600 mt-1 leading-snug">
+                Jl. Pangeran Ratu, RT. 31 / RW. 08, Kel. 8 Ulu, Kec. Seberang Ulu I, Kota Palembang, Sumatera Selatan 30252
+                <br />
+                Laman Resmi: <em>smansumsel.sch.id</em> &bull; Pos-el: <em>info@smansumsel.sch.id</em>
               </p>
             </div>
+            <div className="w-16 shrink-0 text-right text-[8pt] text-slate-400 font-mono">
+              DOK.RESMI
+            </div>
+          </div>
+          <div className="border-b border-slate-900 mt-1"></div>
+        </div>
+
+        {/* JUDUL DOKUMEN RESMI */}
+        <div className="text-center mb-5">
+          <h3 className="text-[12pt] font-black uppercase tracking-wide text-slate-950 underline decoration-1 underline-offset-4">
+            STANDAR OPERASIONAL PROSEDUR (SOP) &amp; PEDOMAN PERHITUNGAN PRESENSI
+          </h3>
+          <p className="text-[8.5pt] text-slate-700 mt-1">
+            Nomor: 421.3/SOP-PRES/SMANSS/2026 &bull; Berlaku Sah untuk Seluruh Pendidik &amp; Tenaga Kependidikan
+          </p>
+        </div>
+
+        {/* BAGIAN I: SUSUNAN & ARTI KOLOM LAPORAN */}
+        <div className="mb-5 print-avoid-break">
+          <div className="font-bold text-[9.5pt] uppercase text-slate-900 mb-1.5 pb-1 border-b border-slate-400">
+            I. Susunan &amp; Arti Kolom Laporan Rekapitulasi (Kolom A s/d AU)
+          </div>
+          <table className="print-table">
+            <thead>
+              <tr>
+                <th style={{ width: '18%' }}>Bagian Laporan</th>
+                <th style={{ width: '12%' }}>Kolom</th>
+                <th style={{ width: '18%' }}>Judul Header</th>
+                <th style={{ width: '28%' }}>Maksud &amp; Definisi Kolom</th>
+                <th style={{ width: '24%' }}>Aturan Pengisian</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td rowSpan={2} className="font-bold">1. Identitas Pegawai</td>
+                <td className="font-semibold">Kolom A</td>
+                <td className="font-bold">NO</td>
+                <td>Nomor urut resmi pegawai aktif</td>
+                <td>Angka bulat berurutan di tengah</td>
+              </tr>
+              <tr>
+                <td className="font-semibold">Kolom B</td>
+                <td className="font-bold">NAME</td>
+                <td>Nama lengkap pegawai dan gelar dinas</td>
+                <td>Rata kiri sesuai SK kedinasan resmi</td>
+              </tr>
+
+              <tr>
+                <td rowSpan={3} className="font-bold">2. Kehadiran Harian</td>
+                <td className="font-semibold">Kolom C s/d AF</td>
+                <td className="font-bold">Hari Kerja Biasa</td>
+                <td>Catatan harian pegawai (Senin–Jumat)</td>
+                <td>Kosong jika hadir tepat waktu; Berisi kode jika izin/sakit/alpa</td>
+              </tr>
+              <tr>
+                <td className="font-semibold">Kolom C s/d AF</td>
+                <td className="font-bold">Sabtu &amp; Minggu</td>
+                <td>Hari libur akhir pekan kalender</td>
+                <td>Warna merah tanda libur rutin, tidak memotong nilai</td>
+              </tr>
+              <tr>
+                <td className="font-semibold">Kolom C s/d AF</td>
+                <td className="font-bold">Libur Sekolah/Nasional</td>
+                <td>Libur resmi kalender pendidikan</td>
+                <td>Tertulis LIBUR latar merah, tidak memotong nilai</td>
+              </tr>
+
+              <tr>
+                <td rowSpan={10} className="font-bold">3. Ringkasan Hari &amp; Izin</td>
+                <td className="font-semibold">Kolom AG</td>
+                <td className="font-bold">HK</td>
+                <td>Hari kerja nyata yang dihadiri</td>
+                <td>Total Hari Kerja dikurangi I dan Alpa</td>
+              </tr>
+              <tr>
+                <td className="font-semibold">Kolom AH</td>
+                <td className="font-bold">HIP</td>
+                <td>Izin Datang Terlambat (&gt; 07:30)</td>
+                <td>Denda -1 poin; Hari kerja (HK) tetap hadir</td>
+              </tr>
+              <tr>
+                <td className="font-semibold">Kolom AI</td>
+                <td className="font-bold">HIS</td>
+                <td>Izin Pulang Lebih Cepat (&lt; 16:00)</td>
+                <td>Denda -1 poin; Hari kerja (HK) tetap hadir</td>
+              </tr>
+              <tr>
+                <td className="font-semibold">Kolom AJ</td>
+                <td className="font-bold">I</td>
+                <td>Sakit Tanpa Surat Dokter</td>
+                <td>Denda -1 poin dan mengurangi HK (-1 hari)</td>
+              </tr>
+              <tr>
+                <td className="font-semibold">Kolom AK</td>
+                <td className="font-bold">IL</td>
+                <td>Sakit Dengan Surat Dokter Sah</td>
+                <td>Nilai utuh (bebas denda), HK tetap hadir</td>
+              </tr>
+              <tr>
+                <td className="font-semibold">Kolom AL</td>
+                <td className="font-bold">PM / P</td>
+                <td>Izin Keperluan Resmi</td>
+                <td>Disetujui Kepala Sekolah, bebas denda</td>
+              </tr>
+              <tr>
+                <td className="font-semibold">Kolom AM</td>
+                <td className="font-bold">OTL</td>
+                <td>Cuti Khusus / Alasan Penting</td>
+                <td>Cuti resmi yang sah, bebas denda</td>
+              </tr>
+              <tr>
+                <td className="font-semibold">Kolom AN</td>
+                <td className="font-bold">AL</td>
+                <td>Cuti Tahunan</td>
+                <td>Hak cuti resmi tahunan, bebas denda</td>
+              </tr>
+              <tr>
+                <td className="font-semibold">Kolom AO</td>
+                <td className="font-bold">DL</td>
+                <td>Dinas Luar Sekolah</td>
+                <td>Melampirkan Surat Tugas (ST), bebas denda</td>
+              </tr>
+              <tr>
+                <td className="font-semibold">Kolom AP</td>
+                <td className="font-bold">A</td>
+                <td>Alpa / Tanpa Keterangan</td>
+                <td>Denda berat -3 poin dan mengurangi HK (-1 hari)</td>
+              </tr>
+
+              <tr>
+                <td rowSpan={5} className="font-bold">4. Penilaian Kedisiplinan</td>
+                <td className="font-semibold">Kolom AQ</td>
+                <td className="font-bold">Nilai X</td>
+                <td>Total skor poin bersih perolehan</td>
+                <td>(HK &times; 2 poin) dikurangi potongan denda</td>
+              </tr>
+              <tr>
+                <td className="font-semibold">Kolom AR</td>
+                <td className="font-bold">Nilai Y</td>
+                <td>Total poin maksimal jika 100%</td>
+                <td>Total hari kerja sebulan &times; 2 poin</td>
+              </tr>
+              <tr>
+                <td className="font-semibold">Kolom AS</td>
+                <td className="font-bold">Persentase (%)</td>
+                <td>Tingkat persentase kehadiran</td>
+                <td>(Nilai X &divide; Nilai Y) &times; 100%</td>
+              </tr>
+              <tr>
+                <td className="font-semibold">Kolom AT</td>
+                <td className="font-bold">Score 1</td>
+                <td>Nilai prestasi kehadiran (skala 10)</td>
+                <td>Angka bulat resmi: 10, 9, 8, 7, 6, atau 5</td>
+              </tr>
+              <tr>
+                <td className="font-semibold">Kolom AU</td>
+                <td className="font-bold">Score 2 (SKP)</td>
+                <td>Nilai kedisiplinan berbobot 20%</td>
+                <td>Score 1 &times; 20% (skala nilai 0.0 s/d 2.0)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* BAGIAN II: GLOSARIUM KODE STATUS KEHADIRAN */}
+        <div className="mb-5 print-avoid-break">
+          <div className="font-bold text-[9.5pt] uppercase text-slate-900 mb-1.5 pb-1 border-b border-slate-400">
+            II. Glosarium &amp; Ketentuan Status Kehadiran Pegawai
+          </div>
+          <table className="print-table">
+            <thead>
+              <tr>
+                <th style={{ width: '10%' }}>Kode</th>
+                <th style={{ width: '22%' }}>Keterangan Resmi</th>
+                <th style={{ width: '10%' }} className="text-center">Kolom</th>
+                <th style={{ width: '30%' }}>Ketentuan Jam / Syarat Bukti Sah</th>
+                <th style={{ width: '14%' }}>Pengurangan Poin</th>
+                <th style={{ width: '14%' }}>Pengaruh ke HK</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="font-bold">HADIR</td>
+                <td>Hadir Lengkap Tepat Waktu</td>
+                <td className="text-center">-</td>
+                <td>Masuk &le; 07:30 &amp; Pulang &ge; 16:00 (absen datang dan pulang lengkap)</td>
+                <td>Dapat 2 Poin Penuh</td>
+                <td>Dihitung Hadir (1 Hari)</td>
+              </tr>
+              <tr>
+                <td className="font-bold">A</td>
+                <td>Alpa / Tanpa Keterangan</td>
+                <td className="text-center font-bold">Kolom AP</td>
+                <td>Tidak hadir tanpa pemberitahuan atau tanpa surat izin sah</td>
+                <td>Dipotong 3 Poin</td>
+                <td>Berkurang (-1 Hari)</td>
+              </tr>
+              <tr>
+                <td className="font-bold">HIP</td>
+                <td>Izin Datang Terlambat</td>
+                <td className="text-center font-bold">Kolom AH</td>
+                <td>Datang lewat dari jam 07:30 dengan surat izin resmi</td>
+                <td>Dipotong 1 Poin</td>
+                <td>Tetap terhitung hadir</td>
+              </tr>
+              <tr>
+                <td className="font-bold">HIS</td>
+                <td>Izin Pulang Cepat</td>
+                <td className="text-center font-bold">Kolom AI</td>
+                <td>Pulang sebelum jam 16:00 dengan surat izin resmi</td>
+                <td>Dipotong 1 Poin</td>
+                <td>Tetap terhitung hadir</td>
+              </tr>
+              <tr>
+                <td className="font-bold">I</td>
+                <td>Sakit Tanpa Surat Dokter</td>
+                <td className="text-center font-bold">Kolom AJ</td>
+                <td>Tidak hadir sakit tetapi tidak menyerahkan surat dokter</td>
+                <td>Dipotong 1 Poin</td>
+                <td>Berkurang (-1 Hari)</td>
+              </tr>
+              <tr>
+                <td className="font-bold">IL</td>
+                <td>Sakit Surat Dokter Sah</td>
+                <td className="text-center font-bold">Kolom AK</td>
+                <td>Melampirkan surat keterangan sakit resmi dari dokter/klinik</td>
+                <td>Bebas Potongan (0)</td>
+                <td>Tetap terhitung hadir</td>
+              </tr>
+              <tr>
+                <td className="font-bold">PM / P</td>
+                <td>Izin Keperluan Resmi</td>
+                <td className="text-center font-bold">Kolom AL</td>
+                <td>Surat permohonan tertulis yang disetujui Kepala Sekolah</td>
+                <td>Bebas Potongan (0)</td>
+                <td>Tetap terhitung hadir</td>
+              </tr>
+              <tr>
+                <td className="font-bold">OTL</td>
+                <td>Cuti Khusus / Alasan Penting</td>
+                <td className="text-center font-bold">Kolom AM</td>
+                <td>Cuti melahirkan, cuti alasan penting keluarga mendesak</td>
+                <td>Bebas Potongan (0)</td>
+                <td>Tetap terhitung hadir</td>
+              </tr>
+              <tr>
+                <td className="font-bold">AL</td>
+                <td>Cuti Tahunan</td>
+                <td className="text-center font-bold">Kolom AN</td>
+                <td>Hak cuti tahunan resmi yang telah disetujui pimpinan</td>
+                <td>Bebas Potongan (0)</td>
+                <td>Tetap terhitung hadir</td>
+              </tr>
+              <tr>
+                <td className="font-bold">DL</td>
+                <td>Dinas Luar Sekolah</td>
+                <td className="text-center font-bold">Kolom AO</td>
+                <td>Tugas luar sekolah berlandaskan Surat Tugas (ST) resmi</td>
+                <td>Bebas Potongan (0)</td>
+                <td>Tetap terhitung hadir</td>
+              </tr>
+              <tr>
+                <td className="font-bold">LIBUR</td>
+                <td>Hari Libur / Lepas Tugas</td>
+                <td className="text-center">-</td>
+                <td>Hari libur kalender atau jadwal lepas piket tugas</td>
+                <td>Bukan Hari Kerja</td>
+                <td>Tidak mempengaruhi nilai</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* BAGIAN III: RUMUS & PEDOMAN NILAI KEDISIPLINAN (SKP) */}
+        <div className="mb-5 print-avoid-break">
+          <div className="font-bold text-[9.5pt] uppercase text-slate-900 mb-1.5 pb-1 border-b border-slate-400">
+            III. Rumus Perhitungan &amp; Pedoman Nilai Kedisiplinan (SKP)
+          </div>
+          <table className="print-table mb-3">
+            <thead>
+              <tr>
+                <th style={{ width: '15%' }}>Langkah</th>
+                <th style={{ width: '25%' }}>Indikator &amp; Letak Kolom</th>
+                <th style={{ width: '35%' }}>Rumus Matematis</th>
+                <th style={{ width: '25%' }}>Penjelasan Singkat</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="font-bold">Langkah 1</td>
+                <td>Hari Kerja Nyata (HK) - Kolom AG</td>
+                <td className="font-semibold">Hari Kerja Bulan Ini - I - Alpa</td>
+                <td>Hanya berkurang jika sakit tanpa surat atau alpa</td>
+              </tr>
+              <tr>
+                <td className="font-bold">Langkah 2</td>
+                <td>Nilai Bersih (Nilai X) - Kolom AQ</td>
+                <td className="font-semibold">(HK &times; 2) - denda (HIP+HIS+I+A&times;3)</td>
+                <td>Tiap hari kerja bernilai 2 poin dikurangi potongan</td>
+              </tr>
+              <tr>
+                <td className="font-bold">Langkah 3</td>
+                <td>Maksimal (Y) &amp; Persen (%) - Kolom AR &amp; AS</td>
+                <td className="font-semibold">Y = HK Bulan Ini &times; 2 | % = (X &divide; Y) &times; 100%</td>
+                <td>Rasio perolehan poin riil terhadap poin maksimal</td>
+              </tr>
+              <tr>
+                <td className="font-bold">Langkah 4</td>
+                <td>Score 1 &amp; Score 2 - Kolom AT &amp; AU</td>
+                <td className="font-semibold">Score 1 = Skala 1 s/d 10 | Score 2 = Score 1 &times; 20%</td>
+                <td>Score 2 (maksimal 2.0) dimasukkan ke laporan SKP</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div className="font-bold text-[8.5pt] uppercase text-slate-800 mb-1">
+            Tabel Pedoman Konversi Nilai Kehadiran &amp; Kedisiplinan SKP
+          </div>
+          <table className="print-table">
+            <thead>
+              <tr>
+                <th style={{ width: '24%' }}>Persentase Kehadiran</th>
+                <th style={{ width: '24%' }}>Tingkat Kualifikasi</th>
+                <th style={{ width: '18%' }} className="text-center">Score 1 (Skala 10)</th>
+                <th style={{ width: '18%' }} className="text-center">Score 2 (Bobot 20%)</th>
+                <th style={{ width: '16%' }}>Keterangan</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="font-bold">100.0%</td>
+                <td>Sempurna / Sangat Baik</td>
+                <td className="text-center font-bold">10</td>
+                <td className="text-center font-bold">2.0</td>
+                <td>Hadir penuh tepat waktu</td>
+              </tr>
+              <tr>
+                <td className="font-bold">90.0% s/d 99.9%</td>
+                <td>Sangat Baik</td>
+                <td className="text-center font-bold">9</td>
+                <td className="text-center font-bold">1.8</td>
+                <td>Toleransi 1-2 izin dinas ringan</td>
+              </tr>
+              <tr>
+                <td className="font-bold">80.0% s/d 89.9%</td>
+                <td>Baik</td>
+                <td className="text-center font-bold">8</td>
+                <td className="text-center font-bold">1.6</td>
+                <td>Memenuhi standar kedisiplinan</td>
+              </tr>
+              <tr>
+                <td className="font-bold">65.0% s/d 79.9%</td>
+                <td>Cukup</td>
+                <td className="text-center font-bold">7</td>
+                <td className="text-center font-bold">1.4</td>
+                <td>Perlu pembinaan ketepatan waktu</td>
+              </tr>
+              <tr>
+                <td className="font-bold">50.0% s/d 64.9%</td>
+                <td>Kurang</td>
+                <td className="text-center font-bold">6</td>
+                <td className="text-center font-bold">1.2</td>
+                <td>Mendapat pembinaan pimpinan</td>
+              </tr>
+              <tr>
+                <td className="font-bold">&lt; 50.0%</td>
+                <td>Sangat Kurang</td>
+                <td className="text-center font-bold">5</td>
+                <td className="text-center font-bold">1.0</td>
+                <td>Peringatan disiplin pegawai</td>
+              </tr>
+              <tr>
+                <td className="font-bold">0.0% (Tidak Hadir)</td>
+                <td>Tidak Pernah Hadir</td>
+                <td className="text-center font-bold">0</td>
+                <td className="text-center font-bold">0.0</td>
+                <td>Nirkehadiran selama sebulan</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* BAGIAN IV: CONTOH STUDI KASUS RIIL */}
+        <div className="mb-5 print-avoid-break">
+          <div className="font-bold text-[9.5pt] uppercase text-slate-900 mb-1.5 pb-1 border-b border-slate-400">
+            IV. Contoh Studi Kasus Perhitungan Riil (Simulasi Bulan 21 Hari Kerja)
+          </div>
+          <table className="print-table">
+            <thead>
+              <tr>
+                <th style={{ width: '22%' }}>Contoh Kasus</th>
+                <th style={{ width: '26%' }}>Kondisi Kehadiran</th>
+                <th style={{ width: '24%' }}>Rincian Hitung Nilai</th>
+                <th style={{ width: '10%' }} className="text-center">Persen</th>
+                <th style={{ width: '9%' }} className="text-center">Score 1</th>
+                <th style={{ width: '9%' }} className="text-center">Score 2</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="font-bold">Kasus 1: Hadir Penuh</td>
+                <td>Masuk tepat waktu seluruh 21 hari</td>
+                <td>HK = 21 | X = 42 poin dari 42 poin</td>
+                <td className="text-center font-bold">100.0%</td>
+                <td className="text-center font-bold">10</td>
+                <td className="text-center font-bold">2.0</td>
+              </tr>
+              <tr>
+                <td className="font-bold">Kasus 2: Izin Pagi &amp; Siang</td>
+                <td>Terlambat 2 kali &amp; pulang cepat 1 kali berizin</td>
+                <td>HK = 21 | X = 42 - 2 - 1 = 39 poin</td>
+                <td className="text-center font-bold">92.8%</td>
+                <td className="text-center font-bold">9</td>
+                <td className="text-center font-bold">1.8</td>
+              </tr>
+              <tr>
+                <td className="font-bold">Kasus 3: 1 Hari Alpa</td>
+                <td>Tidak masuk 1 hari tanpa keterangan</td>
+                <td>HK = 20 | X = (20&times;2) - 3 = 37 poin</td>
+                <td className="text-center font-bold">88.1%</td>
+                <td className="text-center font-bold">8</td>
+                <td className="text-center font-bold">1.6</td>
+              </tr>
+              <tr>
+                <td className="font-bold">Kasus 4: Sakit Surat vs Tanpa</td>
+                <td>Sakit 2 hari surat dokter vs tanpa surat</td>
+                <td>Surat: HK=21, X=42 | Tanpa: HK=19, X=36</td>
+                <td className="text-center font-bold">100% vs 85.7%</td>
+                <td className="text-center font-bold">10 vs 8</td>
+                <td className="text-center font-bold">2.0 vs 1.6</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* BAGIAN V: LEMBAR PENGESAHAN DOKUMEN RESMI */}
+        <div className="mt-8 pt-4 border-t-2 border-slate-800 print-avoid-break">
+          <div className="flex justify-between items-start text-[9.5pt] text-slate-900">
+            <div className="text-left w-64">
+              <p>Mengetahui,</p>
+              <p className="font-bold">Kepala Sub Bagian Tata Usaha</p>
+              <div className="h-16"></div>
+              <p className="font-bold underline text-slate-950">( ...................................................... )</p>
+              <p className="text-[8pt] text-slate-600">NIP. ......................................................</p>
+            </div>
+
+            <div className="text-left w-64">
+              <p>Palembang, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+              <p className="font-bold">Kepala SMA Negeri Sumatera Selatan</p>
+              <div className="h-16"></div>
+              <p className="font-bold underline text-slate-950">( ...................................................... )</p>
+              <p className="text-[8pt] text-slate-600">NIP. ......................................................</p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
-              title="Cetak Panduan"
-            >
-              <Printer className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          <div className="mt-6 text-center text-[7.5pt] text-slate-500 border-t border-slate-300 pt-1.5">
+            Dokumen ini dicetak secara sah melalui Sistem AutoAbsen SMANSS pada {new Date().toLocaleDateString('id-ID')} &bull; Penjaminan Mutu Kepegawaian SMAN Sumatera Selatan
           </div>
-        </div>
-
-        {/* Sub-Navigasi Modal */}
-        <div className="px-6 border-b border-slate-200 bg-white flex items-center gap-1 overflow-x-auto shrink-0 pb-px">
-          {[
-            { id: 'anatomy', label: '1. Susunan Kolom', icon: Layers },
-            { id: 'codes', label: '2. Keterangan Absen', icon: CheckCircle2 },
-            { id: 'formulas', label: '3. Cara Hitung & Nilai', icon: Percent },
-            { id: 'simulator', label: '4. Simulasi Hitung', icon: Calculator },
-            { id: 'cases', label: '5. Contoh Nyata', icon: FileSpreadsheet },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`py-2.5 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                  isActive
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Isi Modal */}
-        <div className="flex-1 overflow-y-auto p-6 text-slate-800 text-xs">
-          {renderTabContent()}
-        </div>
-
-        {/* Penutup Modal */}
-        <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0">
-          <span className="text-xs text-slate-500">AutoAbsen SMANSS &copy; 2026</span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 transition-colors cursor-pointer shadow-2xs"
-          >
-            Tutup
-          </button>
         </div>
       </div>
-    </div>
+    </>
   );
 };

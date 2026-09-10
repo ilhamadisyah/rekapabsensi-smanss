@@ -25,10 +25,21 @@ export default function PanduanPublicPage() {
     }
   };
 
+  const handlePrintPDF = () => {
+    if (typeof window !== 'undefined') {
+      const originalTitle = document.title;
+      document.title = 'SOP_Pedoman_Rekapitulasi_Presensi_SMANSS_2026';
+      window.print();
+      setTimeout(() => {
+        document.title = originalTitle;
+      }, 1000);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-slate-100/70 flex flex-col">
+    <div className="min-h-screen bg-slate-100/70 flex flex-col print:bg-white print:min-h-0 print:block">
       {/* Top Header Navbar */}
-      <header className="bg-white border-b border-slate-200/90 sticky top-0 z-30 shadow-2xs">
+      <header className="bg-white border-b border-slate-200/90 sticky top-0 z-30 shadow-2xs print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Logo & School Title */}
           <div className="flex items-center gap-3">
@@ -52,6 +63,16 @@ export default function PanduanPublicPage() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePrintPDF}
+              className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+              title="Cetak Pedoman Resmi sebagai Dokumen PDF (A4)"
+            >
+              <Printer className="w-3.5 h-3.5 text-blue-300" />
+              <span className="hidden sm:inline">Cetak Dokumen PDF</span>
+            </button>
+
             <button
               type="button"
               onClick={handleCopyLink}
@@ -87,7 +108,7 @@ export default function PanduanPublicPage() {
       </header>
 
       {/* Hero Notice Banner */}
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 text-white py-6 px-4">
+      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 text-white py-6 px-4 print:hidden">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 text-blue-100 text-[11px] font-semibold border border-white/20 mb-2">
@@ -105,7 +126,7 @@ export default function PanduanPublicPage() {
       </div>
 
       {/* Main Content Area: Calculation Guide Component */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full print:p-0 print:max-w-none">
         <CalculationGuideModal
           isOpen={true}
           onClose={() => {}}
@@ -114,7 +135,7 @@ export default function PanduanPublicPage() {
       </main>
 
       {/* Public Footer */}
-      <footer className="bg-white border-t border-slate-200/90 py-6 text-center text-xs text-slate-500">
+      <footer className="bg-white border-t border-slate-200/90 py-6 text-center text-xs text-slate-500 print:hidden">
         <div className="max-w-7xl mx-auto px-4 space-y-1.5">
           <p className="font-semibold text-slate-700">
             SMA Negeri Sumatera Selatan (SMANSS)
