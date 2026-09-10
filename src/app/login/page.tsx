@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   Lock,
   User,
@@ -9,6 +10,7 @@ import {
   EyeOff,
   ArrowRight,
   AlertCircle,
+  BookOpen,
 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -185,6 +187,17 @@ export default function LoginPage() {
                   </>
                 )}
               </button>
+
+              {/* Link Publik Panduan & Simulasi Nilai (Tanpa Login) */}
+              <div className="pt-2 text-center">
+                <Link
+                  href="/panduan"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 hover:underline transition-colors"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>Lihat Panduan Perhitungan &amp; Simulasi Nilai (Tanpa Login)</span>
+                </Link>
+              </div>
             </form>
           </div>
 

@@ -48,17 +48,21 @@ export async function middleware(request: NextRequest) {
   const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
   const session = token ? await verifySessionToken(token) : null;
 
-  // 4. Rute Publik: /login dan /api/auth/*
+  // 4. Rute Publik: /login, /api/auth/*, serta /panduan dan /kalkulator (dapat diakses tanpa login)
   const isLoginPage = pathname === '/login';
   const isAuthApi = pathname.startsWith('/api/auth');
+  const isPublicPage =
+    pathname === '/login' ||
+    pathname.startsWith('/panduan') ||
+    pathname.startsWith('/kalkulator');
 
   // Jika sudah login dan mencoba mengakses /login -> redirect ke dashboard utama /
   if (isLoginPage && session) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  // Jika belum login dan mengakses halaman /login atau API auth publik -> izinkan
-  if (isLoginPage || isAuthApi) {
+  // Jika mengakses halaman publik atau API auth -> izinkan tanpa login
+  if (isPublicPage || isAuthApi) {
     return NextResponse.next();
   }
 

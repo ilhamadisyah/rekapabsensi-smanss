@@ -10,6 +10,9 @@ import {
   FileSpreadsheet,
   Layers,
   Printer,
+  Share2,
+  Check,
+  ExternalLink,
 } from 'lucide-react';
 
 interface CalculationGuideModalProps {
@@ -24,6 +27,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
   isEmbeddedView = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'anatomy' | 'codes' | 'formulas' | 'simulator' | 'cases'>('anatomy');
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // State untuk Simulasi Hitung Nilai
   const [calcWorkingDays, setCalcWorkingDays] = useState<number>(21);
@@ -913,10 +917,51 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  const fullUrl = `${window.location.origin}/panduan`;
+                  navigator.clipboard.writeText(fullUrl);
+                  setLinkCopied(true);
+                  setTimeout(() => setLinkCopied(false), 2500);
+                }
+              }}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                linkCopied
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                  : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+              }`}
+              title="Salin tautan publik tanpa login untuk dibagikan ke seluruh pegawai"
+            >
+              {linkCopied ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-emerald-700 font-bold">Link Disalin!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Bagikan Link Publik</span>
+                </>
+              )}
+            </button>
+
+            <a
+              href="/panduan"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer hidden sm:flex"
+              title="Buka tampilan publik di tab baru"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+              <span>Buka Halaman Publik</span>
+            </a>
+
+            <button
+              type="button"
               onClick={() => window.print()}
               className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
             >
-              <Printer className="w-4 h-4 text-slate-500" />
+              <Printer className="w-3.5 h-3.5 text-slate-500" />
               <span>Cetak Panduan</span>
             </button>
           </div>
