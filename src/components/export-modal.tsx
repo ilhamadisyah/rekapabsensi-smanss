@@ -8,6 +8,7 @@ import {
   Building2,
   Download,
   Info,
+  Check,
 } from 'lucide-react';
 import { getMonthName } from '@/lib/types';
 
@@ -333,14 +334,23 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
           {/* Section 3: Pengaturan Legalitas Tanda Tangan */}
           <div className="pt-1.5">
-            <label className="flex items-center gap-2.5 cursor-pointer text-slate-700 select-none">
+            <label className="flex items-center gap-2.5 cursor-pointer text-slate-700 select-none group p-1.5 rounded-xl hover:bg-slate-100/70 transition-colors">
+              <div
+                className={`w-4 h-4 rounded flex items-center justify-center border transition-all shrink-0 ${
+                  includeSignatures
+                    ? 'bg-blue-600 border-blue-600 text-white shadow-2xs'
+                    : 'border-slate-300 bg-white group-hover:border-slate-400'
+                }`}
+              >
+                {includeSignatures && <Check className="w-3 h-3 stroke-[3]" />}
+              </div>
               <input
                 type="checkbox"
                 checked={includeSignatures}
                 onChange={(e) => setIncludeSignatures(e.target.checked)}
-                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                className="sr-only"
               />
-              <span className="font-medium text-xs">
+              <span className="font-medium text-xs text-slate-700 group-hover:text-slate-900 transition-colors">
                 Sertakan kolom tanda tangan resmi Kepala Sekolah pada lembar Excel
               </span>
             </label>

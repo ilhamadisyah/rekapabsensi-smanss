@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ShiftTemplate, Employee, Holiday } from '@/lib/types';
 import { X, Calendar, Users, Check, AlertCircle, Sparkles, Filter, Search, CheckSquare, Square } from 'lucide-react';
 
@@ -28,11 +28,26 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
   const [selectedShiftId, setSelectedShiftId] = useState<string>(
     shifts[0]?.id || 'shift-normal'
   );
+
+  const totalDaysInMonth = useMemo(() => {
+    return new Date(currentYear, currentMonth, 0).getDate();
+  }, [currentYear, currentMonth]);
+
   const [startDay, setStartDay] = useState<number>(1);
   const [endDay, setEndDay] = useState<number>(30);
   const [skipWeekends, setSkipWeekends] = useState<boolean>(true);
   const [skipHolidays, setSkipHolidays] = useState<boolean>(false);
   const [notes, setNotes] = useState<string>('');
+
+  // Reset/sync on modal open
+  useEffect(() => {
+    if (isOpen) {
+      setStartDay(1);
+      setEndDay(totalDaysInMonth);
+      setErrorMsg(null);
+      setSuccessMsg(null);
+    }
+  }, [isOpen, totalDaysInMonth]);
 
   // Search & selection
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -56,23 +71,29 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
     });
   }, [employees, searchQuery]);
 
-  // Hitung jumlah hari aktif yang benar-benar ditugaskan (melewati Sabtu & Minggu jika dicentang)
-  const activeDaysCount = useMemo(() => {
-    let count = 0;
+  // Hitung jumlah hari aktif dan rincian hari yang dilewati
+  const { activeDaysCount, skippedWeekendsCount, skippedHolidaysCount } = useMemo(() => {
+    let active = 0;
+    let weekends = 0;
+    let holidaysCount = 0;
     const monthPad = String(currentMonth).padStart(2, '0');
+
     for (let day = startDay; day <= endDay; day++) {
       const dayPad = String(day).padStart(2, '0');
       const dateStr = `${currentYear}-${monthPad}-${dayPad}`;
       const d = new Date(dateStr + 'T00:00:00');
       const dayOfWeek = d.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-      const isHoliday = holidays.some((h) => h.date === dateStr);
+      const isHoliday = holidays.some((h) => h.date === dateStr || h.date.startsWith(dateStr));
+
+      if (isWeekend) weekends++;
+      if (isHoliday) holidaysCount++;
 
       if (skipWeekends && isWeekend) continue;
       if (skipHolidays && isHoliday) continue;
-      count++;
+      active++;
     }
-    return count;
+    return { activeDaysCount: active, skippedWeekendsCount: weekends, skippedHolidaysCount: holidaysCount };
   }, [currentYear, currentMonth, startDay, endDay, skipWeekends, skipHolidays, holidays]);
 
   if (!isOpen) return null;
@@ -135,7 +156,7 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
       const d = new Date(dateStr + 'T00:00:00');
       const dayOfWeek = d.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-      const isHoliday = holidays.some((h) => h.date === dateStr);
+      const isHoliday = holidays.some((h) => h.date === dateStr || h.date.startsWith(dateStr));
 
       if (skipWeekends && isWeekend) {
         continue; // skip Saturday & Sunday
@@ -155,6 +176,12 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
       }
     }
 
+    if (schedulesToSave.length === 0) {
+      setErrorMsg('Tidak ada hari kerja aktif dalam rentang tanggal yang dipilih (semua hari dilewati karena filter akhir pekan / libur).');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch('/api/schedules', {
         method: 'POST',
@@ -165,6 +192,17 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
       const data = await res.json();
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Gagal menyimpan penugasan jadwal.');
+      }
+
+      // Otomatis sinkronisasi/evaluasi presensi kehadiran
+      try {
+        await fetch('/api/schedules/reevaluate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ month: currentMonth, year: currentYear }),
+        });
+      } catch (syncErr) {
+        console.warn('Auto reevaluate attendance warning:', syncErr);
       }
 
       setSuccessMsg(
@@ -280,50 +318,99 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
                   <input
                     type="number"
                     min={1}
-                    max={31}
+                    max={totalDaysInMonth}
                     value={startDay}
-                    onChange={(e) => setStartDay(Number(e.target.value))}
+                    onChange={(e) => setStartDay(Math.max(1, Math.min(totalDaysInMonth, Number(e.target.value) || 1)))}
                     className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
                   <span className="block text-[11px] text-slate-600 font-medium mb-1">
-                    Sampai Tanggal:
+                    Sampai Tanggal (Maks {totalDaysInMonth}):
                   </span>
                   <input
                     type="number"
                     min={1}
-                    max={31}
+                    max={totalDaysInMonth}
                     value={endDay}
-                    onChange={(e) => setEndDay(Number(e.target.value))}
+                    onChange={(e) => setEndDay(Math.max(1, Math.min(totalDaysInMonth, Number(e.target.value) || 1)))}
                     className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
-              <div className="pt-1 space-y-1.5">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
+              {/* Custom Checkbox Group (Bebas dari bug double-outline native browser) */}
+              <div className="pt-1 space-y-2">
+                {/* 1. Checkbox: Lewati Hari Sabtu & Minggu */}
+                <label className="flex items-start gap-2.5 cursor-pointer select-none group p-2 rounded-xl hover:bg-white/80 border border-transparent hover:border-slate-200 transition-all">
+                  <div
+                    className={`mt-0.5 w-4 h-4 rounded flex items-center justify-center border transition-all shrink-0 ${
+                      skipWeekends
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-2xs'
+                        : 'border-slate-300 bg-white group-hover:border-slate-400'
+                    }`}
+                  >
+                    {skipWeekends && <Check className="w-3 h-3 stroke-[3]" />}
+                  </div>
                   <input
                     type="checkbox"
                     checked={skipWeekends}
                     onChange={(e) => setSkipWeekends(e.target.checked)}
-                    className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                    className="sr-only"
                   />
-                  <span className="text-[11px] font-medium text-slate-700">
-                    Lewati Hari Sabtu &amp; Minggu
-                  </span>
+                  <div className="flex-1 leading-snug">
+                    <span className="text-[11px] font-semibold text-slate-800 group-hover:text-blue-700 transition-colors">
+                      Lewati Hari Sabtu &amp; Minggu
+                    </span>
+                    <span className="block text-[10px] mt-0.5">
+                      {skipWeekends ? (
+                        <span className="inline-flex items-center gap-1 font-medium text-blue-600 bg-blue-50/80 px-1.5 py-0.5 rounded">
+                          ✓ {skippedWeekendsCount} hari akhir pekan dilewati (tidak ditugaskan)
+                        </span>
+                      ) : (
+                        <span className="text-slate-500">
+                          Hari Sabtu &amp; Minggu akan tetap ditugaskan shift kerja
+                        </span>
+                      )}
+                    </span>
+                  </div>
                 </label>
 
-                <label className="flex items-center gap-2 cursor-pointer select-none">
+                {/* 2. Checkbox: Lewati Hari Libur Tambahan */}
+                <label className="flex items-start gap-2.5 cursor-pointer select-none group p-2 rounded-xl hover:bg-white/80 border border-transparent hover:border-slate-200 transition-all">
+                  <div
+                    className={`mt-0.5 w-4 h-4 rounded flex items-center justify-center border transition-all shrink-0 ${
+                      skipHolidays
+                        ? 'bg-rose-600 border-rose-600 text-white shadow-2xs'
+                        : 'border-slate-300 bg-white group-hover:border-slate-400'
+                    }`}
+                  >
+                    {skipHolidays && <Check className="w-3 h-3 stroke-[3]" />}
+                  </div>
                   <input
                     type="checkbox"
                     checked={skipHolidays}
                     onChange={(e) => setSkipHolidays(e.target.checked)}
-                    className="rounded text-rose-600 focus:ring-rose-500 w-4 h-4 cursor-pointer"
+                    className="sr-only"
                   />
-                  <span className="text-[11px] font-medium text-slate-700">
-                    Lewati Hari Libur Tambahan (Jangan tugaskan pada tanggal libur)
-                  </span>
+                  <div className="flex-1 leading-snug">
+                    <span className="text-[11px] font-semibold text-slate-800 group-hover:text-rose-700 transition-colors">
+                      Lewati Hari Libur Tambahan (Jangan tugaskan pada tanggal libur)
+                    </span>
+                    <span className="block text-[10px] mt-0.5">
+                      {skipHolidays ? (
+                        <span className="inline-flex items-center gap-1 font-medium text-rose-600 bg-rose-50/80 px-1.5 py-0.5 rounded">
+                          ✓ {skippedHolidaysCount} hari libur terdaftar dilewati
+                        </span>
+                      ) : (
+                        <span className="text-slate-500">
+                          {holidays.length > 0
+                            ? `Ada ${holidays.length} hari libur terdaftar (tetap ditugaskan jika tidak dicentang)`
+                            : 'Belum ada hari libur khusus terdaftar di bulan ini'}
+                        </span>
+                      )}
+                    </span>
+                  </div>
                 </label>
               </div>
 
@@ -434,12 +521,17 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
 
           {/* Footer Submit */}
           <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-            <span className="text-[11px] text-slate-500">
-              Total penugasan:{' '}
+            <div className="text-[11px] text-slate-500">
+              <span>Total penugasan: </span>
               <strong className="text-slate-800">
                 {selectedEmpIds.size} pegawai &times; {activeDaysCount} hari ({selectedEmpIds.size * activeDaysCount} entri)
               </strong>
-            </span>
+              {activeDaysCount === 0 && selectedEmpIds.size > 0 && (
+                <span className="block text-[10px] text-rose-600 font-medium">
+                  Semua hari dalam rentang dilewati karena filter akhir pekan/libur.
+                </span>
+              )}
+            </div>
 
             <div className="flex items-center gap-2">
               <button
@@ -451,8 +543,8 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={isLoading || selectedEmpIds.size === 0}
-                className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                disabled={isLoading || selectedEmpIds.size === 0 || activeDaysCount === 0}
+                className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? 'Menugaskan...' : 'Terapkan Jadwal'}
               </button>
