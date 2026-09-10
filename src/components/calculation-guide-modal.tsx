@@ -12,7 +12,6 @@ import {
   Printer,
   Share2,
   Check,
-  ExternalLink,
 } from 'lucide-react';
 
 interface CalculationGuideModalProps {
@@ -959,16 +958,6 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                   )}
                 </button>
 
-                <a
-                  href="/panduan"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer hidden sm:flex"
-                  title="Buka tampilan publik di tab baru"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Buka Halaman Publik</span>
-                </a>
 
                 <button
                   type="button"
