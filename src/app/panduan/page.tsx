@@ -4,14 +4,11 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { CalculationGuideModal } from '@/components/calculation-guide-modal';
 import {
-  BookOpen,
   Share2,
   Check,
   LogIn,
   Printer,
   School,
-  ArrowLeft,
-  Sparkles,
 } from 'lucide-react';
 
 export default function PanduanPublicPage() {
@@ -106,24 +103,6 @@ export default function PanduanPublicPage() {
           </div>
         </div>
       </header>
-
-      {/* Hero Notice Banner */}
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 text-white py-6 px-4 print:hidden">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 text-blue-100 text-[11px] font-semibold border border-white/20 mb-2">
-              <Sparkles className="w-3 h-3 text-amber-300" />
-              <span>Halaman Publik Tanpa Login</span>
-            </div>
-            <h2 className="text-lg sm:text-2xl font-black tracking-tight">
-              Panduan Perhitungan &amp; Simulasi Nilai Kehadiran Pegawai
-            </h2>
-            <p className="text-xs sm:text-sm text-blue-100 mt-1 max-w-3xl leading-relaxed">
-              Dapat diakses secara terbuka oleh seluruh guru, staf tata usaha, dan pimpinan untuk memahami aturan kolom laporan, arti keterangan absen, rumus nilai, serta melakukan simulasi nilai kedisiplinan (SKP) secara langsung.
-            </p>
-          </div>
-        </div>
-      </div>
 
       {/* Main Content Area: Calculation Guide Component */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full print:p-0 print:max-w-none">
