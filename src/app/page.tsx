@@ -21,6 +21,7 @@ import { AuditTrailView } from '@/components/audit-trail-view';
 import { ScheduleManagerView } from '@/components/schedule-manager-view';
 import { AdminManagerModal } from '@/components/admin-manager-modal';
 import { EditProfileModal } from '@/components/edit-profile-modal';
+import { CalculationGuideModal } from '@/components/calculation-guide-modal';
 import Link from 'next/link';
 import {
   Calendar,
@@ -34,6 +35,7 @@ import {
   User as UserIcon,
   ChevronDown,
   UserCog,
+  BookOpen,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -43,9 +45,10 @@ export default function HomePage() {
   const [userRole, setUserRole] = useState<UserRole>('admin');
   const [isAdminManagerOpen, setIsAdminManagerOpen] = useState<boolean>(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState<boolean>(false);
+  const [isGuideModalOpen, setIsGuideModalOpen] = useState<boolean>(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState<boolean>(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
-  const [activeTab, setActiveTab] = useState<'matrix' | 'schedules' | 'employees' | 'audit'>('matrix');
+  const [activeTab, setActiveTab] = useState<'matrix' | 'schedules' | 'employees' | 'guide' | 'audit'>('matrix');
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isExporting, setIsExporting] = useState<boolean>(false);
@@ -146,7 +149,7 @@ export default function HomePage() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get('tab');
-      if (tab === 'schedules' || tab === 'matrix' || tab === 'employees' || tab === 'audit') {
+      if (tab === 'schedules' || tab === 'matrix' || tab === 'employees' || tab === 'guide' || tab === 'audit') {
         setActiveTab(tab as any);
       }
     }
@@ -457,6 +460,7 @@ export default function HomePage() {
               { id: 'matrix', label: 'Matriks Presensi', icon: Calendar },
               { id: 'schedules', label: 'Jadwal & Shift Pegawai', icon: Clock },
               { id: 'employees', label: `Master Pegawai (${employees.length || 107})`, icon: Users },
+              { id: 'guide', label: 'Panduan Perhitungan', icon: BookOpen },
               { id: 'audit', label: 'Audit Trail', icon: History },
             ].map((tab) => {
               const Icon = tab.icon;
@@ -498,6 +502,7 @@ export default function HomePage() {
               onlyNeedsVerification={onlyNeedsVerification}
               onToggleVerificationFilter={setOnlyNeedsVerification}
               onOpenUpload={() => setIsUploadOpen(true)}
+              onOpenGuide={() => setIsGuideModalOpen(true)}
               userRole={userRole}
             />
 
@@ -530,6 +535,7 @@ export default function HomePage() {
                 isExporting={isExporting}
                 onSyncDatabase={handleSyncDatabase}
                 isSyncingDatabase={isSyncingDb}
+                onOpenGuide={() => setIsGuideModalOpen(true)}
               />
             )}
           </div>
@@ -550,7 +556,7 @@ export default function HomePage() {
           />
         )}
 
-        {/* TAB 2: Master Pegawai */}
+        {/* TAB 3: Master Pegawai */}
         {activeTab === 'employees' && (
           <EmployeeManager
             employees={employees}
@@ -559,7 +565,16 @@ export default function HomePage() {
           />
         )}
 
-        {/* TAB 3: Audit Trail */}
+        {/* TAB 4: Panduan Perhitungan Lengkap */}
+        {activeTab === 'guide' && (
+          <CalculationGuideModal
+            isOpen={true}
+            onClose={() => setActiveTab('matrix')}
+            isEmbeddedView={true}
+          />
+        )}
+
+        {/* TAB 5: Audit Trail */}
         {activeTab === 'audit' && <AuditTrailView />}
       </main>
 
@@ -645,6 +660,13 @@ export default function HomePage() {
           setUserRole(updated.role);
         }}
         showToast={showToast}
+      />
+
+      {/* Panduan Perhitungan Modal */}
+      <CalculationGuideModal
+        isOpen={isGuideModalOpen}
+        onClose={() => setIsGuideModalOpen(false)}
+        isEmbeddedView={false}
       />
 
       {/* Floating Toast Message */}

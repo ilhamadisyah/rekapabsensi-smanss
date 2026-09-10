@@ -31,7 +31,8 @@ import {
   FileSpreadsheet,
   Download,
   RefreshCw,
-  Database
+  Database,
+  BookOpen
 } from 'lucide-react';
 
 export type AttendanceFilterType = 
@@ -140,6 +141,7 @@ interface AttendanceGridProps {
   isExporting?: boolean;
   onSyncDatabase?: () => Promise<void> | void;
   isSyncingDatabase?: boolean;
+  onOpenGuide?: () => void;
 }
 
 export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
@@ -159,6 +161,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
   isExporting = false,
   onSyncDatabase,
   isSyncingDatabase = false,
+  onOpenGuide,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<'ALL' | 'Guru' | 'TU'>('ALL');
@@ -428,6 +431,17 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isSyncingDatabase ? 'animate-spin' : ''}`} />
                 <span>{isSyncingDatabase ? 'Menyinkronkan...' : 'Sinkronkan DB'}</span>
+              </button>
+            )}
+            {onOpenGuide && (
+              <button
+                type="button"
+                onClick={onOpenGuide}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition-all shadow-2xs active:scale-[0.98] cursor-pointer"
+                title="Buka panduan lengkap rumus perhitungan dan penjelasan setiap kolom tabel"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-blue-600" />
+                <span>Panduan Tabel</span>
               </button>
             )}
             {onOpenBulk && (

@@ -18,6 +18,7 @@ interface DashboardStatsProps {
   onlyNeedsVerification?: boolean;
   onToggleVerificationFilter?: (val: boolean) => void;
   onOpenUpload: () => void;
+  onOpenGuide?: () => void;
   onExport?: () => void;
   isExporting?: boolean;
   userRole: string;
@@ -29,6 +30,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
   onlyNeedsVerification,
   onToggleVerificationFilter,
   onOpenUpload,
+  onOpenGuide,
   userRole,
 }) => {
   if (!summary) return null;
@@ -57,6 +59,19 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {onOpenGuide && (
+            <button
+              type="button"
+              onClick={onOpenGuide}
+              id="btn-open-guide-top"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 active:scale-[0.98] shadow-xs hover:shadow transition-all duration-200 cursor-pointer"
+              title="Buka panduan lengkap rumus perhitungan dan arti tabel"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-blue-600" />
+              <span>Panduan Perhitungan</span>
+            </button>
+          )}
+
           {onOpenUpload && (
             <button
               type="button"

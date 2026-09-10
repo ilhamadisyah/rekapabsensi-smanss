@@ -607,16 +607,25 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
     // 4. Persentase Kehadiran
     const persentase = scoreY > 0 ? Math.min(100, Math.max(0, Math.round((scoreX / scoreY) * 10000) / 100)) : 0;
 
-    // 5. SCORE 1 (Skala Nilai SMANSS)
-    let score1 = 50;
-    if (persentase >= 100) score1 = 100;
-    else if (persentase >= 90) score1 = 90;
-    else if (persentase >= 80) score1 = 80;
-    else if (persentase >= 65) score1 = 70;
-    else if (persentase >= 50) score1 = 60;
-    else score1 = 50;
+    // 5. SCORE 1 (Skala Nilai Resmi SMANSS 1 s/d 10)
+    let score1 = 5;
+    if (scoreX === 0 || persentase <= 0) {
+      score1 = 0;
+    } else if (persentase >= 100) {
+      score1 = 10;
+    } else if (persentase >= 90) {
+      score1 = 9;
+    } else if (persentase >= 80) {
+      score1 = 8;
+    } else if (persentase >= 65) {
+      score1 = 7;
+    } else if (persentase >= 50) {
+      score1 = 6;
+    } else {
+      score1 = 5;
+    }
 
-    // 6. SCORE KEDISIPLINAN (20% dari Score 1)
+    // 6. SCORE KEDISIPLINAN / SCORE 2 (Bobot 20% dari Score 1: Skala 0.0 s/d 2.0)
     const scoreKedisiplinan = Math.round(score1 * 0.2 * 10) / 10;
 
     // Tulis nilai hasil perhitungan ke kolom AG s/d AU (Rata tengah vertikal & horizontal, border seragam)
@@ -634,7 +643,7 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
       ['AQ', scoreX],
       ['AR', scoreY],
       ['AS', persentase / 100, '0.0%'],
-      ['AT', score1],
+      ['AT', score1, '0'],
       ['AU', scoreKedisiplinan, '0.0'],
     ];
 
