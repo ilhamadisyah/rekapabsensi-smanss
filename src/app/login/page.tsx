@@ -9,7 +9,6 @@ import {
   EyeOff,
   ArrowRight,
   AlertCircle,
-  CheckCircle2,
 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -78,10 +77,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
-                Portal Presensi Terpadu
-              </span>
+            <div className="space-y-2 pt-2">
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight text-white">
                 AutoAbsen SMANSS
               </h1>
@@ -91,24 +87,8 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Key System Highlights */}
-          <div className="relative z-10 pt-6 space-y-2.5 border-t border-white/15">
-            <div className="flex items-center gap-2.5 text-xs text-emerald-100/90 font-medium">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Otomatisasi Olah Data Mesin Sidik Jari</span>
-            </div>
-            <div className="flex items-center gap-2.5 text-xs text-emerald-100/90 font-medium">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Format Rekap Excel Baku &amp; Akurat</span>
-            </div>
-            <div className="flex items-center gap-2.5 text-xs text-emerald-100/90 font-medium">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Manajemen Shift &amp; Hari Libur Khusus</span>
-            </div>
-          </div>
-
           {/* Bottom Left Note */}
-          <div className="relative z-10 pt-4 text-[11px] text-emerald-200/60 font-medium">
+          <div className="relative z-10 pt-6 border-t border-white/10 text-[11px] text-emerald-200/60 font-medium">
             Learn Today, Lead Tomorrow
           </div>
         </div>
