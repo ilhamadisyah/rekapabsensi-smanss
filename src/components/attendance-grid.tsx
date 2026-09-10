@@ -438,17 +438,6 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                 <span>{isSyncingDatabase ? 'Menyinkronkan...' : 'Sinkronkan DB'}</span>
               </button>
             )}
-            {onOpenGuide && (
-              <button
-                type="button"
-                onClick={onOpenGuide}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition-all shadow-2xs active:scale-[0.98] cursor-pointer"
-                title="Buka panduan lengkap rumus perhitungan dan penjelasan setiap kolom tabel"
-              >
-                <BookOpen className="w-3.5 h-3.5 text-blue-600" />
-                <span>Panduan Tabel</span>
-              </button>
-            )}
             {onOpenBulk && (
               <button
                 type="button"
