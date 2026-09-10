@@ -311,14 +311,9 @@ export default function HomePage() {
               />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight">
-                  AutoAbsen SMANSS
-                </h1>
-                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-sans text-[10px] font-bold rounded-full">
-                  v1.1 Production
-                </span>
-              </div>
+              <h1 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight leading-tight">
+                AutoAbsen SMANSS
+              </h1>
               <p className="text-[11px] text-slate-500">
                 SMAN Sumatera Selatan | Sistem Rekap Presensi Biometrik
               </p>
