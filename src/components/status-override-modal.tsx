@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AttendanceCode, ATTENDANCE_STATUS_MAP, DailyAttendance, Employee } from '@/lib/types';
+import { AttendanceCode, ATTENDANCE_STATUS_MAP, DailyAttendance, Employee, ShiftTemplate } from '@/lib/types';
 import { 
   X, 
   Check, 
@@ -23,6 +23,8 @@ interface StatusOverrideModalProps {
   dayNumber: number;
   currentAttendance: DailyAttendance | null;
   onSaveStatus: (newStatus: AttendanceCode, notes: string) => Promise<void>;
+  defaultShift?: ShiftTemplate | null;
+  shifts?: ShiftTemplate[];
 }
 
 // Friendly titles and clean badges for presentation
@@ -137,6 +139,8 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
   dayNumber,
   currentAttendance,
   onSaveStatus,
+  defaultShift,
+  shifts = [],
 }) => {
   const isWeekendDay = (() => {
     if (!dateStr) return false;
@@ -148,6 +152,21 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
       return false;
     }
   })();
+
+  // Resolve assigned shift or default shift dynamically from database
+  const assignedShift =
+    shifts.find((s) => s.id === currentAttendance?.shift_id || s.code === currentAttendance?.shift_code) ||
+    defaultShift;
+
+  const defaultStartTime =
+    assignedShift?.start_time?.substring(0, 5) || defaultShift?.start_time?.substring(0, 5) || '08:00';
+  const defaultEndTime =
+    assignedShift?.end_time?.substring(0, 5) || defaultShift?.end_time?.substring(0, 5) || '14:30';
+  const resolvedShiftName =
+    currentAttendance?.shift_name || assignedShift?.name || defaultShift?.name || 'Jam Kerja Normal';
+
+  const scheduledStart = currentAttendance?.scheduled_start?.substring(0, 5) || defaultStartTime;
+  const scheduledEnd = currentAttendance?.scheduled_end?.substring(0, 5) || defaultEndTime;
 
   const [selectedStatus, setSelectedStatus] = useState<AttendanceCode>(
     currentAttendance?.final_status || (isWeekendDay ? 'LIBUR' : 'A')
@@ -279,7 +298,7 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                       ? 'Hari Libur Resmi'
                       : isWeekendDay && !currentAttendance?.shift_id
                       ? 'Libur Akhir Pekan (Bebas Tugas)'
-                      : `${currentAttendance?.scheduled_start?.substring(0, 5) || '07:30'} s/d ${currentAttendance?.scheduled_end?.substring(0, 5) || '16:00'} WIB`}
+                      : `${scheduledStart} s/d ${scheduledEnd} WIB`}
                   </strong>
                 </div>
 
@@ -290,7 +309,7 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                     <span className="text-slate-600">Shift:</span>
                   </div>
                   <span className="font-semibold text-slate-800 truncate">
-                    {currentAttendance?.shift_name || (currentAttendance?.is_off_day ? 'Libur Shift' : (currentAttendance?.is_holiday || currentAttendance?.final_status === 'LIBUR') ? 'Hari Libur' : isWeekendDay ? 'Libur Akhir Pekan' : 'Jam Kerja Normal')}
+                    {currentAttendance?.shift_name || (currentAttendance?.is_off_day ? 'Libur Shift' : (currentAttendance?.is_holiday || currentAttendance?.final_status === 'LIBUR') ? 'Hari Libur' : isWeekendDay ? 'Libur Akhir Pekan' : resolvedShiftName)}
                   </span>
                 </div>
 
@@ -313,8 +332,6 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
 
               {/* Notifikasi Sistem (Selalu Muncul Dinamis) */}
               {(() => {
-                const scheduledStart = currentAttendance?.scheduled_start?.substring(0, 5) || '07:30';
-                const scheduledEnd = currentAttendance?.scheduled_end?.substring(0, 5) || '16:00';
                 const firstIn = currentAttendance?.first_in;
                 const lastOut = currentAttendance?.last_out;
                 const tapCount = currentAttendance?.tap_count || 0;
@@ -410,13 +427,14 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                 }
 
                 if (tapCount === 0) {
+                  const isUnrecorded = currentAttendance?.upload_id === 'virtual-unrecorded' || (currentAttendance?.final_status as string) === '-';
                   return (
                     <div className="text-[11px] text-rose-900 bg-rose-50/90 p-2.5 rounded-lg border border-rose-200 flex items-start gap-2">
                       <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                       <div>
                         <div className="font-bold text-rose-950 flex items-center gap-1.5">
-                          <span>Notifikasi Sistem: Belum Memenuhi Jam Kerja (Alpha)</span>
-                          <span className="px-1.5 py-0.5 bg-rose-200 text-rose-900 rounded text-[9px] font-bold">0 Tap</span>
+                          <span>{isUnrecorded ? 'Notifikasi Sistem: Belum Ada Rekaman Tap' : 'Notifikasi Sistem: Belum Memenuhi Jam Kerja (Alpha)'}</span>
+                          <span className="px-1.5 py-0.5 bg-rose-200 text-rose-900 rounded text-[9px] font-bold">{isUnrecorded ? 'Belum Terekap' : '0 Tap'}</span>
                         </div>
                         <div className="text-rose-800 mt-0.5 leading-relaxed">
                           Tidak ditemukan rekaman tap mesin pada tanggal ini. Jam kerja yang berlaku adalah <strong>{scheduledStart} s/d {scheduledEnd} WIB</strong>. Silakan pilih status override (DL, Sakit, Izin, Cuti) jika ada dokumen pendukung.

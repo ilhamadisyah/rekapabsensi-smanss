@@ -6,7 +6,8 @@ import {
   ATTENDANCE_STATUS_MAP, 
   AttendanceCode,
   MONTH_NAMES_ID,
-  getMonthName 
+  getMonthName,
+  ShiftTemplate
 } from '@/lib/types';
 import { 
   Search, 
@@ -142,6 +143,8 @@ interface AttendanceGridProps {
   onSyncDatabase?: () => Promise<void> | void;
   isSyncingDatabase?: boolean;
   onOpenGuide?: () => void;
+  defaultShift?: ShiftTemplate | null;
+  shifts?: ShiftTemplate[];
 }
 
 export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
@@ -162,6 +165,8 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
   onSyncDatabase,
   isSyncingDatabase = false,
   onOpenGuide,
+  defaultShift,
+  shifts = [],
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<'ALL' | 'Guru' | 'TU'>('ALL');
@@ -757,8 +762,9 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                       const isManuallyVerified = rec && rec.is_verified;
                       const isOff = Boolean(rec?.is_off_day || rec?.final_status === 'OFF');
                       const isHol = Boolean(rec?.is_holiday || d.holiday || rec?.final_status === 'LIBUR');
-                      const sStart = rec?.scheduled_start?.substring(0, 5) || '07:30';
-                      const sEnd = rec?.scheduled_end?.substring(0, 5) || '16:00';
+                      const empShift = shifts.find((s) => s.id === rec?.shift_id || s.code === rec?.shift_code) || defaultShift;
+                      const sStart = rec?.scheduled_start?.substring(0, 5) || empShift?.start_time?.substring(0, 5) || defaultShift?.start_time?.substring(0, 5) || '08:00';
+                      const sEnd = rec?.scheduled_end?.substring(0, 5) || empShift?.end_time?.substring(0, 5) || defaultShift?.end_time?.substring(0, 5) || '14:30';
                       const cellWorkingHours = isOff
                         ? 'Libur Shift (Bebas Tugas)'
                         : isHol
@@ -841,7 +847,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                             }}
                             onMouseLeave={() => setHoveredCell(null)}
                             className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-300 bg-slate-100/70 hover:bg-slate-200/70 transition-all font-medium select-none cursor-pointer box-border relative group/cell"
-                            title={`${emp.full_name} | Tgl ${d.day}: Belum Terekap | Shift: ${rec?.shift_name || 'Jam Kerja Normal'} | Jam Kerja: ${cellWorkingHours}`}
+                            title={`${emp.full_name} | Tgl ${d.day}: Belum Terekap | Shift: ${rec?.shift_name || empShift?.name || defaultShift?.name || 'Jam Kerja Normal'} | Jam Kerja: ${cellWorkingHours}`}
                           >
                             <div className="w-full h-full flex flex-col items-center justify-center">
                               <span className="text-[11px] font-semibold text-slate-300 select-none">
@@ -1013,8 +1019,9 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
       const hRec = attendanceMap[hEmp.machine_id]?.[hDay.day];
       const isOff = hRec?.is_off_day || hRec?.final_status === 'OFF';
       const isHol = hRec?.is_holiday || Boolean(hDay.holiday) || hRec?.final_status === 'LIBUR';
-      const sTime = hRec?.scheduled_start ? hRec.scheduled_start.substring(0, 5) : '07:30';
-      const eTime = hRec?.scheduled_end ? hRec.scheduled_end.substring(0, 5) : '16:00';
+      const hEmpShift = shifts.find((s) => s.id === hRec?.shift_id || s.code === hRec?.shift_code) || defaultShift;
+      const sTime = hRec?.scheduled_start ? hRec.scheduled_start.substring(0, 5) : (hEmpShift?.start_time?.substring(0, 5) || defaultShift?.start_time?.substring(0, 5) || '08:00');
+      const eTime = hRec?.scheduled_end ? hRec.scheduled_end.substring(0, 5) : (hEmpShift?.end_time?.substring(0, 5) || defaultShift?.end_time?.substring(0, 5) || '14:30');
       const isWeekendOrHol = hDay.isWeekend || isHol || hRec?.final_status === 'LIBUR';
       const workingHoursStr = isHol
         ? 'Hari Libur Resmi'

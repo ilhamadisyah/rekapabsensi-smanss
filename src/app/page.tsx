@@ -9,6 +9,7 @@ import {
   UserRole,
   AttendanceCode,
   AdminUserPublic,
+  ShiftTemplate,
 } from '@/lib/types';
 import { DashboardStats } from '@/components/dashboard-stats';
 import { AttendanceGrid } from '@/components/attendance-grid';
@@ -58,6 +59,8 @@ export default function HomePage() {
   const [days, setDays] = useState<AttendanceMatrixDay[]>([]);
   const [recordedDays, setRecordedDays] = useState<number[]>([]);
   const [attendanceMap, setAttendanceMap] = useState<Record<string, Record<number, DailyAttendance>>>({});
+  const [shifts, setShifts] = useState<ShiftTemplate[]>([]);
+  const [defaultShift, setDefaultShift] = useState<ShiftTemplate | null>(null);
   const [summary, setSummary] = useState<MonthlyAttendanceSummary | null>(null);
   const [detectedPeriod, setDetectedPeriod] = useState<any>(null);
 
@@ -131,6 +134,8 @@ export default function HomePage() {
         setDays(data.days || []);
         setRecordedDays(data.recordedDays || []);
         setAttendanceMap(data.attendanceMap || {});
+        setShifts(data.shifts || []);
+        setDefaultShift(data.defaultShift || null);
         setSummary(data.summary || null);
         setDetectedPeriod(data.detectedPeriod || null);
       }
@@ -536,6 +541,8 @@ export default function HomePage() {
                 onSyncDatabase={handleSyncDatabase}
                 isSyncingDatabase={isSyncingDb}
                 onOpenGuide={() => setIsGuideModalOpen(true)}
+                defaultShift={defaultShift}
+                shifts={shifts}
               />
             )}
           </div>
@@ -594,6 +601,8 @@ export default function HomePage() {
         dayNumber={overrideModal.day?.day || 0}
         currentAttendance={overrideModal.attendance}
         onSaveStatus={handleSaveStatus}
+        defaultShift={defaultShift}
+        shifts={shifts}
       />
 
       <UploadModal

@@ -30,8 +30,8 @@ export async function GET(request: NextRequest) {
         id: 'shift-normal',
         code: 'NORM',
         name: 'Jam Kerja Normal (Reguler)',
-        start_time: '07:30:00',
-        end_time: '16:00:00',
+        start_time: '08:00:00',
+        end_time: '14:30:00',
         grace_period_minutes: 0,
         check_in_window_minutes: 120,
         check_out_window_minutes: 240,
@@ -339,6 +339,32 @@ export async function GET(request: NextRequest) {
                 updated_at: new Date().toISOString(),
               };
               attendanceMap[emp.machine_id][d.day] = rec;
+            } else {
+              // Unrecorded regular workday (logs not uploaded yet)
+              rec = {
+                id: `att-unrecorded-${emp.machine_id}-${d.dateStr}`,
+                upload_id: 'virtual-unrecorded',
+                employee_id: emp.machine_id,
+                employee_name: emp.full_name,
+                attendance_date: d.dateStr,
+                first_in: null,
+                last_out: null,
+                tap_count: 0,
+                system_status: 'HADIR',
+                final_status: '-' as any,
+                is_off_day: false,
+                is_holiday: false,
+                shift_id: defaultShift.id,
+                shift_code: defaultShift.code,
+                shift_name: defaultShift.name,
+                shift_color: defaultShift.color,
+                scheduled_start: defaultShift.start_time,
+                scheduled_end: defaultShift.end_time,
+                is_verified: false,
+                is_custom_schedule: false,
+                updated_at: new Date().toISOString(),
+              };
+              attendanceMap[emp.machine_id][d.day] = rec;
             }
           }
         }
@@ -441,6 +467,7 @@ export async function GET(request: NextRequest) {
       employees,
       attendanceMap,
       shifts,
+      defaultShift,
       schedules,
       holidays,
       uploadHistory: await db.getUploadHistory(),

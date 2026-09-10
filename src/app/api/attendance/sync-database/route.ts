@@ -18,18 +18,21 @@ export async function POST(request: NextRequest) {
     const allEmployees = await db.getEmployees();
     const employees = allEmployees.filter((e) => e.is_active);
     const shifts = await db.getShiftTemplates();
-    const defaultShift = shifts.find((s) => s.is_default) || shifts[0] || {
-      id: 'shift-normal',
-      code: 'NORM',
-      name: 'Jam Kerja Normal',
-      start_time: '07:30',
-      end_time: '16:00',
-      grace_period_minutes: 0,
-      check_in_window_minutes: 120,
-      check_out_window_minutes: 240,
-      is_overnight: false,
-      is_off_day: false,
-    };
+    const defaultShift =
+      shifts.find((s) => s.is_default) ||
+      shifts.find((s) => s.code === 'NORM') ||
+      shifts[0] || {
+        id: 'shift-normal',
+        code: 'NORM',
+        name: 'Jam Kerja Normal',
+        start_time: '08:00',
+        end_time: '14:30',
+        grace_period_minutes: 0,
+        check_in_window_minutes: 120,
+        check_out_window_minutes: 240,
+        is_overnight: false,
+        is_off_day: false,
+      };
     const schedules = await db.getEmployeeSchedules(month, year);
     const holidays = await db.getHolidays(month, year);
     const existingAttendance = await db.getAttendanceForMonth(month, year);

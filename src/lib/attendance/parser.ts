@@ -386,8 +386,8 @@ export function evaluateAttendanceStatus(
     return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
   }
 
-  let startTime = scheduleContext?.startTime || '07:30:00';
-  let endTime = scheduleContext?.endTime || '16:00:00';
+  let startTime = scheduleContext?.startTime || '08:00:00';
+  let endTime = scheduleContext?.endTime || '14:30:00';
   if (startTime.length === 5) startTime += ':00';
   if (endTime.length === 5) endTime += ':00';
 
