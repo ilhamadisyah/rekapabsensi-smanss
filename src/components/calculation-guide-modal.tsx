@@ -10,7 +10,6 @@ import {
   FileSpreadsheet,
   Layers,
   Printer,
-  Info,
 } from 'lucide-react';
 
 interface CalculationGuideModalProps {
@@ -242,14 +241,6 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                   </tr>
                 </tbody>
               </table>
-            </div>
-
-            {/* Catatan Sederhana Tampilan Laporan */}
-            <div className="flex items-start gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600">
-              <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-              <div>
-                <strong>Catatan Kerapian Laporan:</strong> Seluruh judul kolom tanggal dan nama pegawai dibuat menyatu rapi agar tidak terpotong saat dicetak atau dibuka di komputer, serta dilengkapi garis pembatas yang jelas dan mudah dibaca oleh siapa pun.
-              </div>
             </div>
           </div>
         );
