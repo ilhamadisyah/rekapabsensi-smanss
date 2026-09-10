@@ -1,4 +1,24 @@
-export type UserRole = 'superadmin' | 'admin_tu' | 'pimpinan';
+export type UserRole = 'superadmin' | 'admin';
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  email: string;
+  password_hash: string;
+  full_name: string;
+  role: UserRole;
+  is_active: boolean;
+  last_login_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type AdminUserPublic = Omit<AdminUser, 'password_hash'>;
+
+export interface AuthSession {
+  user: AdminUserPublic;
+  token: string;
+}
 
 export type AttendanceCode = 
   | 'HADIR'  // Hadir Penuh (Tepat Waktu)
@@ -273,8 +293,8 @@ export interface AuditLog {
   employee_id: string;
   employee_name?: string;
   attendance_date: string;
-  previous_status: AttendanceCode;
-  new_status: AttendanceCode;
+  previous_status: AttendanceCode | string;
+  new_status: AttendanceCode | string;
   reason?: string;
   changed_by: string;
   changed_at: string;

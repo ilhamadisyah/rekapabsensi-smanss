@@ -418,7 +418,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
 
           {/* Right side: Bulk Action & Counter Info */}
           <div className="flex items-center gap-2.5">
-            {onSyncDatabase && userRole !== 'pimpinan' && (
+            {onSyncDatabase && (
               <button
                 type="button"
                 onClick={onSyncDatabase}
@@ -430,7 +430,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                 <span>{isSyncingDatabase ? 'Menyinkronkan...' : 'Sinkronkan DB'}</span>
               </button>
             )}
-            {onOpenBulk && userRole !== 'pimpinan' && (
+            {onOpenBulk && (
               <button
                 type="button"
                 onClick={onOpenBulk}
@@ -758,10 +758,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                         return (
                           <td
                             key={`cell-${emp.id}-${d.day}`}
-                            onClick={() => {
-                              if (userRole === 'pimpinan') return;
-                              onCellClick(emp, d, rec || null);
-                            }}
+                            onClick={() => onCellClick(emp, d, rec || null)}
                             onMouseEnter={(e) => {
                               const rect = e.currentTarget.getBoundingClientRect();
                               setHoveredCell({
@@ -789,10 +786,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                         return (
                           <td
                             key={`cell-${emp.id}-${d.day}`}
-                            onClick={() => {
-                              if (userRole === 'pimpinan') return;
-                              onCellClick(emp, d, rec || null);
-                            }}
+                            onClick={() => onCellClick(emp, d, rec || null)}
                             onMouseEnter={(e) => {
                               const rect = e.currentTarget.getBoundingClientRect();
                               setHoveredCell({
@@ -821,10 +815,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                         return (
                           <td
                             key={`cell-${emp.id}-${d.day}`}
-                            onClick={() => {
-                              if (userRole === 'pimpinan') return;
-                              onCellClick(emp, d, rec || null);
-                            }}
+                            onClick={() => onCellClick(emp, d, rec || null)}
                             onMouseEnter={(e) => {
                               const rect = e.currentTarget.getBoundingClientRect();
                               setHoveredCell({
@@ -865,10 +856,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                       return (
                         <td
                           key={`cell-${emp.id}-${d.day}`}
-                          onClick={() => {
-                            if (userRole === 'pimpinan') return;
-                            onCellClick(emp, d, rec || null);
-                          }}
+                          onClick={() => onCellClick(emp, d, rec || null)}
                           onMouseEnter={(e) => {
                             const rect = e.currentTarget.getBoundingClientRect();
                             setHoveredCell({

@@ -122,10 +122,11 @@ const ORDERED_STATUS_LIST: AttendanceCode[] = [
 ];
 
 const QUICK_NOTES = [
-  'Surat Tugas Dinas Luar',
-  'Surat Keterangan Dokter',
+  'Dispensasi',
+  'Izin Sakit',
   'Izin Kepentingan Keluarga',
-  'Dispensasi Pimpinan Sekolah',
+  'Tugas Dinas Luar',
+  'Surat Keterangan Dokter',
 ];
 
 export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({

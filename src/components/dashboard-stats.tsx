@@ -57,7 +57,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          {userRole !== 'pimpinan' && (
+          {onOpenUpload && (
             <button
               type="button"
               onClick={onOpenUpload}

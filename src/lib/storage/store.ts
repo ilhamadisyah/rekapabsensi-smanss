@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Employee, UploadHistory, DailyAttendance, AuditLog, AttendanceCode, ShiftTemplate, EmployeeSchedule, Holiday } from '../types';
+import { Employee, UploadHistory, DailyAttendance, AuditLog, AttendanceCode, ShiftTemplate, EmployeeSchedule, Holiday, AdminUser } from '../types';
 import { INITIAL_EMPLOYEES, getEmployeeNameByMachineId } from '../attendance/employee-mapping';
 import { parseAttendanceFile } from '../attendance/parser';
 import { isSupabaseConfigured } from '../supabase/server';
@@ -14,7 +14,20 @@ interface DbSchema {
   shift_templates: ShiftTemplate[];
   employee_schedules: EmployeeSchedule[];
   holidays: Holiday[];
+  admin_users?: AdminUser[];
 }
+
+export const DEFAULT_SUPERADMIN_USER: AdminUser = {
+  id: 'superadmin-default-id',
+  username: 'superadmin',
+  email: 'superadmin@smansumsel.sch.id',
+  password_hash: 'e42aa401077bfafdbf5a64e19bfd8d0f:cc0e3c0e2898864777f07477ea57d57275bfa33c677f465ba2a094ca91686703e13ebdcb087cac2787f8b2b1b596e0c995e54167321cf384a69273d81ded02d1',
+  full_name: 'Super Administrator SMANSS',
+  role: 'superadmin',
+  is_active: true,
+  created_at: '2026-09-01T00:00:00.000Z',
+  updated_at: '2026-09-01T00:00:00.000Z',
+};
 
 export const DEFAULT_SHIFT_TEMPLATES: ShiftTemplate[] = [
   {
@@ -121,6 +134,7 @@ function ensureDbFile(): DbSchema {
       shift_templates: [...DEFAULT_SHIFT_TEMPLATES],
       employee_schedules: [],
       holidays: [],
+      admin_users: [{ ...DEFAULT_SUPERADMIN_USER }],
     };
 
     // Auto-seed with ABSENSI 1111.xls if available
@@ -167,6 +181,10 @@ function ensureDbFile(): DbSchema {
     }
     if (!parsed.holidays) {
       parsed.holidays = [];
+      dirty = true;
+    }
+    if (!parsed.admin_users || parsed.admin_users.length === 0) {
+      parsed.admin_users = [{ ...DEFAULT_SUPERADMIN_USER }];
       dirty = true;
     }
 
@@ -464,6 +482,19 @@ const localDb = {
     );
   },
 
+  addAuditLog(log: Omit<AuditLog, 'id' | 'changed_at'>): AuditLog {
+    const data = ensureDbFile();
+    if (!data.audit_logs) data.audit_logs = [];
+    const fullLog: AuditLog = {
+      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      ...log,
+      changed_at: new Date().toISOString(),
+    };
+    data.audit_logs.push(fullLog);
+    writeDb(data);
+    return fullLog;
+  },
+
   // --- SHIFT TEMPLATES CRUD ---
   getShiftTemplates(): ShiftTemplate[] {
     const data = ensureDbFile();
@@ -741,6 +772,67 @@ const localDb = {
 
     return { copiedCount: count };
   },
+
+  // --- ADMIN USERS (RBAC) ---
+  getAdminUsers(): AdminUser[] {
+    const data = ensureDbFile();
+    return (data.admin_users || []).map((u) => ({ ...u }));
+  },
+
+  getAdminUserByIdentifier(identifier: string): AdminUser | null {
+    const data = ensureDbFile();
+    const clean = identifier.trim().toLowerCase();
+    const found = (data.admin_users || []).find(
+      (u) =>
+        u.is_active &&
+        (u.username.toLowerCase() === clean || u.email.toLowerCase() === clean)
+    );
+    return found ? { ...found } : null;
+  },
+
+  createAdminUser(userData: Omit<AdminUser, 'id' | 'created_at' | 'updated_at'>): AdminUser {
+    const data = ensureDbFile();
+    if (!data.admin_users) data.admin_users = [];
+
+    const now = new Date().toISOString();
+    const newUser: AdminUser = {
+      id: `admin-${Date.now()}`,
+      username: userData.username.toLowerCase().trim(),
+      email: userData.email.toLowerCase().trim(),
+      password_hash: userData.password_hash,
+      full_name: userData.full_name.trim(),
+      role: userData.role,
+      is_active: userData.is_active !== undefined ? userData.is_active : true,
+      created_at: now,
+      updated_at: now,
+    };
+
+    data.admin_users.push(newUser);
+    writeDb(data);
+    return { ...newUser };
+  },
+
+  deleteAdminUser(id: string): boolean {
+    const data = ensureDbFile();
+    if (!data.admin_users) return false;
+    const initialLen = data.admin_users.length;
+    data.admin_users = data.admin_users.filter((u) => u.id !== id);
+    if (data.admin_users.length !== initialLen) {
+      writeDb(data);
+      return true;
+    }
+    return false;
+  },
+
+  updateAdminLastLogin(id: string): void {
+    const data = ensureDbFile();
+    if (!data.admin_users) return;
+    const user = data.admin_users.find((u) => u.id === id);
+    if (user) {
+      user.last_login_at = new Date().toISOString();
+      writeDb(data);
+    }
+  },
 };
 
 export const db = {
@@ -801,6 +893,18 @@ export const db = {
   async getAuditLogs(): Promise<AuditLog[]> {
     if (isSupabaseConfigured) return supabaseStore.getAuditLogs();
     return localDb.getAuditLogs();
+  },
+
+  async addAuditLog(log: Omit<AuditLog, 'id' | 'changed_at'>): Promise<AuditLog> {
+    if (isSupabaseConfigured) {
+      try {
+        const res = await supabaseStore.addAuditLog(log);
+        if (res) return res;
+      } catch (e) {
+        console.warn('Gagal addAuditLog ke Supabase, simpan ke local:', e);
+      }
+    }
+    return localDb.addAuditLog(log);
   },
 
   async getShiftTemplates(): Promise<ShiftTemplate[]> {
@@ -872,5 +976,72 @@ export const db = {
       return supabaseStore.copySchedulesFromMonth(fromMonth, fromYear, toMonth, toYear);
     }
     return localDb.copySchedulesFromMonth(fromMonth, fromYear, toMonth, toYear);
+  },
+
+  // --- ADMIN USERS (RBAC & AUTH) ---
+  async getAdminUsers(): Promise<AdminUser[]> {
+    if (isSupabaseConfigured) {
+      const users = await supabaseStore.getAdminUsers();
+      if (users && users.length > 0) return users;
+    }
+    return localDb.getAdminUsers();
+  },
+
+  async getAdminUserByIdentifier(identifier: string): Promise<AdminUser | null> {
+    if (isSupabaseConfigured) {
+      try {
+        const user = await supabaseStore.getAdminUserByIdentifier(identifier);
+        if (user) return user;
+      } catch (e) {
+        console.warn('[Store] Supabase error getting admin user, checking local/seed:', e);
+      }
+    }
+    const localUser = localDb.getAdminUserByIdentifier(identifier);
+    if (localUser) return localUser;
+
+    // Fallback seed superadmin if username/email matches default
+    const clean = identifier.trim().toLowerCase();
+    if (
+      clean === DEFAULT_SUPERADMIN_USER.username.toLowerCase() ||
+      clean === DEFAULT_SUPERADMIN_USER.email.toLowerCase()
+    ) {
+      return { ...DEFAULT_SUPERADMIN_USER };
+    }
+    return null;
+  },
+
+  async createAdminUser(userData: Omit<AdminUser, 'id' | 'created_at' | 'updated_at'>): Promise<AdminUser | null> {
+    if (isSupabaseConfigured) {
+      try {
+        const user = await supabaseStore.createAdminUser(userData);
+        if (user) return user;
+      } catch (e) {
+        console.warn('[Store] Supabase error creating admin user, falling back to localDb:', e);
+      }
+    }
+    return localDb.createAdminUser(userData);
+  },
+
+  async deleteAdminUser(id: string): Promise<boolean> {
+    if (isSupabaseConfigured) {
+      try {
+        const res = await supabaseStore.deleteAdminUser(id);
+        if (res) return true;
+      } catch (e) {
+        console.warn('[Store] Supabase error deleting admin user, falling back to localDb:', e);
+      }
+    }
+    return localDb.deleteAdminUser(id);
+  },
+
+  async updateAdminLastLogin(id: string): Promise<void> {
+    if (isSupabaseConfigured) {
+      try {
+        await supabaseStore.updateAdminLastLogin(id);
+      } catch (e) {
+        console.warn('[Store] Supabase error updating admin last login:', e);
+      }
+    }
+    localDb.updateAdminLastLogin(id);
   },
 };

@@ -593,22 +593,30 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                     {/* KARTU 1: PENGATURAN SHIFT LINTAS HARI (OVERNIGHT) */}
                     <div className={`p-3.5 rounded-2xl border transition-all ${
                       isOvernight
-                        ? 'bg-gradient-to-br from-indigo-50/60 to-purple-50/40 border-indigo-200 shadow-2xs'
-                        : 'bg-slate-50/70 border-slate-200'
+                        ? 'bg-gradient-to-br from-indigo-50/70 via-purple-50/40 to-indigo-50/30 border-indigo-200 shadow-2xs'
+                        : 'bg-slate-50/80 border-slate-200/90 hover:bg-slate-50'
                     }`}>
                       <label className="flex items-start gap-3 cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={isOvernight}
-                          onChange={(e) => setIsOvernight(e.target.checked)}
-                          className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 mt-0.5 cursor-pointer shrink-0"
-                        />
+                        <div className="pt-0.5 shrink-0">
+                          <input
+                            type="checkbox"
+                            checked={isOvernight}
+                            onChange={(e) => setIsOvernight(e.target.checked)}
+                            className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500/30 border-slate-300 cursor-pointer accent-indigo-600"
+                          />
+                        </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                              <Moon className={`w-3.5 h-3.5 ${isOvernight ? 'text-indigo-600' : 'text-slate-400'}`} />
-                              Shift Lintas Hari (Overnight / Pulang Keesokan Harinya)
-                            </span>
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                                isOvernight ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200/70 text-slate-500'
+                              }`}>
+                                <Moon className="w-3.5 h-3.5" />
+                              </div>
+                              <span className="text-xs font-bold text-slate-900">
+                                Shift Lintas Hari (Overnight / Pulang Keesokan Harinya)
+                              </span>
+                            </div>
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                               isOvernight
                                 ? 'bg-indigo-100 text-indigo-800 border-indigo-200'
@@ -617,11 +625,11 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                               {isOvernight ? 'Lintas Hari (+1 Aktif)' : 'Hari yang Sama'}
                             </span>
                           </div>
-                          <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                          <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
                             Aktifkan jika jam kerja melewati pukul 00:00 tengah malam. Jam pulang akan dihitung pada hari kalender berikutnya (+1). Sistem presensi akan otomatis melakukan pencocokan <em>Cross-Day Punch Pairing</em>.
                           </p>
                           {startTime > endTime && (
-                            <div className="mt-2 text-[10.5px] text-indigo-700 bg-indigo-100/70 px-2.5 py-1 rounded-lg border border-indigo-200/80 font-medium flex items-center gap-1.5">
+                            <div className="mt-2.5 text-[10.5px] text-indigo-700 bg-indigo-100/70 px-2.5 py-1 rounded-lg border border-indigo-200/80 font-medium flex items-center gap-1.5">
                               <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                               <span>Jam pulang ({endTime}) lebih kecil dari jam masuk ({startTime}). Otomatis diakui sebagai shift lintas hari (+1 hari).</span>
                             </div>
@@ -630,19 +638,19 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                       </label>
                     </div>
 
-                    {/* KARTU 2: JENDELA WAKTU PRESENSI (PROTEKSI KEAMANAN CROSS-DAY) */}
-                    <div className="bg-gradient-to-br from-slate-50 to-blue-50/30 border border-slate-200/90 rounded-2xl p-3.5 space-y-3 shadow-2xs">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-5 h-5 rounded-md bg-blue-100 flex items-center justify-center text-blue-600">
+                    {/* KARTU 2: BATAS MAKSIMAL ABSENSI (PROTEKSI KEAMANAN CROSS-DAY) */}
+                    <div className="bg-gradient-to-br from-slate-50/90 to-blue-50/40 border border-slate-200/90 rounded-2xl p-4 space-y-3 shadow-2xs">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
                             <Shield className="w-3.5 h-3.5" />
                           </div>
-                          <span className="text-xs font-bold text-slate-800">
-                            Jendela Waktu Presensi (Proteksi Keamanan Cross-Day)
+                          <span className="text-xs font-bold text-slate-900">
+                            Batas Maksimal Absensi (Proteksi Keamanan Cross-Day)
                           </span>
                         </div>
-                        <span className="text-[10px] text-blue-700 bg-blue-100/70 border border-blue-200/60 px-2 py-0.5 rounded-full font-bold">
-                          Anti-Absen Diluar Jam
+                        <span className="text-[10px] text-blue-700 bg-blue-100/70 border border-blue-200/60 px-2.5 py-0.5 rounded-full font-bold">
+                          Anti-Absen Di Luar Jam
                         </span>
                       </div>
 
@@ -652,10 +660,10 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                         {/* Jendela Buka Tap Masuk */}
-                        <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs space-y-2">
+                        <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-2xs space-y-2">
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="font-bold text-slate-700">Batas Maksimal Absen Masuk</span>
-                            <span className="text-blue-600 font-bold text-[10px] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
+                            <span className="text-blue-600 font-bold text-[10px] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
                               {(checkInWindow / 60).toFixed(1)} jam sebelum
                             </span>
                           </div>
@@ -668,9 +676,9 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                               step={15}
                               value={checkInWindow}
                               onChange={(e) => setCheckInWindow(Number(e.target.value))}
-                              className="w-full pl-2.5 pr-12 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                              className="w-full pl-3 pr-12 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                             />
-                            <span className="absolute right-2.5 top-1.5 text-[10px] text-slate-400 font-medium">
+                            <span className="absolute right-3 top-2 text-[10px] text-slate-400 font-medium">
                               menit
                             </span>
                           </div>
@@ -684,10 +692,10 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                         </div>
 
                         {/* Batas Akhir Tap Pulang */}
-                        <div className="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs space-y-2">
+                        <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-2xs space-y-2">
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="font-bold text-slate-700">Batas Maksimal Absen Pulang</span>
-                            <span className="text-blue-600 font-bold text-[10px] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
+                            <span className="text-blue-600 font-bold text-[10px] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
                               {(checkOutWindow / 60).toFixed(1)} jam setelah
                             </span>
                           </div>
@@ -700,9 +708,9 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                               step={15}
                               value={checkOutWindow}
                               onChange={(e) => setCheckOutWindow(Number(e.target.value))}
-                              className="w-full pl-2.5 pr-12 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                              className="w-full pl-3 pr-12 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                             />
-                            <span className="absolute right-2.5 top-1.5 text-[10px] text-slate-400 font-medium">
+                            <span className="absolute right-3 top-2 text-[10px] text-slate-400 font-medium">
                               menit
                             </span>
                           </div>

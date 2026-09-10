@@ -8,6 +8,7 @@ import {
   MonthlyAttendanceSummary,
   UserRole,
   AttendanceCode,
+  AdminUserPublic,
 } from '@/lib/types';
 import { DashboardStats } from '@/components/dashboard-stats';
 import { AttendanceGrid } from '@/components/attendance-grid';
@@ -18,6 +19,7 @@ import { ExportModal, ExportConfig } from '@/components/export-modal';
 import { EmployeeManager } from '@/components/employee-manager';
 import { AuditTrailView } from '@/components/audit-trail-view';
 import { ScheduleManagerView } from '@/components/schedule-manager-view';
+import { AdminManagerModal } from '@/components/admin-manager-modal';
 import Link from 'next/link';
 import {
   Calendar,
@@ -26,12 +28,17 @@ import {
   History,
   CheckCircle2,
   Clock,
+  Shield,
+  LogOut,
+  User as UserIcon,
 } from 'lucide-react';
 
 export default function HomePage() {
   const [selectedMonth, setSelectedMonth] = useState<number>(9);
   const [selectedYear, setSelectedYear] = useState<number>(2026);
-  const [userRole, setUserRole] = useState<UserRole>('admin_tu');
+  const [currentUser, setCurrentUser] = useState<AdminUserPublic | null>(null);
+  const [userRole, setUserRole] = useState<UserRole>('admin');
+  const [isAdminManagerOpen, setIsAdminManagerOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'matrix' | 'schedules' | 'employees' | 'audit'>('matrix');
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -67,7 +74,29 @@ export default function HomePage() {
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 3500);
+    setTimeout(() => setToastMsg(null), 4000);
+  };
+
+  // Muat data sesi user saat ini
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.user) {
+          setCurrentUser(data.user);
+          setUserRole(data.user.role);
+        }
+      })
+      .catch((err) => console.error('Gagal memuat info akun:', err));
+  }, []);
+
+  const handleLogout = async () => {
+    if (!confirm('Apakah Anda yakin ingin keluar (logout) dari AutoAbsen SMANSS?')) return;
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } finally {
+      window.location.href = '/login';
+    }
   };
 
   const loadData = useCallback(async (overrideMonth?: number, overrideYear?: number) => {
@@ -118,11 +147,6 @@ export default function HomePage() {
     day: AttendanceMatrixDay,
     attendance: DailyAttendance | null
   ) => {
-    if (userRole === 'pimpinan') {
-      showToast('Peran Pimpinan hanya memiliki hak akses baca (Read-Only).');
-      return;
-    }
-
     setOverrideModal({
       isOpen: true,
       employee,
@@ -262,8 +286,12 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Logo & School Name */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-blue-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-emerald-500/20">
-              SS
+            <div className="h-10 w-9 flex items-center justify-center shrink-0">
+              <img
+                src="/logo-smanss.png"
+                alt="Logo SMAN Sumatera Selatan"
+                className="max-h-full max-w-full object-contain drop-shadow-xs"
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -280,22 +308,61 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Role Switcher (FR-01) */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1 bg-blue-50 border border-blue-200/80 p-1 rounded-xl text-xs">
-              <span className="text-[10px] font-bold text-blue-800 uppercase px-1.5">
-                Peran:
-              </span>
-              <select
-                value={userRole}
-                onChange={(e) => setUserRole(e.target.value as UserRole)}
-                className="bg-white text-blue-900 text-xs font-bold px-2 py-1 rounded-lg border border-blue-200 focus:outline-none cursor-pointer"
+          {/* User Profile & Action Bar (RBAC & Logout) */}
+          <div className="flex items-center gap-2.5">
+            {/* User Info Badge */}
+            <div className="flex items-center gap-2 px-2.5 py-1 bg-slate-100/80 border border-slate-200/90 rounded-xl">
+              <div
+                className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${
+                  userRole === 'superadmin'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'bg-blue-600 text-white shadow-xs'
+                }`}
               >
-                <option value="admin_tu">Admin TU (Upload &amp; Verifikasi)</option>
-                <option value="superadmin">Superadmin (Akses Penuh + Master)</option>
-                <option value="pimpinan">Pimpinan (Read-Only)</option>
-              </select>
+                {currentUser?.full_name ? currentUser.full_name.charAt(0).toUpperCase() : 'U'}
+              </div>
+              <div className="hidden sm:block text-left pr-1">
+                <div className="text-xs font-bold text-slate-800 leading-tight">
+                  {currentUser?.full_name || 'Admin Presensi'}
+                </div>
+                <div className="text-[10px] text-slate-500 font-mono leading-tight">
+                  @{currentUser?.username || 'user'}
+                </div>
+              </div>
+              <span
+                className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold border uppercase tracking-wider ${
+                  userRole === 'superadmin'
+                    ? 'bg-purple-50 text-purple-800 border-purple-200'
+                    : 'bg-blue-50 text-blue-800 border-blue-200'
+                }`}
+              >
+                {userRole === 'superadmin' ? 'SUPERADMIN' : 'ADMIN'}
+              </span>
             </div>
+
+            {/* Tombol Khusus Superadmin: Kelola Admin */}
+            {userRole === 'superadmin' && (
+              <button
+                type="button"
+                onClick={() => setIsAdminManagerOpen(true)}
+                className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Buka panel manajemen akun admin (Eksklusif Superadmin)"
+              >
+                <Shield className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="hidden md:inline">Kelola Admin</span>
+              </button>
+            )}
+
+            {/* Tombol Logout */}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="p-1.5 sm:px-2.5 sm:py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Keluar dari sistem"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Keluar</span>
+            </button>
           </div>
         </div>
 
@@ -415,8 +482,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200/80 py-4 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4">
-          AutoAbsen SMANSS &copy; 2026 Tim IT &amp; Urusan Kepegawaian SMAN Sumatera Selatan.
-          Sistem Otomasi Rekapitulasi Presensi Terintegrasi.
+          AutoAbsen SMANSS &copy; 2026
         </div>
       </footer>
 
@@ -475,6 +541,14 @@ export default function HomePage() {
         recordedDays={recordedDays}
         onConfirmExport={handleExportWithOptions}
         isExporting={isExporting}
+      />
+
+      {/* Superadmin Exclusive: Admin Management Modal */}
+      <AdminManagerModal
+        isOpen={isAdminManagerOpen}
+        onClose={() => setIsAdminManagerOpen(false)}
+        currentUserId={currentUser?.id}
+        onToast={showToast}
       />
 
       {/* Floating Toast Message */}

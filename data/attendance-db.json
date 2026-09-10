@@ -4935,5 +4935,19 @@
       "created_at": "2026-09-08T07:51:55.288Z",
       "updated_at": "2026-09-08T07:53:51.688Z"
     }
+  ],
+  "admin_users": [
+    {
+      "id": "superadmin-default-id",
+      "username": "superadmin",
+      "email": "superadmin@smansumsel.sch.id",
+      "password_hash": "e42aa401077bfafdbf5a64e19bfd8d0f:cc0e3c0e2898864777f07477ea57d57275bfa33c677f465ba2a094ca91686703e13ebdcb087cac2787f8b2b1b596e0c995e54167321cf384a69273d81ded02d1",
+      "full_name": "Super Administrator SMANSS",
+      "role": "superadmin",
+      "is_active": true,
+      "created_at": "2026-09-01T00:00:00.000Z",
+      "updated_at": "2026-09-01T00:00:00.000Z",
+      "last_login_at": "2026-09-10T01:24:17.700Z"
+    }
   ]
 }

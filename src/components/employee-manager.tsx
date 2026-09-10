@@ -100,12 +100,6 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
         </div>
       )}
 
-      {userRole !== 'superadmin' && (
-        <div className="p-3 bg-amber-50 text-amber-800 rounded-xl border border-amber-200 text-xs">
-          <strong>Mode Peninjauan:</strong> Hanya pengguna dengan peran <strong>superadmin</strong> yang memiliki wewenang untuk mengubah pemetaan ID Mesin ke Baris Excel.
-        </div>
-      )}
-
       {/* Table */}
       <div className="overflow-x-auto max-h-[500px]">
         <table className="w-full border-collapse text-left text-xs">
@@ -117,9 +111,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
               <th className="p-3 font-bold text-slate-700 text-center w-36">ID Mesin Biometrik</th>
               <th className="p-3 font-bold text-slate-700 text-center w-32">Baris Excel Template</th>
               <th className="p-3 font-bold text-slate-700 text-center w-24">Status</th>
-              {userRole === 'superadmin' && (
-                <th className="p-3 font-bold text-slate-700 text-center w-20">Aksi</th>
-              )}
+              <th className="p-3 font-bold text-slate-700 text-center w-20">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -169,8 +161,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                       Aktif
                     </span>
                   </td>
-                  {userRole === 'superadmin' && (
-                    <td className="p-3 text-center">
+                  <td className="p-3 text-center">
                       {isEditing ? (
                         <div className="flex items-center justify-center gap-1">
                           <button
@@ -199,7 +190,6 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                         </button>
                       )}
                     </td>
-                  )}
                 </tr>
               );
             })}

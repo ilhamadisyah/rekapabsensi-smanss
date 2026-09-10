@@ -8,6 +8,7 @@ import {
   ShiftTemplate,
   EmployeeSchedule,
   Holiday,
+  AdminUser,
 } from '../types';
 import { getEmployeeNameByMachineId } from '../attendance/employee-mapping';
 
@@ -423,6 +424,25 @@ export const supabaseStore = {
     }));
   },
 
+  async addAuditLog(log: Omit<AuditLog, 'id' | 'changed_at'>): Promise<AuditLog> {
+    const client = getSupabaseServerClient();
+    const fullLog: AuditLog = {
+      id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      ...log,
+      changed_at: new Date().toISOString(),
+    };
+
+    if (client) {
+      const { error } = await client.from('audit_logs').insert(fullLog);
+      if (error && (error.message.includes('column') || error.message.includes('schema cache'))) {
+        const { employee_name, ...cleanLog } = fullLog;
+        await client.from('audit_logs').insert(cleanLog);
+      }
+    }
+
+    return fullLog;
+  },
+
   // --- SHIFTS ---
   async getShiftTemplates(): Promise<ShiftTemplate[]> {
     const client = getSupabaseServerClient();
@@ -797,4 +817,97 @@ export const supabaseStore = {
     const res = await this.saveBulkEmployeeSchedules(toInsert);
     return { copiedCount: res.saved };
   },
+
+  // ==========================================
+  // ADMIN USERS (RBAC & AUTH)
+  // ==========================================
+  async getAdminUsers(): Promise<AdminUser[]> {
+    const client = getSupabaseServerClient();
+    if (!client) return [];
+
+    const { data, error } = await client
+      .from('admin_users')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[Supabase] Error getAdminUsers:', error);
+      return [];
+    }
+
+    return (data || []) as AdminUser[];
+  },
+
+  async getAdminUserByIdentifier(identifier: string): Promise<AdminUser | null> {
+    const client = getSupabaseServerClient();
+    if (!client) return null;
+
+    const clean = identifier.trim().toLowerCase();
+    const { data, error } = await client
+      .from('admin_users')
+      .select('*')
+      .or(`username.ilike.${clean},email.ilike.${clean}`)
+      .eq('is_active', true)
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return data as AdminUser;
+  },
+
+  async createAdminUser(userData: Omit<AdminUser, 'id' | 'created_at' | 'updated_at'>): Promise<AdminUser | null> {
+    const client = getSupabaseServerClient();
+    if (!client) return null;
+
+    const { data, error } = await client
+      .from('admin_users')
+      .insert({
+        username: userData.username.toLowerCase().trim(),
+        email: userData.email.toLowerCase().trim(),
+        password_hash: userData.password_hash,
+        full_name: userData.full_name.trim(),
+        role: userData.role,
+        is_active: userData.is_active !== undefined ? userData.is_active : true,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[Supabase] Error createAdminUser:', error);
+      throw new Error(error.message);
+    }
+
+    return data as AdminUser;
+  },
+
+  async deleteAdminUser(id: string): Promise<boolean> {
+    const client = getSupabaseServerClient();
+    if (!client) return false;
+
+    const { error } = await client
+      .from('admin_users')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('[Supabase] Error deleteAdminUser:', error);
+      return false;
+    }
+
+    return true;
+  },
+
+  async updateAdminLastLogin(id: string): Promise<void> {
+    const client = getSupabaseServerClient();
+    if (!client) return;
+
+    await client
+      .from('admin_users')
+      .update({ last_login_at: new Date().toISOString() })
+      .eq('id', id);
+  },
 };
+

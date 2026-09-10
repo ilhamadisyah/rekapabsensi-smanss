@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AuditLog, ATTENDANCE_STATUS_MAP } from '@/lib/types';
+import { AuditLog, AttendanceCode, ATTENDANCE_STATUS_MAP } from '@/lib/types';
 import { History, Search, ArrowRight, UserCheck, Calendar } from 'lucide-react';
 
 export const AuditTrailView: React.FC = () => {
@@ -82,8 +82,8 @@ export const AuditTrailView: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredLogs.map((log) => {
-                const prev = ATTENDANCE_STATUS_MAP[log.previous_status];
-                const next = ATTENDANCE_STATUS_MAP[log.new_status];
+                const prev = ATTENDANCE_STATUS_MAP[log.previous_status as AttendanceCode];
+                const next = ATTENDANCE_STATUS_MAP[log.new_status as AttendanceCode];
                 const dateObj = new Date(log.changed_at);
 
                 return (

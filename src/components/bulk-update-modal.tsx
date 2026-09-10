@@ -12,6 +12,14 @@ interface BulkUpdateModalProps {
   onBulkUpdateSuccess: () => void;
 }
 
+const QUICK_NOTES = [
+  'Dispensasi',
+  'Izin Sakit',
+  'Izin Kepentingan Keluarga',
+  'Tugas Dinas Luar',
+  'Surat Keterangan Dokter',
+];
+
 export const BulkUpdateModal: React.FC<BulkUpdateModalProps> = ({
   isOpen,
   onClose,
@@ -217,6 +225,22 @@ export const BulkUpdateModal: React.FC<BulkUpdateModalProps> = ({
               placeholder="Contoh: Rapat Koordinasi Dinas Pendidikan atau Cuti Bersama"
               className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500/20"
             />
+            {/* Quick Suggestion Chips */}
+            <div className="flex flex-wrap items-center gap-1.5 mt-2">
+              <span className="text-[10px] text-slate-400 font-medium mr-0.5">
+                Saran cepat:
+              </span>
+              {QUICK_NOTES.map((text) => (
+                <button
+                  key={text}
+                  type="button"
+                  onClick={() => setNotes(text)}
+                  className="text-[10px] font-medium px-2 py-0.5 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 rounded-md text-slate-600 transition-colors"
+                >
+                  + {text}
+                </button>
+              ))}
+            </div>
           </div>
 
           {errorMsg && (
