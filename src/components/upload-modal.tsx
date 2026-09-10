@@ -114,26 +114,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     }
   };
 
-  const handleUseSampleFile = async () => {
-    setIsUploading(true);
-    setErrorMsg(null);
-    try {
-      const res = await fetch('/api/attendance/data?month=9&year=2026');
-      if (res.ok) {
-        const d = await res.json();
-        setSuccessMsg('Data contoh ABSENSI 1111.xls (September 2026) berhasil dimuat!');
-        setTimeout(() => {
-          onUploadSuccess(d.detectedPeriod || { month: 9, year: 2026, monthName: 'September' });
-          onClose();
-        }, 800);
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal memuat file contoh.');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
@@ -157,38 +137,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
         {/* Content */}
         <div className="p-6 space-y-4">
-          {/* Quick Demo Button */}
-          <button
-            type="button"
-            onClick={handleUseSampleFile}
-            className="w-full p-3 rounded-xl bg-gradient-to-r from-emerald-500/10 to-blue-500/10 border border-emerald-300 hover:border-emerald-500 text-left transition-all group flex items-center justify-between"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-emerald-600 text-white rounded-lg group-hover:scale-105 transition-transform">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-slate-900">
-                  Muat Cepat Berkas Bawaan
-                </div>
-                <div className="text-[11px] text-slate-500">
-                  ABSENSI 1111.xls (September 2026 - Terdeteksi: 1 s/d 3 Sept)
-                </div>
-              </div>
-            </div>
-            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-md">
-              Klik Uji Coba
-            </span>
-          </button>
-
-          <div className="relative flex py-1 items-center">
-            <div className="flex-grow border-t border-slate-200"></div>
-            <span className="flex-shrink mx-3 text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-              Atau Pilih Berkas Baru
-            </span>
-            <div className="flex-grow border-t border-slate-200"></div>
-          </div>
-
           {/* Drag & Drop File Zone */}
           <div
             onClick={() => fileInputRef.current?.click()}
