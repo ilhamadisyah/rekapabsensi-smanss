@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Employee,
   AttendanceMatrixDay,
@@ -20,6 +20,7 @@ import { EmployeeManager } from '@/components/employee-manager';
 import { AuditTrailView } from '@/components/audit-trail-view';
 import { ScheduleManagerView } from '@/components/schedule-manager-view';
 import { AdminManagerModal } from '@/components/admin-manager-modal';
+import { EditProfileModal } from '@/components/edit-profile-modal';
 import Link from 'next/link';
 import {
   Calendar,
@@ -31,6 +32,8 @@ import {
   Shield,
   LogOut,
   User as UserIcon,
+  ChevronDown,
+  UserCog,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -39,6 +42,9 @@ export default function HomePage() {
   const [currentUser, setCurrentUser] = useState<AdminUserPublic | null>(null);
   const [userRole, setUserRole] = useState<UserRole>('admin');
   const [isAdminManagerOpen, setIsAdminManagerOpen] = useState<boolean>(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState<boolean>(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState<boolean>(false);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<'matrix' | 'schedules' | 'employees' | 'audit'>('matrix');
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -88,6 +94,17 @@ export default function HomePage() {
         }
       })
       .catch((err) => console.error('Gagal memuat info akun:', err));
+  }, []);
+
+  // Tutup dropdown saat klik di luar area profil
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(e.target as Node)) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const handleLogout = async () => {
@@ -308,21 +325,25 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* User Profile & Action Bar (RBAC & Logout) */}
-          <div className="flex items-center gap-2.5">
-            {/* User Info Badge */}
-            <div className="flex items-center gap-2 px-2.5 py-1 bg-slate-100/80 border border-slate-200/90 rounded-xl">
+          {/* User Profile Dropdown Menu */}
+          <div className="relative" ref={profileDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+              className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200/90 hover:border-slate-300 rounded-2xl shadow-2xs transition-all cursor-pointer group"
+              title="Menu Pengguna & Pengaturan Profil"
+            >
               <div
-                className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${
+                className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs shadow-2xs ${
                   userRole === 'superadmin'
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'bg-blue-600 text-white shadow-xs'
+                    ? 'bg-gradient-to-br from-purple-600 to-indigo-700 text-white'
+                    : 'bg-gradient-to-br from-blue-600 to-teal-600 text-white'
                 }`}
               >
                 {currentUser?.full_name ? currentUser.full_name.charAt(0).toUpperCase() : 'U'}
               </div>
-              <div className="hidden sm:block text-left pr-1">
-                <div className="text-xs font-bold text-slate-800 leading-tight">
+              <div className="text-left hidden sm:block pr-0.5">
+                <div className="text-xs font-bold text-slate-800 leading-tight group-hover:text-blue-600 transition-colors">
                   {currentUser?.full_name || 'Admin Presensi'}
                 </div>
                 <div className="text-[10px] text-slate-500 font-mono leading-tight">
@@ -330,7 +351,7 @@ export default function HomePage() {
                 </div>
               </div>
               <span
-                className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold border uppercase tracking-wider ${
+                className={`hidden md:inline-block px-1.5 py-0.5 rounded-md text-[9px] font-extrabold border uppercase tracking-wider ${
                   userRole === 'superadmin'
                     ? 'bg-purple-50 text-purple-800 border-purple-200'
                     : 'bg-blue-50 text-blue-800 border-blue-200'
@@ -338,31 +359,99 @@ export default function HomePage() {
               >
                 {userRole === 'superadmin' ? 'SUPERADMIN' : 'ADMIN'}
               </span>
-            </div>
-
-            {/* Tombol Khusus Superadmin: Kelola Admin */}
-            {userRole === 'superadmin' && (
-              <button
-                type="button"
-                onClick={() => setIsAdminManagerOpen(true)}
-                className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                title="Buka panel manajemen akun admin (Eksklusif Superadmin)"
-              >
-                <Shield className="w-3.5 h-3.5 text-indigo-600" />
-                <span className="hidden md:inline">Kelola Admin</span>
-              </button>
-            )}
-
-            {/* Tombol Logout */}
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="p-1.5 sm:px-2.5 sm:py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-              title="Keluar dari sistem"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Keluar</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 ${
+                  isProfileDropdownOpen ? 'rotate-180' : ''
+                }`}
+              />
             </button>
+
+            {/* Floating Dropdown Panel */}
+            {isProfileDropdownOpen && (
+              <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                {/* Header User Identity */}
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+                  <div
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shadow-xs shrink-0 ${
+                      userRole === 'superadmin'
+                        ? 'bg-gradient-to-br from-purple-600 to-indigo-700 text-white'
+                        : 'bg-gradient-to-br from-blue-600 to-teal-600 text-white'
+                    }`}
+                  >
+                    {currentUser?.full_name ? currentUser.full_name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  <div className="overflow-hidden">
+                    <div className="text-xs font-bold text-slate-900 truncate">
+                      {currentUser?.full_name || 'Pengguna'}
+                    </div>
+                    <div className="text-[11px] text-slate-500 truncate">
+                      {currentUser?.email || `@${currentUser?.username}`}
+                    </div>
+                    <span
+                      className={`inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold border uppercase tracking-wider ${
+                        userRole === 'superadmin'
+                          ? 'bg-purple-50 text-purple-700 border-purple-200'
+                          : 'bg-blue-50 text-blue-700 border-blue-200'
+                      }`}
+                    >
+                      {userRole === 'superadmin' ? 'Super Administrator' : 'Administrator Presensi'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Dropdown Menu Items */}
+                <div className="p-1.5 space-y-0.5 text-xs">
+                  {/* Item 1: Edit Profil */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      setIsEditProfileOpen(true);
+                    }}
+                    className="w-full px-3 py-2 rounded-xl flex items-center gap-2.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left cursor-pointer"
+                  >
+                    <UserCog className="w-4 h-4 text-slate-500" />
+                    <div>
+                      <div className="font-semibold leading-tight">Edit Profil &amp; Sandi</div>
+                      <div className="text-[10px] text-slate-400">Ubah nama, email, dan kata sandi</div>
+                    </div>
+                  </button>
+
+                  {/* Item 2: Kelola Admin (Superadmin Only) */}
+                  {userRole === 'superadmin' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProfileDropdownOpen(false);
+                        setIsAdminManagerOpen(true);
+                      }}
+                      className="w-full px-3 py-2 rounded-xl flex items-center gap-2.5 text-indigo-700 hover:bg-indigo-50 transition-colors text-left cursor-pointer"
+                    >
+                      <Shield className="w-4 h-4 text-indigo-600" />
+                      <div>
+                        <div className="font-semibold leading-tight">Kelola Administrator</div>
+                        <div className="text-[10px] text-indigo-400">Tambah atau hapus akun admin</div>
+                      </div>
+                    </button>
+                  )}
+                </div>
+
+                {/* Divider & Logout */}
+                <div className="border-t border-slate-100 pt-1 px-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileDropdownOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full px-3 py-2 rounded-xl flex items-center gap-2.5 text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-colors text-left cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4 text-rose-500" />
+                    <div className="font-semibold leading-tight">Keluar dari Sistem</div>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -549,6 +638,18 @@ export default function HomePage() {
         onClose={() => setIsAdminManagerOpen(false)}
         currentUserId={currentUser?.id}
         onToast={showToast}
+      />
+
+      {/* User Profile Editor Modal (Admin & Superadmin) */}
+      <EditProfileModal
+        isOpen={isEditProfileOpen}
+        onClose={() => setIsEditProfileOpen(false)}
+        currentUser={currentUser}
+        onProfileUpdated={(updated) => {
+          setCurrentUser(updated);
+          setUserRole(updated.role);
+        }}
+        showToast={showToast}
       />
 
       {/* Floating Toast Message */}

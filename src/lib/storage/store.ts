@@ -824,6 +824,23 @@ const localDb = {
     return false;
   },
 
+  updateAdminUser(id: string, updates: Partial<AdminUser>): AdminUser | null {
+    const data = ensureDbFile();
+    if (!data.admin_users) return null;
+    const idx = data.admin_users.findIndex((u) => u.id === id);
+    if (idx === -1) return null;
+
+    const user = data.admin_users[idx];
+    const updated: AdminUser = {
+      ...user,
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+    data.admin_users[idx] = updated;
+    writeDb(data);
+    return { ...updated };
+  },
+
   updateAdminLastLogin(id: string): void {
     const data = ensureDbFile();
     if (!data.admin_users) return;
@@ -1032,6 +1049,18 @@ export const db = {
       }
     }
     return localDb.deleteAdminUser(id);
+  },
+
+  async updateAdminUser(id: string, updates: Partial<AdminUser>): Promise<AdminUser | null> {
+    if (isSupabaseConfigured) {
+      try {
+        const user = await supabaseStore.updateAdminUser(id, updates);
+        if (user) return user;
+      } catch (e) {
+        console.warn('[Store] Supabase error updating admin user, falling back to localDb:', e);
+      }
+    }
+    return localDb.updateAdminUser(id, updates);
   },
 
   async updateAdminLastLogin(id: string): Promise<void> {

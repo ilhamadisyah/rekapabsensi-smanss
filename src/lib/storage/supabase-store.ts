@@ -900,6 +900,32 @@ export const supabaseStore = {
     return true;
   },
 
+  async updateAdminUser(id: string, updates: Partial<AdminUser>): Promise<AdminUser | null> {
+    const client = getSupabaseServerClient();
+    if (!client) return null;
+
+    const updatePayload: any = {
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+    delete updatePayload.id;
+    delete updatePayload.created_at;
+
+    const { data, error } = await client
+      .from('admin_users')
+      .update(updatePayload)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[Supabase] Error updateAdminUser:', error);
+      throw new Error(error.message);
+    }
+
+    return data as AdminUser;
+  },
+
   async updateAdminLastLogin(id: string): Promise<void> {
     const client = getSupabaseServerClient();
     if (!client) return;
