@@ -52,6 +52,11 @@ const securityHeaders = [
     key: 'X-DNS-Prefetch-Control',
     value: 'on',
   },
+  // 9. Anti Search Engine Indexing (Strictly block all search engines, spiders, and crawlers)
+  {
+    key: 'X-Robots-Tag',
+    value: 'noindex, nofollow, noarchive, nosnippet, noimageindex, nocache',
+  },
 ];
 
 const nextConfig: NextConfig = {
