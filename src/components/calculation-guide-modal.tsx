@@ -1094,47 +1094,61 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
       {/* ========================================================================= */}
       <div className="hidden print:block print-document font-sans text-black">
         {/* KOP SURAT RESMI DINAS SMANSS */}
-        <div className="text-center pb-2.5 border-b-2 border-slate-900 mb-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="w-16 h-16 rounded-full border-2 border-slate-900 flex items-center justify-center font-black text-[10px] text-center p-1 leading-tight shrink-0">
-              SMANSS
+        <div className="text-center pb-2 mb-4">
+          <div className="flex items-center justify-between gap-3">
+            {/* Logo Kiri: Pemerintah Provinsi Sumatera Selatan */}
+            <div className="w-20 h-20 flex items-center justify-center shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo-sumsel.png"
+                alt="Logo Pemerintah Provinsi Sumatera Selatan"
+                className="w-18 h-18 max-h-20 object-contain"
+              />
             </div>
-            <div className="flex-1 text-center">
-              <h4 className="text-[10pt] font-bold uppercase tracking-wider text-slate-800 leading-tight">
+
+            {/* Teks Kop Surat Dinas */}
+            <div className="flex-1 text-center px-1">
+              <h4 className="text-[10.5pt] font-bold uppercase tracking-wider text-slate-800 leading-tight">
                 Pemerintah Provinsi Sumatera Selatan
               </h4>
-              <h3 className="text-[11pt] font-bold uppercase tracking-wider text-slate-900 leading-tight">
+              <h3 className="text-[11.5pt] font-bold uppercase tracking-wider text-slate-900 leading-tight">
                 Dinas Pendidikan
               </h3>
-              <h2 className="text-[14pt] font-black uppercase tracking-tight text-slate-950 leading-tight">
+              <h2 className="text-[14pt] font-black uppercase tracking-wide text-slate-950 leading-tight">
                 SMA Negeri Sumatera Selatan
               </h2>
-              <p className="text-[8pt] text-slate-600 mt-1 leading-snug">
+              <p className="text-[8pt] text-slate-700 mt-1 leading-snug">
                 Jl. Pangeran Ratu, RT. 31 / RW. 08, Kel. 8 Ulu, Kec. Seberang Ulu I, Kota Palembang, Sumatera Selatan 30252
                 <br />
                 Laman Resmi: <em>smansumsel.sch.id</em> &bull; Pos-el: <em>info@smansumsel.sch.id</em>
               </p>
             </div>
-            <div className="w-16 shrink-0 text-right text-[8pt] text-slate-400 font-mono">
-              DOK.RESMI
+
+            {/* Logo Kanan: SMAN Sumatera Selatan */}
+            <div className="w-20 h-20 flex items-center justify-center shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo-smanss.png"
+                alt="Logo SMAN Sumatera Selatan"
+                className="w-18 h-18 max-h-20 object-contain"
+              />
             </div>
           </div>
-          <div className="border-b border-slate-900 mt-1"></div>
+          {/* Garis Ganda Standar Kop Surat Resmi Dinas */}
+          <div className="border-b-[2.5px] border-slate-950 mt-2"></div>
+          <div className="border-b-[0.75px] border-slate-950 mt-0.5"></div>
         </div>
 
         {/* JUDUL DOKUMEN RESMI */}
-        <div className="text-center mb-5">
-          <h3 className="text-[12pt] font-black uppercase tracking-wide text-slate-950 underline decoration-1 underline-offset-4">
+        <div className="text-center mb-4 mt-2">
+          <h3 className="text-[11.5pt] font-black uppercase tracking-wide text-slate-950 underline decoration-1 underline-offset-4">
             STANDAR OPERASIONAL PROSEDUR (SOP) &amp; PEDOMAN PERHITUNGAN PRESENSI
           </h3>
-          <p className="text-[8.5pt] text-slate-700 mt-1">
-            Nomor: 421.3/SOP-PRES/SMANSS/2026 &bull; Berlaku Sah untuk Seluruh Pendidik &amp; Tenaga Kependidikan
-          </p>
         </div>
 
         {/* BAGIAN I: SUSUNAN & ARTI KOLOM LAPORAN */}
-        <div className="mb-5 print-avoid-break">
-          <div className="font-bold text-[9.5pt] uppercase text-slate-900 mb-1.5 pb-1 border-b border-slate-400">
+        <div className="mb-5">
+          <div className="font-bold text-[9.5pt] uppercase text-slate-900 mb-1.5 pb-1 border-b border-slate-400 print-heading">
             I. Susunan &amp; Arti Kolom Laporan Rekapitulasi (Kolom A s/d AU)
           </div>
           <table className="print-table">
@@ -1280,8 +1294,8 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
         </div>
 
         {/* BAGIAN II: GLOSARIUM KODE STATUS KEHADIRAN */}
-        <div className="mb-5 print-avoid-break">
-          <div className="font-bold text-[9.5pt] uppercase text-slate-900 mb-1.5 pb-1 border-b border-slate-400">
+        <div className="mb-5">
+          <div className="font-bold text-[9.5pt] uppercase text-slate-900 mb-1.5 pb-1 border-b border-slate-400 print-heading">
             II. Glosarium &amp; Ketentuan Status Kehadiran Pegawai
           </div>
           <table className="print-table">
@@ -1389,8 +1403,8 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
         </div>
 
         {/* BAGIAN III: RUMUS & PEDOMAN NILAI KEDISIPLINAN (SKP) */}
-        <div className="mb-5 print-avoid-break">
-          <div className="font-bold text-[9.5pt] uppercase text-slate-900 mb-1.5 pb-1 border-b border-slate-400">
+        <div className="mb-5">
+          <div className="font-bold text-[9.5pt] uppercase text-slate-900 mb-1.5 pb-1 border-b border-slate-400 print-heading">
             III. Rumus Perhitungan &amp; Pedoman Nilai Kedisiplinan (SKP)
           </div>
           <table className="print-table mb-3">
@@ -1498,8 +1512,8 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
         </div>
 
         {/* BAGIAN IV: CONTOH STUDI KASUS RIIL */}
-        <div className="mb-5 print-avoid-break">
-          <div className="font-bold text-[9.5pt] uppercase text-slate-900 mb-1.5 pb-1 border-b border-slate-400">
+        <div className="mb-5">
+          <div className="font-bold text-[9.5pt] uppercase text-slate-900 mb-1.5 pb-1 border-b border-slate-400 print-heading">
             IV. Contoh Studi Kasus Perhitungan Riil (Simulasi Bulan 21 Hari Kerja)
           </div>
           <table className="print-table">
@@ -1553,20 +1567,21 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
         {/* BAGIAN V: LEMBAR PENGESAHAN DOKUMEN RESMI */}
         <div className="mt-8 pt-4 border-t-2 border-slate-800 print-avoid-break">
           <div className="flex justify-between items-start text-[9.5pt] text-slate-900">
-            <div className="text-left w-64">
+            <div className="text-left w-72">
               <p>Mengetahui,</p>
-              <p className="font-bold">Kepala Sub Bagian Tata Usaha</p>
+              <p className="font-bold">Kepala Tenaga Administrasi</p>
               <div className="h-16"></div>
-              <p className="font-bold underline text-slate-950">( ...................................................... )</p>
-              <p className="text-[8pt] text-slate-600">NIP. ......................................................</p>
+              <p className="font-bold underline text-slate-950">Debby Leonella, A.Md.</p>
+              <p className="text-[8.5pt] text-slate-700">NIP. 199007302025212024</p>
             </div>
 
-            <div className="text-left w-64">
+            <div className="text-left w-72">
               <p>Palembang, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
               <p className="font-bold">Kepala SMA Negeri Sumatera Selatan</p>
               <div className="h-16"></div>
-              <p className="font-bold underline text-slate-950">( ...................................................... )</p>
-              <p className="text-[8pt] text-slate-600">NIP. ......................................................</p>
+              <p className="font-bold underline text-slate-950">Iswan Djati Kusuma, S.Pd, M.Si</p>
+              <p className="text-[8.5pt] text-slate-700">Pembina Utama Muda, IV.c</p>
+              <p className="text-[8.5pt] text-slate-700">NIP. 196912232000121001</p>
             </div>
           </div>
 

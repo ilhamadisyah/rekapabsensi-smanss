@@ -328,11 +328,11 @@ export default function HomePage() {
             <button
               type="button"
               onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-              className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200/90 hover:border-slate-300 rounded-2xl shadow-2xs transition-all cursor-pointer group"
+              className="flex items-center gap-2.5 px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200/90 hover:border-slate-300 rounded-2xl shadow-2xs transition-all cursor-pointer group"
               title="Menu Pengguna & Pengaturan Profil"
             >
               <div
-                className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs shadow-2xs ${
+                className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shadow-2xs shrink-0 ${
                   userRole === 'superadmin'
                     ? 'bg-gradient-to-br from-purple-600 to-indigo-700 text-white'
                     : 'bg-gradient-to-br from-blue-600 to-teal-600 text-white'
@@ -340,16 +340,16 @@ export default function HomePage() {
               >
                 {currentUser?.full_name ? currentUser.full_name.charAt(0).toUpperCase() : 'U'}
               </div>
-              <div className="text-left hidden sm:block pr-0.5">
+              <div className="text-left hidden sm:block">
                 <div className="text-xs font-bold text-slate-800 leading-tight group-hover:text-blue-600 transition-colors">
                   {currentUser?.full_name || 'Admin Presensi'}
                 </div>
-                <div className="text-[10px] text-slate-500 font-mono leading-tight">
+                <div className="text-[10px] text-slate-500 font-mono leading-tight mt-0.5">
                   @{currentUser?.username || 'user'}
                 </div>
               </div>
               <span
-                className={`hidden md:inline-block px-1.5 py-0.5 rounded-md text-[9px] font-extrabold border uppercase tracking-wider ${
+                className={`hidden md:inline-block px-2 py-0.5 rounded-lg text-[9.5px] font-extrabold border uppercase tracking-wider ${
                   userRole === 'superadmin'
                     ? 'bg-purple-50 text-purple-800 border-purple-200'
                     : 'bg-blue-50 text-blue-800 border-blue-200'
@@ -358,7 +358,7 @@ export default function HomePage() {
                 {userRole === 'superadmin' ? 'SUPERADMIN' : 'ADMIN'}
               </span>
               <ChevronDown
-                className={`w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 ${
+                className={`w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 ${
                   isProfileDropdownOpen ? 'rotate-180' : ''
                 }`}
               />

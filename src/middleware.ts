@@ -3,6 +3,13 @@ import { verifySessionToken } from '@/lib/auth/token';
 import { AUTH_COOKIE_NAME } from '@/lib/auth/session';
 import { checkGlobalRateLimit, getClientIp } from '@/lib/auth/rate-limiter';
 
+const NO_INDEX_ROBOTS = 'noindex, nofollow, noarchive, nosnippet, noimageindex, nocache';
+
+function applySecurityHeaders(res: NextResponse): NextResponse {
+  res.headers.set('X-Robots-Tag', NO_INDEX_ROBOTS);
+  return res;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const ip = getClientIp(request);
@@ -21,25 +28,27 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/api')) {
     // Kecualikan preflight OPTIONS
     if (request.method === 'OPTIONS') {
-      return NextResponse.next();
+      return applySecurityHeaders(NextResponse.next());
     }
 
     const rateCheck = checkGlobalRateLimit(ip);
     if (!rateCheck.allowed) {
       const retryAfter = Math.ceil(rateCheck.resetTimeMs / 1000);
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Terlalu banyak permintaan (Rate limit exceeded). Silakan tunggu sejenak.',
-        },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': String(retryAfter),
-            'X-RateLimit-Limit': String(rateCheck.limit),
-            'X-RateLimit-Remaining': '0',
+      return applySecurityHeaders(
+        NextResponse.json(
+          {
+            success: false,
+            error: 'Terlalu banyak permintaan (Rate limit exceeded). Silakan tunggu sejenak.',
           },
-        }
+          {
+            status: 429,
+            headers: {
+              'Retry-After': String(retryAfter),
+              'X-RateLimit-Limit': String(rateCheck.limit),
+              'X-RateLimit-Remaining': '0',
+            },
+          }
+        )
       );
     }
   }
@@ -58,27 +67,29 @@ export async function middleware(request: NextRequest) {
 
   // Jika sudah login dan mencoba mengakses /login -> redirect ke dashboard utama /
   if (isLoginPage && session) {
-    return NextResponse.redirect(new URL('/', request.url));
+    return applySecurityHeaders(NextResponse.redirect(new URL('/', request.url)));
   }
 
   // Jika mengakses halaman publik atau API auth -> izinkan tanpa login
   if (isPublicPage || isAuthApi) {
-    return NextResponse.next();
+    return applySecurityHeaders(NextResponse.next());
   }
 
   // 5. Rute Terproteksi:
   // Jika akses API tanpa sesi -> kembalikan 401 JSON
   if (pathname.startsWith('/api')) {
     if (!session) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Sesi login tidak ditemukan atau telah kedaluwarsa. Silakan login kembali.',
-        },
-        { status: 401 }
+      return applySecurityHeaders(
+        NextResponse.json(
+          {
+            success: false,
+            error: 'Sesi login tidak ditemukan atau telah kedaluwarsa. Silakan login kembali.',
+          },
+          { status: 401 }
+        )
       );
     }
-    return NextResponse.next();
+    return applySecurityHeaders(NextResponse.next());
   }
 
   // Jika akses Halaman Frontend (Dashboard, Jadwal, dll) tanpa sesi -> redirect ke /login
@@ -87,10 +98,10 @@ export async function middleware(request: NextRequest) {
     if (pathname !== '/') {
       loginUrl.searchParams.set('callbackUrl', pathname);
     }
-    return NextResponse.redirect(loginUrl);
+    return applySecurityHeaders(NextResponse.redirect(loginUrl));
   }
 
-  return NextResponse.next();
+  return applySecurityHeaders(NextResponse.next());
 }
 
 export const config = {

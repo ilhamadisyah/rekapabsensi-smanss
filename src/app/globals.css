@@ -237,6 +237,12 @@ input[type="date"]::-webkit-datetime-edit-year-field {
     break-inside: avoid !important;
   }
 
+  /* Cegah judul bagian terpisah dari tabel di akhir halaman */
+  .print-heading {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
   .print-page-break {
     page-break-before: always !important;
     break-before: page !important;
