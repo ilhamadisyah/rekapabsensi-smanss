@@ -39,7 +39,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className={plusJakartaSans.variable}>
-      <body className={`${plusJakartaSans.className} font-sans min-h-screen bg-slate-50 text-slate-900 antialiased selection:bg-emerald-100 selection:text-emerald-900`}>
+      <body className={`${plusJakartaSans.className} font-sans min-h-screen bg-slate-50 print:bg-white text-slate-900 antialiased selection:bg-emerald-100 selection:text-emerald-900`}>
         {children}
       </body>
     </html>

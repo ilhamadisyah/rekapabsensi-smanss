@@ -143,13 +143,13 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-slate-800">Kolom AH</td>
                     <td className="p-3 font-bold text-slate-900">HIP</td>
-                    <td className="p-3 text-slate-600">Izin Pagi: Jumlah berapa kali pegawai datang terlambat melewati jam masuk kerja yang ditentukan dengan surat izin.</td>
+                    <td className="p-3 text-slate-600">Hak Izin Pagi: Jumlah pemanfaatan hak izin datang pada pagi hari dengan surat izin resmi.</td>
                     <td className="p-3 text-emerald-600 font-semibold">Bebas denda (0 poin). Hari kerja (HK) tetap dihitung hadir.</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-slate-800">Kolom AI</td>
                     <td className="p-3 font-bold text-slate-900">HIS</td>
-                    <td className="p-3 text-slate-600">Izin Siang: Jumlah berapa kali pegawai pulang lebih awal mendahului jam pulang kerja yang ditentukan dengan surat izin.</td>
+                    <td className="p-3 text-slate-600">Hak Izin Siang: Jumlah pemanfaatan hak izin pulang pada siang hari dengan surat izin resmi.</td>
                     <td className="p-3 text-emerald-600 font-semibold">Bebas denda (0 poin). Hari kerja (HK) tetap dihitung hadir.</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
@@ -289,17 +289,17 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-amber-700">HIP</td>
-                    <td className="p-3 font-semibold text-slate-900">Izin Datang Terlambat</td>
+                    <td className="p-3 font-semibold text-slate-900">Hak Izin Pagi</td>
                     <td className="p-3 text-center font-bold text-slate-700">Kolom AH</td>
-                    <td className="p-3 text-slate-600">Datang terlambat melewati jam masuk kerja yang ditentukan dengan membawa surat izin resmi</td>
+                    <td className="p-3 text-slate-600">Pemanfaatan hak izin datang pada pagi hari dengan membawa surat izin resmi</td>
                     <td className="p-3 font-bold text-emerald-600">Tidak Dipotong (0 Poin / Bebas Denda)</td>
                     <td className="p-3 text-slate-600">Tetap dihitung hadir bekerja</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-amber-700">HIS</td>
-                    <td className="p-3 font-semibold text-slate-900">Izin Pulang Cepat</td>
+                    <td className="p-3 font-semibold text-slate-900">Hak Izin Siang</td>
                     <td className="p-3 text-center font-bold text-slate-700">Kolom AI</td>
-                    <td className="p-3 text-slate-600">Pulang lebih awal mendahului jam pulang kerja yang ditentukan dengan membawa surat izin resmi</td>
+                    <td className="p-3 text-slate-600">Pemanfaatan hak izin pulang pada siang hari dengan membawa surat izin resmi</td>
                     <td className="p-3 font-bold text-emerald-600">Tidak Dipotong (0 Poin / Bebas Denda)</td>
                     <td className="p-3 text-slate-600">Tetap dihitung hadir bekerja</td>
                   </tr>
@@ -570,7 +570,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
 
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">
-                      Izin Datang Terlambat (HIP)
+                      Hak Izin Pagi (HIP)
                     </label>
                     <input
                       type="number"
@@ -584,7 +584,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
 
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">
-                      Izin Pulang Cepat (HIS)
+                      Hak Izin Siang (HIS)
                     </label>
                     <input
                       type="number"
@@ -826,11 +826,11 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
 
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-slate-900">
-                      Kasus 2: Pernah Terlambat &amp; Pulang Cepat<br />
-                      <span className="text-[11px] font-normal text-slate-500">Semua Membawa Surat Izin Resmi</span>
+                      Kasus 2: Hak Izin Pagi &amp; Hak Izin Siang<br />
+                      <span className="text-[11px] font-normal text-slate-500">Menggunakan Hak Izin Resmi (HIP &amp; HIS)</span>
                     </td>
                     <td className="p-3 text-slate-600">
-                      Datang terlambat 2 kali (HIP) dan pulang cepat 1 kali (HIS), seluruhnya ada surat izin resmi. Tidak pernah alpa.
+                      Menggunakan Hak Izin Pagi (HIP) 2 kali dan Hak Izin Siang (HIS) 1 kali dengan surat izin resmi. Tidak pernah alpa.
                     </td>
                     <td className="p-3 text-[11px] text-slate-700">
                       Hari Kerja: Tetap 21 hari penuh.<br />
@@ -935,11 +935,10 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                       setTimeout(() => setLinkCopied(false), 2500);
                     }
                   }}
-                  className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                    linkCopied
-                      ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
-                      : 'border-slate-200 hover:bg-slate-50 text-slate-700'
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${linkCopied
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                    : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                    }`}
                   title="Salin tautan publik tanpa login untuk dibagikan ke seluruh pegawai"
                 >
                   {linkCopied ? (
@@ -984,11 +983,10 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`py-2.5 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                      isActive
-                        ? 'border-blue-600 text-blue-600'
-                        : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
-                    }`}
+                    className={`py-2.5 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${isActive
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
+                      }`}
                   >
                     <Icon className="w-4 h-4" />
                     <span>{tab.label}</span>
@@ -1055,11 +1053,10 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                       key={tab.id}
                       type="button"
                       onClick={() => setActiveTab(tab.id as any)}
-                      className={`py-2.5 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                        isActive
-                          ? 'border-blue-600 text-blue-600'
-                          : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
-                      }`}
+                      className={`py-2.5 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${isActive
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
+                        }`}
                     >
                       <Icon className="w-3.5 h-3.5" />
                       <span>{tab.label}</span>
@@ -1206,13 +1203,13 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
               <tr>
                 <td className="font-semibold">Kolom AH</td>
                 <td className="font-bold">HIP</td>
-                <td>Izin Datang Terlambat (Melewati jam masuk kerja)</td>
+                <td>Hak Izin Pagi</td>
                 <td>Bebas denda (0 poin); Hari kerja (HK) tetap hadir</td>
               </tr>
               <tr>
                 <td className="font-semibold">Kolom AI</td>
                 <td className="font-bold">HIS</td>
-                <td>Izin Pulang Lebih Cepat (Mendahului jam pulang kerja)</td>
+                <td>Hak Izin Siang</td>
                 <td>Bebas denda (0 poin); Hari kerja (HK) tetap hadir</td>
               </tr>
               <tr>
@@ -1328,17 +1325,17 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
               </tr>
               <tr>
                 <td className="font-bold">HIP</td>
-                <td>Izin Datang Terlambat</td>
+                <td>Hak Izin Pagi</td>
                 <td className="text-center font-bold">Kolom AH</td>
-                <td>Datang terlambat melewati jam masuk yang ditentukan dengan surat izin resmi</td>
+                <td>Pemanfaatan hak izin pada pagi hari dengan surat izin resmi</td>
                 <td>Bebas Denda (0 Poin)</td>
                 <td>Tetap terhitung hadir</td>
               </tr>
               <tr>
                 <td className="font-bold">HIS</td>
-                <td>Izin Pulang Cepat</td>
+                <td>Hak Izin Siang</td>
                 <td className="text-center font-bold">Kolom AI</td>
-                <td>Pulang lebih awal mendahului jam pulang yang ditentukan dengan surat izin resmi</td>
+                <td>Pemanfaatan hak izin pada siang hari dengan surat izin resmi</td>
                 <td>Bebas Denda (0 Poin)</td>
                 <td>Tetap terhitung hadir</td>
               </tr>
@@ -1537,8 +1534,8 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                 <td className="text-center font-bold">2.0</td>
               </tr>
               <tr>
-                <td className="font-bold">Kasus 2: Izin Pagi &amp; Siang</td>
-                <td>Terlambat 2 kali &amp; pulang cepat 1 kali berizin</td>
+                <td className="font-bold">Kasus 2: Hak Izin Pagi &amp; Siang</td>
+                <td>Hak Izin Pagi (HIP) 2 kali &amp; Hak Izin Siang (HIS) 1 kali berizin</td>
                 <td>HK = 21 | X = 42 poin (bebas denda / 0 denda)</td>
                 <td className="text-center font-bold">100.0%</td>
                 <td className="text-center font-bold">10</td>
@@ -1569,24 +1566,24 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
           <div className="flex justify-between items-start text-[9.5pt] text-slate-900">
             <div className="text-left w-72">
               <p>Mengetahui,</p>
-              <p className="font-bold">Kepala Tenaga Administrasi</p>
+              <p className="font-bold">Kepala Sekolah</p>
               <div className="h-16"></div>
-              <p className="font-bold underline text-slate-950">Debby Leonella, A.Md.</p>
-              <p className="text-[8.5pt] text-slate-700">NIP. 199007302025212024</p>
+              <p className="font-bold text-slate-950">Iswan Djati Kusuma, S.Pd, M.Si</p>
+              <p className="text-[8.5pt] text-slate-700">Pembina Utama Muda, IV.c</p>
+              <p className="text-[8.5pt] text-slate-700">NIP. 196912232000121001</p>
             </div>
 
             <div className="text-left w-72">
               <p>Palembang, {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-              <p className="font-bold">Kepala SMA Negeri Sumatera Selatan</p>
+              <p className="font-bold">Kepala Tenaga Administrasi</p>
               <div className="h-16"></div>
-              <p className="font-bold underline text-slate-950">Iswan Djati Kusuma, S.Pd, M.Si</p>
-              <p className="text-[8.5pt] text-slate-700">Pembina Utama Muda, IV.c</p>
-              <p className="text-[8.5pt] text-slate-700">NIP. 196912232000121001</p>
+              <p className="font-bold text-slate-950">Debby Leonella, A.Md.</p>
+              <p className="text-[8.5pt] text-slate-700">NIP. 199007302025212024</p>
             </div>
           </div>
 
           <div className="mt-6 text-center text-[7.5pt] text-slate-500 border-t border-slate-300 pt-1.5">
-            Dokumen ini dicetak secara sah melalui Sistem AutoAbsen SMANSS pada {new Date().toLocaleDateString('id-ID')} &bull; Penjaminan Mutu Kepegawaian SMAN Sumatera Selatan
+            Dokumen ini dicetak secara sah melalui Sistem AutoAbsen SMANSS pada {new Date().toLocaleDateString('id-ID')} &bull; SMAN Sumatera Selatan
           </div>
         </div>
       </div>

@@ -300,7 +300,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-slate-50 print:bg-white print:min-h-0 flex flex-col">
       {/* Top Navbar */}
       <header className="bg-white border-b border-slate-200/90 sticky top-0 z-50 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">

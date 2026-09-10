@@ -176,9 +176,11 @@ input[type="date"]::-webkit-datetime-edit-year-field {
     display: none !important;
   }
 
-  /* Reset layout body untuk kertas A4 */
+  /* Reset layout body & html untuk kertas A4 putih bersih */
+  html,
   body {
     background: #ffffff !important;
+    background-color: #ffffff !important;
     color: #000000 !important;
     font-size: 10pt !important;
     line-height: 1.4 !important;
@@ -186,6 +188,16 @@ input[type="date"]::-webkit-datetime-edit-year-field {
     padding: 0 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  /* Hilangkan warna background abu-abu (slate-50/slate-100) dari semua kontainer saat dicetak */
+  body > div,
+  main,
+  .min-h-screen,
+  .print-document {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    min-height: 0 !important;
   }
 
   /* Ukuran dan margin halaman A4 standar kedinasan */
@@ -198,6 +210,8 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   .print-document {
     display: block !important;
     width: 100% !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
   }
 
   /* Tabel dokumen cetak: garis hitam tegas, pembagian halaman rapi */
