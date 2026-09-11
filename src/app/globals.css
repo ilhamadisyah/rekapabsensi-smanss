@@ -53,7 +53,7 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   background: #94a3b8;
 }
 
-/* Sticky styles for table */
+/* Sticky styles for table (Desktop >= 640px) */
 .sticky-col-1 {
   position: sticky;
   left: 0;
@@ -82,64 +82,6 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   max-width: 110px;
   box-sizing: border-box;
   z-index: 20;
-}
-
-/* Mobile responsive adjustments for sticky columns (<640px) */
-@media (max-width: 640px) {
-  .sticky-col-1 {
-    width: 36px;
-    min-width: 36px;
-    max-width: 36px;
-    padding-left: 2px !important;
-    padding-right: 2px !important;
-    font-size: 10.5px !important;
-  }
-
-  .sticky-col-2 {
-    left: 36px;
-    width: 140px;
-    min-width: 140px;
-    max-width: 140px;
-    padding-left: 6px !important;
-    padding-right: 6px !important;
-  }
-
-  /* Ringkasan becomes non-sticky horizontally in mobile to allow viewing day cells */
-  .sticky-col-3 {
-    position: relative;
-    left: auto;
-    width: 84px;
-    min-width: 84px;
-    max-width: 84px;
-    z-index: 10;
-    padding-left: 4px !important;
-    padding-right: 4px !important;
-  }
-
-  .header-row-1 th.sticky-col-3,
-  .header-row-2 th.sticky-col-3 {
-    position: sticky;
-    top: 0;
-    left: auto;
-    z-index: 30;
-  }
-  .header-row-2 th.sticky-col-3 {
-    top: 32px;
-  }
-}
-
-/* Smooth touch momentum scrolling and no-scrollbar */
-.smooth-scroll-touch {
-  -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
-}
-
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
 }
 
 /* Header Row 1 (Day Names) - Height exactly 32px */
@@ -172,6 +114,68 @@ input[type="date"]::-webkit-datetime-edit-year-field {
 .header-row-2 th.sticky-col-2,
 .header-row-2 th.sticky-col-3 {
   z-index: 45;
+}
+
+/* Mobile responsive adjustments for sticky columns (<640px) */
+@media (max-width: 640px) {
+  .sticky-col-1 {
+    left: 0 !important;
+    width: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+    font-size: 10.5px !important;
+    z-index: 20 !important;
+  }
+
+  .sticky-col-2 {
+    left: 36px !important;
+    width: 154px !important;
+    min-width: 154px !important;
+    max-width: 154px !important;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+    z-index: 20 !important;
+  }
+
+  .sticky-col-3,
+  th.sticky-col-3,
+  td.sticky-col-3 {
+    display: none !important;
+  }
+
+  .header-row-1 th.sticky-col-1,
+  .header-row-2 th.sticky-col-1 {
+    left: 0 !important;
+    z-index: 45 !important;
+  }
+
+  .header-row-1 th.sticky-col-2,
+  .header-row-2 th.sticky-col-2 {
+    left: 36px !important;
+    z-index: 45 !important;
+  }
+
+  .attendance-matrix-table th.sticky-col-2,
+  .attendance-matrix-table td.sticky-col-2 {
+    border-right: 2px solid #cbd5e1 !important;
+    box-shadow: 2px 0 4px -1px rgba(0, 0, 0, 0.08) !important;
+  }
+}
+
+/* Smooth touch momentum scrolling and no-scrollbar */
+.smooth-scroll-touch {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Weekend pattern */

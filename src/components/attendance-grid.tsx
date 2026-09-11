@@ -606,8 +606,8 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
           <table className="attendance-matrix-table w-full border-separate border-spacing-0 text-left text-xs">
             <colgroup>
               <col className="w-[36px] sm:w-[56px] min-w-[36px] sm:min-w-[56px] max-w-[36px] sm:max-w-[56px]" />
-              <col className="w-[140px] sm:w-[220px] min-w-[140px] sm:min-w-[220px] max-w-[140px] sm:max-w-[220px]" />
-              <col className="w-[84px] sm:w-[110px] min-w-[84px] sm:min-w-[110px] max-w-[84px] sm:max-w-[110px]" />
+              <col className="w-[154px] sm:w-[220px] min-w-[154px] sm:min-w-[220px] max-w-[154px] sm:max-w-[220px]" />
+              <col className="hidden sm:table-column w-[110px] min-w-[110px] max-w-[110px]" />
               {days.map((d) => (
                 <col key={`col-${d.day}`} className="w-[38px] sm:w-[42px] min-w-[38px] sm:min-w-[42px] max-w-[38px] sm:max-w-[42px]" />
               ))}
@@ -618,10 +618,11 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
               <th className="sticky-col-1 bg-slate-100 px-1 h-8 border-b border-r border-slate-300 text-center text-slate-500 font-bold box-border">
                 #
               </th>
-              <th className="sticky-col-2 bg-slate-100 px-3 h-8 border-b border-r border-slate-300 font-bold text-slate-700 box-border">
-                Identitas Pegawai
+              <th className="sticky-col-2 bg-slate-100 px-2 sm:px-3 h-8 border-b border-r border-slate-300 font-bold text-slate-700 box-border text-[11px]">
+                <span className="sm:hidden">Pegawai</span>
+                <span className="hidden sm:inline">Identitas Pegawai</span>
               </th>
-              <th className="sticky-col-3 bg-slate-100 px-2 h-8 border-b border-r border-slate-300 text-center font-bold text-xs text-slate-700 box-border">
+              <th className="sticky-col-3 hidden sm:table-cell bg-slate-100 px-2 h-8 border-b border-r border-slate-300 text-center font-bold text-xs text-slate-700 box-border">
                 Ringkasan
               </th>
               {days.map((d) => {
@@ -629,7 +630,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                 return (
                   <th
                     key={`day-name-${d.day}`}
-                    className={`w-[42px] min-w-[42px] max-w-[42px] h-8 p-0 text-center border-b border-r border-slate-300 text-[10px] box-border ${
+                    className={`w-[38px] sm:w-[42px] min-w-[38px] sm:min-w-[42px] max-w-[38px] sm:max-w-[42px] h-8 p-0 text-center border-b border-r border-slate-300 text-[10px] box-border ${
                       isRedDay ? 'bg-rose-50/90 text-rose-700 font-black' : 'bg-slate-100 text-slate-600 font-bold'
                     }`}
                     title={d.holiday ? `Hari Libur: ${d.holiday.name}` : d.isWeekend ? `Akhir Pekan (${d.dayName})` : d.dayName}
@@ -647,10 +648,11 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
               <th className="sticky-col-1 bg-slate-200 px-1 h-8 border-b border-r border-slate-300 text-center text-slate-700 font-bold box-border">
                 No.
               </th>
-              <th className="sticky-col-2 bg-slate-200 px-3 h-8 border-b border-r border-slate-300 font-bold text-slate-800 box-border">
-                Daftar Pegawai
+              <th className="sticky-col-2 bg-slate-200 px-2 sm:px-3 h-8 border-b border-r border-slate-300 font-bold text-slate-800 box-border text-[11px]">
+                <span className="sm:hidden">Daftar Pegawai</span>
+                <span className="hidden sm:inline">Daftar Pegawai</span>
               </th>
-              <th className="sticky-col-3 bg-slate-200 px-2 h-8 border-b border-r border-slate-300 text-center text-xs font-black tracking-wide box-border" title="Ringkasan: Hadir (H) / Alpha (A) / Izin, Sakit, DL (I)">
+              <th className="sticky-col-3 hidden sm:table-cell bg-slate-200 px-2 h-8 border-b border-r border-slate-300 text-center text-xs font-black tracking-wide box-border" title="Ringkasan: Hadir (H) / Alpha (A) / Izin, Sakit, DL (I)">
                 <span className="text-emerald-700">H</span>
                 <span className="text-slate-400 font-normal mx-0.5">/</span>
                 <span className="text-rose-600">A</span>
@@ -662,7 +664,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                 return (
                   <th
                     key={`day-num-${d.day}`}
-                    className={`w-[42px] min-w-[42px] max-w-[42px] h-8 p-0 text-center border-b border-r border-slate-300 text-xs font-black box-border ${
+                    className={`w-[38px] sm:w-[42px] min-w-[38px] sm:min-w-[42px] max-w-[38px] sm:max-w-[42px] h-8 p-0 text-center border-b border-r border-slate-300 text-xs font-black box-border ${
                       isRedDay ? 'bg-rose-100/90 text-rose-800' : 'bg-slate-200 text-slate-900'
                     }`}
                     title={d.holiday ? `Hari Libur: ${d.holiday.name}` : d.isWeekend ? `Akhir Pekan (${d.dayName})` : `Tanggal ${d.day}`}
@@ -730,20 +732,32 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                     </td>
 
                     {/* Sticky Col 2: Employee Name & Machine ID */}
-                    <td className="sticky-col-2 bg-white group-hover:bg-slate-50 px-3 py-2 border-r border-b border-slate-300 box-border">
-                      <div className="font-semibold text-slate-900 truncate" title={emp.full_name}>
+                    <td className="sticky-col-2 bg-white group-hover:bg-slate-50 px-2 sm:px-3 py-2 border-r border-b border-slate-300 box-border">
+                      <div className="font-semibold text-slate-900 truncate text-[11px] sm:text-xs" title={emp.full_name}>
                         {emp.full_name}
                       </div>
-                      <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
-                        <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-sans font-bold text-[10px]">
+                      <div className="flex items-center gap-1.5 text-[9.5px] sm:text-[10px] text-slate-500 mt-0.5">
+                        <span className="bg-slate-100 text-slate-700 px-1 py-0.2 sm:px-1.5 sm:py-0.5 rounded font-sans font-bold text-[9px] sm:text-[10px]">
                           ID: {emp.machine_id}
                         </span>
                         <span className="truncate">{emp.department}</span>
                       </div>
+                      {/* Mobile Row Quick Stats */}
+                      <div className="sm:hidden flex items-center gap-1 mt-1 text-[9.5px] font-bold tabular-nums">
+                        <span className="text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200" title="Hadir">
+                          H:{hadirCount}
+                        </span>
+                        <span className="text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-200" title="Alpha">
+                          A:{alphaCount}
+                        </span>
+                        <span className="text-amber-700 bg-amber-50 px-1 py-0.5 rounded border border-amber-200" title="Izin / Sakit / DL">
+                          I:{verifiedCount}
+                        </span>
+                      </div>
                     </td>
 
-                    {/* Sticky Col 3: Row Quick Stats */}
-                    <td className="sticky-col-3 bg-white group-hover:bg-slate-50 px-2 py-2 border-r border-b border-slate-300 text-center box-border">
+                    {/* Sticky Col 3: Row Quick Stats (Desktop only) */}
+                    <td className="sticky-col-3 hidden sm:table-cell bg-white group-hover:bg-slate-50 px-2 py-2 border-r border-b border-slate-300 text-center box-border">
                       <div className="flex items-center justify-center gap-1 text-[13px] font-bold tracking-tight tabular-nums">
                         <span className="text-emerald-700 min-w-[16px] text-center" title="Hadir (H)">{hadirCount}</span>
                         <span className="text-slate-300 font-normal text-[11px] select-none">/</span>
@@ -890,7 +904,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                             });
                           }}
                           onMouseLeave={() => setHoveredCell(null)}
-                          className={`w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-300 transition-all font-bold select-none cursor-pointer box-border relative ${
+                          className={`w-[38px] sm:w-[42px] min-w-[38px] sm:min-w-[42px] max-w-[38px] sm:max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-300 transition-all font-bold select-none cursor-pointer box-border relative ${
                             isHadir
                               ? 'bg-[#C6EFCE] text-[#006100] hover:brightness-95'
                               : isAlpha
