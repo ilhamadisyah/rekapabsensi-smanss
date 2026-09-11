@@ -131,6 +131,23 @@ const QUICK_NOTES = [
   'Surat Keterangan Dokter',
 ];
 
+const resolveValidStatus = (
+  rawStatus?: string | null,
+  isWeekend?: boolean,
+  isOff?: boolean,
+  isHol?: boolean
+): AttendanceCode => {
+  if (rawStatus && rawStatus !== '-' && rawStatus in STATUS_DISPLAY_CONFIG) {
+    return rawStatus as AttendanceCode;
+  }
+  if (rawStatus === 'S') return 'IL';
+  if (rawStatus === 'C') return 'AL';
+  if (rawStatus === 'H') return 'HADIR';
+  if (isHol || isWeekend) return 'LIBUR';
+  if (isOff) return 'OFF';
+  return 'A';
+};
+
 export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
   isOpen,
   onClose,
@@ -168,23 +185,29 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
   const scheduledStart = currentAttendance?.scheduled_start?.substring(0, 5) || defaultStartTime;
   const scheduledEnd = currentAttendance?.scheduled_end?.substring(0, 5) || defaultEndTime;
 
-  const [selectedStatus, setSelectedStatus] = useState<AttendanceCode>(
-    currentAttendance?.final_status || (isWeekendDay ? 'LIBUR' : 'A')
+  const [selectedStatus, setSelectedStatus] = useState<AttendanceCode>(() =>
+    resolveValidStatus(
+      currentAttendance?.final_status,
+      isWeekendDay,
+      currentAttendance?.is_off_day,
+      currentAttendance?.is_holiday
+    )
   );
   const [notes, setNotes] = useState(currentAttendance?.notes || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Sync state whenever opened
   useEffect(() => {
-    if (currentAttendance) {
-      setSelectedStatus(currentAttendance.final_status);
-      setNotes(currentAttendance.notes || '');
-    } else if (isWeekendDay) {
-      setSelectedStatus('LIBUR');
-      setNotes('');
-    } else {
-      setSelectedStatus('A');
-      setNotes('');
+    if (isOpen) {
+      setSelectedStatus(
+        resolveValidStatus(
+          currentAttendance?.final_status,
+          isWeekendDay,
+          currentAttendance?.is_off_day,
+          currentAttendance?.is_holiday
+        )
+      );
+      setNotes(currentAttendance?.notes || '');
     }
   }, [currentAttendance, dateStr, isWeekendDay, isOpen]);
 
@@ -221,7 +244,14 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
     return `${dateString} (Hari ke-${dayNum})`;
   };
 
-  const selectedConfig = STATUS_DISPLAY_CONFIG[selectedStatus];
+  const selectedConfig =
+    (selectedStatus && STATUS_DISPLAY_CONFIG[selectedStatus]) ||
+    STATUS_DISPLAY_CONFIG['A'] || {
+      title: 'Status Presensi',
+      badgeBg: 'bg-slate-100',
+      badgeText: 'text-slate-800',
+      badgeBorder: 'border-slate-300',
+    };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
@@ -524,7 +554,12 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {ORDERED_STATUS_LIST.map((code) => {
-                  const cfg = STATUS_DISPLAY_CONFIG[code];
+                  const cfg = STATUS_DISPLAY_CONFIG[code] || {
+                    title: code,
+                    badgeBg: 'bg-slate-100',
+                    badgeText: 'text-slate-800',
+                    badgeBorder: 'border-slate-300',
+                  };
                   const isSelected = selectedStatus === code;
 
                   return (
@@ -612,8 +647,8 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
             {/* Status Summary on Left */}
             <div className="hidden sm:flex items-center gap-2 text-xs">
               <span className="text-slate-500">Status baru:</span>
-              <span className={`font-bold px-2 py-0.5 rounded-md text-xs border ${selectedConfig.badgeBg} ${selectedConfig.badgeText} ${selectedConfig.badgeBorder}`}>
-                {selectedStatus} - {selectedConfig.title}
+              <span className={`font-bold px-2 py-0.5 rounded-md text-xs border ${selectedConfig?.badgeBg || 'bg-slate-100'} ${selectedConfig?.badgeText || 'text-slate-800'} ${selectedConfig?.badgeBorder || 'border-slate-300'}`}>
+                {selectedStatus} - {selectedConfig?.title || selectedStatus}
               </span>
             </div>
 
