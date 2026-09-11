@@ -1037,7 +1037,7 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
       {/* Quick Popover Modal (Cell Click) */}
       {activeCell && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-2xs animate-fade-in"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-2xs animate-fade-in"
           onClick={() => setActiveCell(null)}
         >
           <div
@@ -1195,7 +1195,7 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
 
       {/* Modal: Salin Jadwal Bulan Lalu */}
       {isCopyModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-2xs animate-fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-2xs animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden p-6 space-y-4 animate-in zoom-in-95">
             <div className="border-b border-slate-100 pb-3 flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">

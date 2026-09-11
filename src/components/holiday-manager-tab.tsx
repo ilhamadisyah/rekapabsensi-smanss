@@ -287,7 +287,7 @@ export const HolidayManagerTab: React.FC<HolidayManagerTabProps> = ({
 
       {/* Modal: Tambah Hari Libur */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-2xs animate-fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-2xs animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden p-6 space-y-4 animate-in zoom-in-95">
             <div className="border-b border-slate-100 pb-3">
               <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">

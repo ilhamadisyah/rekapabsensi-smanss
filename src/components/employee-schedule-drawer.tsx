@@ -209,7 +209,7 @@ export const EmployeeScheduleDrawer: React.FC<EmployeeScheduleDrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-900/40 backdrop-blur-2xs animate-fade-in flex justify-end">
+    <div className="fixed inset-0 z-[100] overflow-hidden bg-slate-900/40 backdrop-blur-2xs animate-fade-in flex justify-end">
       <div
         className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300"
         onClick={(e) => e.stopPropagation()}
@@ -369,7 +369,7 @@ export const EmployeeScheduleDrawer: React.FC<EmployeeScheduleDrawerProps> = ({
 
         {/* Modal Popover when editing a day */}
         {editingDay && (
-          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-2xs animate-fade-in">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-2xs animate-fade-in">
             <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden p-5 space-y-4 animate-in zoom-in-95">
               <div className="border-b border-slate-100 pb-2.5 flex items-center justify-between">
                 <div>
