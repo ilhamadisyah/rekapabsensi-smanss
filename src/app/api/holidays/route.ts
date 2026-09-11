@@ -24,14 +24,82 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: Create or update holiday
+// POST: Create or update holiday (supports single date or date range)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    if (!body.date || !body.name) {
+    const name = body.name?.trim();
+    if (!name) {
       return NextResponse.json(
-        { success: false, error: 'Tanggal (date) dan nama hari libur (name) wajib diisi.' },
+        { success: false, error: 'Nama hari libur (name) wajib diisi.' },
+        { status: 400 }
+      );
+    }
+
+    // 1. Handle date range (startDate & endDate)
+    if (body.startDate && body.endDate) {
+      if (body.startDate > body.endDate) {
+        return NextResponse.json(
+          { success: false, error: 'Tanggal mulai tidak boleh melebihi tanggal selesai.' },
+          { status: 400 }
+        );
+      }
+
+      const dates: string[] = [];
+      const cur = new Date(body.startDate + 'T00:00:00');
+      const end = new Date(body.endDate + 'T00:00:00');
+
+      while (cur <= end) {
+        const y = cur.getFullYear();
+        const m = String(cur.getMonth() + 1).padStart(2, '0');
+        const d = String(cur.getDate()).padStart(2, '0');
+        dates.push(`${y}-${m}-${d}`);
+        cur.setDate(cur.getDate() + 1);
+      }
+
+      const savedList = [];
+      for (const dStr of dates) {
+        const saved = await db.saveHoliday({
+          date: dStr,
+          name,
+          category: body.category || 'school',
+          notes: body.notes?.trim() || '',
+        });
+        savedList.push(saved);
+      }
+
+      return NextResponse.json({
+        success: true,
+        count: savedList.length,
+        holidays: savedList,
+      });
+    }
+
+    // 2. Handle array of dates
+    if (Array.isArray(body.dates) && body.dates.length > 0) {
+      const savedList = [];
+      for (const dStr of body.dates) {
+        const saved = await db.saveHoliday({
+          date: dStr,
+          name,
+          category: body.category || 'school',
+          notes: body.notes?.trim() || '',
+        });
+        savedList.push(saved);
+      }
+
+      return NextResponse.json({
+        success: true,
+        count: savedList.length,
+        holidays: savedList,
+      });
+    }
+
+    // 3. Single date
+    if (!body.date) {
+      return NextResponse.json(
+        { success: false, error: 'Tanggal libur wajib diisi.' },
         { status: 400 }
       );
     }
@@ -39,12 +107,12 @@ export async function POST(request: NextRequest) {
     const saved = await db.saveHoliday({
       id: body.id,
       date: body.date,
-      name: body.name,
+      name,
       category: body.category || 'school',
-      notes: body.notes,
+      notes: body.notes?.trim() || '',
     });
 
-    return NextResponse.json({ success: true, holiday: saved });
+    return NextResponse.json({ success: true, count: 1, holiday: saved });
   } catch (error: any) {
     console.error('Error saving holiday:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

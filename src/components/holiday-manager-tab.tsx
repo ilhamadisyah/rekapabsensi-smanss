@@ -41,16 +41,40 @@ export const HolidayManagerTab: React.FC<HolidayManagerTabProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form states
+  const [isRangeMode, setIsRangeMode] = useState(false);
   const [dateStr, setDateStr] = useState(
-    `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-15`
+    `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`
+  );
+  const [startDateStr, setStartDateStr] = useState(
+    `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`
+  );
+  const [endDateStr, setEndDateStr] = useState(
+    `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`
   );
   const [name, setName] = useState('');
   const [category, setCategory] = useState<'national' | 'school' | 'collective_leave'>('school');
   const [notes, setNotes] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Hitung jumlah hari dalam rentang
+  const rangeDayCount = (() => {
+    if (!isRangeMode || !startDateStr || !endDateStr) return 1;
+    try {
+      const s = new Date(startDateStr + 'T00:00:00').getTime();
+      const e = new Date(endDateStr + 'T00:00:00').getTime();
+      if (e < s) return 0;
+      return Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1;
+    } catch {
+      return 1;
+    }
+  })();
+
   const openAddModal = () => {
-    setDateStr(`${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`);
+    const defaultDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
+    setIsRangeMode(false);
+    setDateStr(defaultDate);
+    setStartDateStr(defaultDate);
+    setEndDateStr(defaultDate);
     setName('');
     setCategory('school');
     setNotes('');
@@ -60,24 +84,50 @@ export const HolidayManagerTab: React.FC<HolidayManagerTabProps> = ({
 
   const handleSaveHoliday = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!dateStr || !name.trim()) {
-      setFormError('Tanggal dan nama hari libur wajib diisi.');
+    if (!name.trim()) {
+      setFormError('Nama hari libur wajib diisi.');
       return;
+    }
+
+    if (isRangeMode) {
+      if (!startDateStr || !endDateStr) {
+        setFormError('Tanggal mulai dan tanggal selesai wajib diisi.');
+        return;
+      }
+      if (startDateStr > endDateStr) {
+        setFormError('Tanggal selesai tidak boleh mendahului tanggal mulai.');
+        return;
+      }
+    } else {
+      if (!dateStr) {
+        setFormError('Tanggal libur wajib diisi.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
     setFormError(null);
 
     try {
+      const payload = isRangeMode
+        ? {
+            startDate: startDateStr,
+            endDate: endDateStr,
+            name: name.trim(),
+            category,
+            notes: notes.trim(),
+          }
+        : {
+            date: dateStr,
+            name: name.trim(),
+            category,
+            notes: notes.trim(),
+          };
+
       const res = await fetch('/api/holidays', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date: dateStr,
-          name: name.trim(),
-          category,
-          notes: notes.trim(),
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -85,7 +135,12 @@ export const HolidayManagerTab: React.FC<HolidayManagerTabProps> = ({
         throw new Error(data.error || 'Gagal menyimpan hari libur.');
       }
 
-      showToast(`Hari libur "${name}" berhasil ditambahkan!`, 'success');
+      const totalCount = data.count || (isRangeMode ? rangeDayCount : 1);
+      const msg = isRangeMode
+        ? `Hari libur "${name.trim()}" (${totalCount} hari) berhasil ditambahkan!`
+        : `Hari libur "${name.trim()}" berhasil ditambahkan!`;
+
+      showToast(msg, 'success');
       setIsModalOpen(false);
       onHolidayUpdated();
     } catch (err: any) {
@@ -252,18 +307,113 @@ export const HolidayManagerTab: React.FC<HolidayManagerTabProps> = ({
             )}
 
             <form onSubmit={handleSaveHoliday} className="space-y-3.5">
+              {/* Mode Selection: 1 Hari Saja vs Rentang Tanggal */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Tanggal Libur <span className="text-rose-500">*</span>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Tipe Jadwal Libur
                 </label>
-                <input
-                  type="date"
-                  value={dateStr}
-                  onChange={(e) => setDateStr(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-bold focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  required
-                />
+                <div className="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setIsRangeMode(false)}
+                    className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      !isRangeMode
+                        ? 'bg-white text-rose-600 shadow-xs border border-slate-200/80'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                    }`}
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>1 Hari Saja</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsRangeMode(true);
+                      if (!endDateStr || endDateStr < startDateStr) {
+                        setEndDateStr(startDateStr || dateStr);
+                      }
+                    }}
+                    className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      isRangeMode
+                        ? 'bg-white text-rose-600 shadow-xs border border-slate-200/80'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                    }`}
+                  >
+                    <CalendarCheck2 className="w-3.5 h-3.5" />
+                    <span>Rentang (Multi Hari)</span>
+                  </button>
+                </div>
               </div>
+
+              {!isRangeMode ? (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Tanggal Libur <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={dateStr}
+                    onChange={(e) => {
+                      setDateStr(e.target.value);
+                      setStartDateStr(e.target.value);
+                      setEndDateStr(e.target.value);
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-bold focus:outline-none focus:ring-2 focus:ring-rose-500"
+                    required
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Tanggal Mulai <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={startDateStr}
+                        onChange={(e) => {
+                          setStartDateStr(e.target.value);
+                          if (endDateStr && e.target.value > endDateStr) {
+                            setEndDateStr(e.target.value);
+                          }
+                        }}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-bold focus:outline-none focus:ring-2 focus:ring-rose-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Tanggal Selesai <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        value={endDateStr}
+                        min={startDateStr}
+                        onChange={(e) => setEndDateStr(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-bold focus:outline-none focus:ring-2 focus:ring-rose-500"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {rangeDayCount > 0 ? (
+                    <div className="p-2 bg-rose-50 border border-rose-200/70 rounded-xl flex items-center justify-between text-xs text-rose-900">
+                      <span className="font-medium flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-rose-600" />
+                        Total durasi hari libur:
+                      </span>
+                      <span className="font-extrabold px-2 py-0.5 bg-rose-200/80 rounded-md text-rose-950 font-sans">
+                        {rangeDayCount} Hari
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-rose-600 font-semibold">
+                      * Tanggal selesai tidak boleh sebelum tanggal mulai.
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
