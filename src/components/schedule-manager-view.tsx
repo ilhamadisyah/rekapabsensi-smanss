@@ -497,80 +497,81 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
 
       {/* BARIS 1: Sub-Tabs Menu Navigasi (Lega Penuh & Tanpa Terpotong) */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-2">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 bg-slate-100/90 p-1.5 rounded-xl">
+        {/* Tab Header Sub-Menu */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-1 sm:gap-1.5 bg-slate-100/90 p-1 sm:p-1.5 rounded-xl">
           <button
             type="button"
             onClick={() => setActiveSubTab('matrix')}
-            className={`py-2.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`py-2 sm:py-2.5 px-2 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
               activeSubTab === 'matrix'
                 ? 'bg-white text-blue-600 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
-            <CalendarDays className="w-4 h-4 shrink-0" />
-            <span>Matriks Roster Harian</span>
+            <CalendarDays className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="truncate">Matriks Roster</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveSubTab('employees')}
-            className={`py-2.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`py-2 sm:py-2.5 px-2 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
               activeSubTab === 'employees'
                 ? 'bg-white text-blue-600 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
-            <Users className="w-4 h-4 shrink-0" />
-            <span>Atur Jadwal Pegawai</span>
+            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="truncate">Atur Jadwal Pegawai</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveSubTab('shifts')}
-            className={`py-2.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`py-2 sm:py-2.5 px-2 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
               activeSubTab === 'shifts'
                 ? 'bg-white text-blue-600 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
-            <Clock className="w-4 h-4 shrink-0" />
-            <span>Master Shift ({shifts.length})</span>
+            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="truncate">Master Shift ({shifts.length})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveSubTab('holidays')}
-            className={`py-2.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`py-2 sm:py-2.5 px-2 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
               activeSubTab === 'holidays'
                 ? 'bg-white text-rose-600 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
-            <CalendarCheck2 className="w-4 h-4 shrink-0" />
-            <span>Hari Libur ({holidays.length})</span>
+            <CalendarCheck2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span className="truncate">Hari Libur ({holidays.length})</span>
           </button>
         </div>
       </div>
 
       {/* SUB-TAB 1: Matriks Roster Harian */}
       {activeSubTab === 'matrix' && (
-        <div className="space-y-4">
-          {/* Toolbar Aksi Cepat & Periode (Di Atas Tabel Matriks Roster Harian) */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            {/* Di sebelah kiri pojok: Dropdown Select Periode */}
+        <div className="space-y-3 sm:space-y-4">
+          {/* Toolbar Aksi Cepat & Periode */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+            {/* Di sebelah kiri: Dropdown Select Periode */}
             <div className="relative z-20" ref={monthDropdownRef}>
               <button
                 type="button"
                 onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition-all shadow-2xs cursor-pointer"
+                className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition-all shadow-2xs cursor-pointer"
                 title="Tampilkan dan pilih periode bulan"
               >
-                <Calendar className="w-4 h-4 text-blue-600" />
+                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600 shrink-0" />
                 <span>
                   Periode: {MONTH_NAMES[currMonth - 1]} {currYear}
                 </span>
                 <ChevronDown
-                  className={`w-3.5 h-3.5 text-slate-400 transition-transform ${
+                  className={`w-3.5 h-3.5 text-slate-400 transition-transform shrink-0 ${
                     isMonthDropdownOpen ? 'rotate-180' : ''
                   }`}
                 />
@@ -637,11 +638,11 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
             </div>
 
             {/* Di sebelah kanan: Penugasan Massal, Salin, Ekspor, Re-Evaluasi */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={() => setIsBulkModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-xs font-bold text-white transition-colors shadow-xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-[11px] sm:text-xs font-bold text-white transition-colors shadow-xs cursor-pointer"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
                 <span>Penugasan Massal</span>
@@ -650,33 +651,35 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
               <button
                 type="button"
                 onClick={() => setIsCopyModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors shadow-2xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[11px] sm:text-xs font-bold text-slate-700 transition-colors shadow-2xs cursor-pointer"
                 title="Salin penugasan jadwal dari bulan lalu"
               >
                 <Copy className="w-3.5 h-3.5 text-slate-500" />
-                <span>Salin Bulan Lalu</span>
+                <span className="hidden xs:inline sm:inline">Salin Bulan Lalu</span>
+                <span className="xs:hidden sm:hidden">Salin</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleExportRoster}
                 disabled={isExporting}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[11px] sm:text-xs font-bold text-slate-700 transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
                 title="Unduh berkas Excel roster bulanan"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{isExporting ? 'Mengekspor...' : 'Ekspor Excel'}</span>
+                <span>{isExporting ? 'Ekspor...' : 'Ekspor'}</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleReevaluate}
                 disabled={isReevaluating}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white transition-colors shadow-xs cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-[11px] sm:text-xs font-bold text-white transition-colors shadow-xs cursor-pointer disabled:opacity-50"
                 title="Sinkronisasi status presensi dengan aturan shift & hari libur"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isReevaluating ? 'animate-spin' : ''}`} />
-                <span>{isReevaluating ? 'Sinkronisasi...' : 'Re-Evaluasi Presensi'}</span>
+                <span className="hidden xs:inline sm:inline">{isReevaluating ? 'Sinkronisasi...' : 'Re-Evaluasi Presensi'}</span>
+                <span className="xs:hidden sm:hidden">Re-Evaluasi</span>
               </button>
             </div>
           </div>
@@ -684,9 +687,9 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
             {/* Table Control Bar */}
             <div className="relative z-30 border-b border-slate-200/80 bg-slate-50/60">
-              <div className="p-3 sm:px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2.5 flex-1 max-w-xl">
-                  {/* Department Filter Pills (Identik Beranda) */}
+              <div className="p-2.5 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 flex-1 max-w-xl">
+                  {/* Department Filter Pills */}
                   <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl text-xs font-semibold shrink-0">
                     {[
                       { id: 'ALL', label: 'Semua' },
@@ -697,9 +700,9 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                         key={d.id}
                         type="button"
                         onClick={() => setSelectedDept(d.id)}
-                        className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                        className={`px-2.5 sm:px-3 py-1 rounded-lg transition-all cursor-pointer text-xs ${
                           selectedDept === d.id
-                            ? 'bg-white text-slate-900 shadow-xs'
+                            ? 'bg-white text-slate-900 shadow-xs font-bold'
                             : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >
@@ -708,14 +711,14 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                     ))}
                   </div>
 
-                  {/* Search Box (Identik Beranda) */}
-                  <div className="relative flex-1 min-w-[220px] max-w-sm">
+                  {/* Search Box */}
+                  <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[200px] sm:max-w-sm">
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Cari nama pegawai, NIK, ID mesin..."
+                      placeholder="Cari pegawai, NIK, ID mesin..."
                       className="w-full pl-9 pr-7 py-1.5 text-xs bg-white rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all placeholder:text-slate-400"
                     />
                     {searchQuery && (
@@ -731,20 +734,30 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                   </div>
                 </div>
 
-                {/* Right side: Employee Counter (Identik Beranda) */}
-                <div className="text-xs text-slate-500 font-medium whitespace-nowrap">
+                {/* Right side: Employee Counter */}
+                <div className="text-[11px] sm:text-xs text-slate-500 font-medium whitespace-nowrap">
                   Menampilkan <span className="font-bold text-slate-900">{filteredEmployees.length}</span> dari {employees.length} pegawai
                 </div>
               </div>
             </div>
-            <div className="overflow-x-auto max-h-[640px] relative">
+
+            {/* Mobile Swipe Hint Banner */}
+            <div className="sm:hidden px-3 py-1.5 bg-blue-50/90 border-b border-blue-100 flex items-center justify-between text-[11px] text-blue-700">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold">💡 Tip:</span>
+                <span>Geser ke samping untuk melihat tanggal & tap shift</span>
+              </div>
+              <span className="font-bold text-blue-600">➔</span>
+            </div>
+
+            <div className="overflow-x-auto max-h-[640px] relative smooth-scroll-touch">
               <table className="w-full text-left border-collapse text-xs">
                 <thead className="bg-slate-50 sticky top-0 z-30 shadow-xs">
                   <tr className="border-b border-slate-200">
-                    <th className="sticky left-0 z-40 bg-slate-50 px-3 py-3 font-bold text-slate-700 w-10 text-center border-r border-slate-200">
+                    <th className="sticky left-0 z-40 bg-slate-50 px-1.5 sm:px-3 py-2 sm:py-3 font-bold text-slate-700 w-8 sm:w-10 text-center border-r border-slate-200 text-[11px] sm:text-xs">
                       #
                     </th>
-                    <th className="sticky left-10 z-40 bg-slate-50 px-3 py-3 font-bold text-slate-700 min-w-[220px] max-w-[260px] border-r border-slate-200">
+                    <th className="sticky left-8 sm:left-10 z-40 bg-slate-50 px-2 sm:px-3 py-2 sm:py-3 font-bold text-slate-700 min-w-[140px] sm:min-w-[220px] max-w-[160px] sm:max-w-[260px] border-r border-slate-200 text-[11px] sm:text-xs">
                       Identitas Pegawai
                     </th>
                     {monthDays.map((d) => {
@@ -799,17 +812,17 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                   ) : (
                     filteredEmployees.map((emp, empIdx) => (
                       <tr key={emp.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="sticky left-0 z-20 bg-white group-hover:bg-slate-50 px-2 py-2 text-center text-[11px] font-sans font-semibold text-slate-400 border-r border-slate-200">
+                        <td className="sticky left-0 z-20 bg-white group-hover:bg-slate-50 px-1 sm:px-2 py-2 text-center text-[10px] sm:text-[11px] font-sans font-semibold text-slate-400 border-r border-slate-200 w-8 sm:w-10">
                           {empIdx + 1}
                         </td>
 
-                        <td className="sticky left-10 z-20 bg-white group-hover:bg-slate-50 px-3 py-2 border-r border-slate-200">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-slate-800 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                        <td className="sticky left-8 sm:left-10 z-20 bg-white group-hover:bg-slate-50 px-2 sm:px-3 py-2 border-r border-slate-200 min-w-[140px] sm:min-w-[220px] max-w-[160px] sm:max-w-[260px]">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-slate-800 text-white font-bold text-[11px] sm:text-xs flex items-center justify-center shrink-0">
                               {emp.full_name.charAt(0)}
                             </div>
                             <div className="min-w-0">
-                              <p className="font-bold text-slate-900 text-xs truncate leading-tight">
+                              <p className="font-bold text-slate-900 text-[11px] sm:text-xs truncate leading-tight">
                                 {emp.full_name}
                               </p>
                               <div className="flex items-center gap-1.5 mt-0.5">

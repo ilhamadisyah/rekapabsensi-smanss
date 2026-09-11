@@ -55,7 +55,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 flex items-center justify-center p-4 sm:p-8 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 flex items-center justify-center p-3 sm:p-6 md:p-8 relative overflow-hidden">
       {/* Background Decorative Ambient Glows */}
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-teal-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -64,7 +64,7 @@ export default function LoginPage() {
       {/* Main Landscape Card Container */}
       <div className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl shadow-black/50 border border-white/20 overflow-hidden relative z-10 grid grid-cols-1 md:grid-cols-12 min-h-[520px]">
         {/* Left Column: Brand & Hero Showcase (Landscape Side) */}
-        <div className="md:col-span-5 bg-gradient-to-br from-emerald-800 via-teal-900 to-slate-900 p-8 sm:p-10 flex flex-col justify-between relative overflow-hidden text-white">
+        <div className="md:col-span-5 bg-gradient-to-br from-emerald-800 via-teal-900 to-slate-900 p-6 sm:p-8 md:p-10 flex flex-col justify-between relative overflow-hidden text-white">
           {/* Subtle Ambient Background in Left Side */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-400/15 rounded-full blur-2xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-teal-400/10 rounded-full blur-xl pointer-events-none" />
@@ -75,28 +75,31 @@ export default function LoginPage() {
               <img
                 src="/logo-smanss.png"
                 alt="Logo SMAN Sumatera Selatan"
-                className="h-20 w-auto object-contain drop-shadow-sm"
+                className="h-16 sm:h-20 w-auto object-contain drop-shadow-sm"
               />
             </div>
-
-            <div className="space-y-2 pt-2">
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight text-white">
+            <div>
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-emerald-300 font-mono">
+                Sistem Presensi Biometrik Terpadu
+              </span>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1">
                 AutoAbsen SMANSS
               </h1>
-              <p className="text-emerald-100/80 text-xs sm:text-sm font-medium leading-relaxed">
-                Sistem Rekapitulasi Presensi &amp; Penjadwalan Shift Kerja SMAN Sumatera Selatan
+              <p className="text-xs text-emerald-100/80 mt-2 leading-relaxed">
+                Pengelolaan dan rekapitulasi kehadiran Guru &amp; Tenaga Kependidikan SMAN Sumatera Selatan dengan proteksi enterprise.
               </p>
             </div>
           </div>
 
-          {/* Bottom Left Note */}
-          <div className="relative z-10 pt-6 border-t border-white/10 text-[11px] text-emerald-200/60 font-medium">
-            Learn Today, Lead Tomorrow
+          {/* Bottom Security Assurance */}
+          <div className="relative z-10 pt-6 border-t border-emerald-700/50 mt-6 sm:mt-0 flex items-center justify-between text-[11px] text-emerald-200/70">
+            <span>&copy; {new Date().getFullYear()} SMAN Sumatera Selatan</span>
+            <span className="font-mono text-[10px] bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-700/40">v1.1</span>
           </div>
         </div>
 
         {/* Right Column: Clean Login Form */}
-        <div className="md:col-span-7 bg-white p-8 sm:p-12 flex flex-col justify-between">
+        <div className="md:col-span-7 bg-white p-5 sm:p-8 md:p-10 flex flex-col justify-between">
           <div className="space-y-6">
             {/* Header Form */}
             <div className="space-y-1.5">

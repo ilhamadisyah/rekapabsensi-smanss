@@ -340,264 +340,278 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
     <div className="space-y-4">
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col">
         {/* Table Control Bar: 2 Clean Rows */}
-      <div className="relative z-30 border-b border-slate-200/80 bg-slate-50/60 divide-y divide-slate-200/60">
-        {/* ROW 1: Department Pills + Period Selector Button (Left) & Bulk Action + Counter (Right) */}
-        <div className="p-3 sm:px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Department Filter Pills */}
-            <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl text-xs font-semibold">
-              {[
-                { id: 'ALL', label: 'Semua' },
-                { id: 'Guru', label: 'Guru' },
-                { id: 'TU', label: 'Tata Usaha' },
-              ].map((d) => (
+        <div className="relative z-30 border-b border-slate-200/80 bg-slate-50/60 divide-y divide-slate-200/60">
+          {/* ROW 1: Department Pills + Period Selector Button (Left) & Bulk Action + Counter (Right) */}
+          <div className="p-2.5 sm:px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Department Filter Pills */}
+              <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl text-xs font-semibold">
+                {[
+                  { id: 'ALL', label: 'Semua' },
+                  { id: 'Guru', label: 'Guru' },
+                  { id: 'TU', label: 'Tata Usaha' },
+                ].map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => setSelectedDepartment(d.id as any)}
+                    className={`px-2.5 sm:px-3 py-1 rounded-lg transition-all cursor-pointer text-xs ${
+                      selectedDepartment === d.id
+                        ? 'bg-white text-slate-900 shadow-xs font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Periode Bulan Dropdown Button */}
+              <div className="relative" ref={monthDropdownRef}>
                 <button
-                  key={d.id}
                   type="button"
-                  onClick={() => setSelectedDepartment(d.id as any)}
-                  className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                    selectedDepartment === d.id
-                      ? 'bg-white text-slate-900 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                  onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition-all shadow-2xs cursor-pointer"
+                  title="Tampilkan dan pilih periode bulan"
                 >
-                  {d.label}
+                  <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span className="truncate max-w-[130px] sm:max-w-none">
+                    {getMonthName(selectedMonth || 9)} {selectedYear || 2026}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform shrink-0 ${isMonthDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
-              ))}
+
+                {/* Month Selector Dropdown Popover */}
+                {isMonthDropdownOpen && (
+                  <div className="absolute left-0 mt-1.5 w-72 bg-white rounded-xl shadow-xl border border-slate-200 z-50 p-3 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center justify-between">
+                      <span>Pilih Periode Bulan</span>
+                      <span className="text-blue-600 font-bold">{selectedYear || 2026}</span>
+                    </div>
+
+                    {detectedPeriod && detectedPeriod.month === (selectedMonth || 9) && (
+                      <div className="mb-2.5 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-[10px] text-emerald-800 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span className="truncate">Data Transaksi: {detectedPeriod.formattedRange}</span>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {MONTH_NAMES_ID.slice(1).map((mName, idx) => {
+                        const mNum = idx + 1;
+                        const isCurrent = (selectedMonth || 9) === mNum;
+                        return (
+                          <button
+                            key={mNum}
+                            type="button"
+                            onClick={() => {
+                              onMonthChange?.(mNum, selectedYear || 2026);
+                              setIsMonthDropdownOpen(false);
+                            }}
+                            className={`py-1.5 px-2 rounded-lg text-xs font-semibold text-center transition-all cursor-pointer ${
+                              isCurrent
+                                ? 'bg-blue-600 text-white shadow-xs'
+                                : 'text-slate-700 hover:bg-slate-100'
+                            }`}
+                          >
+                            {mName}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Periode Bulan Dropdown Button */}
-            <div className="relative" ref={monthDropdownRef}>
-              <button
-                type="button"
-                onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition-all shadow-2xs cursor-pointer"
-                title="Tampilkan dan pilih periode bulan"
-              >
-                <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                <span>
-                  Periode: {getMonthName(selectedMonth || 9)} {selectedYear || 2026}
-                </span>
-                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isMonthDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
+            {/* Right side: Bulk Action & Counter Info */}
+            <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-2">
+                {onSyncDatabase && (
+                  <button
+                    type="button"
+                    onClick={onSyncDatabase}
+                    disabled={isSyncingDatabase}
+                    className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xs active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                    title="Sinkronkan seluruh data matriks presensi ke database Supabase"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingDatabase ? 'animate-spin' : ''}`} />
+                    <span className="hidden xs:inline sm:inline">{isSyncingDatabase ? 'Menyinkronkan...' : 'Sinkronkan DB'}</span>
+                    <span className="xs:hidden sm:hidden">Sinkron</span>
+                  </button>
+                )}
+                {onOpenBulk && (
+                  <button
+                    type="button"
+                    onClick={onOpenBulk}
+                    className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-xs active:scale-[0.98] cursor-pointer"
+                    title="Verifikasi status presensi secara massal"
+                  >
+                    <Layers className="w-3.5 h-3.5 text-white" />
+                    <span>Verifikasi Massal</span>
+                  </button>
+                )}
+              </div>
+              <div className="text-[11px] sm:text-xs text-slate-500 font-medium whitespace-nowrap">
+                <span className="font-bold text-slate-900">{filteredEmployees.length}</span>/{employees.length} pegawai
+              </div>
+            </div>
+          </div>
 
-              {/* Month Selector Dropdown Popover */}
-              {isMonthDropdownOpen && (
-                <div className="absolute left-0 mt-1.5 w-72 bg-white rounded-xl shadow-xl border border-slate-200 z-50 p-3 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center justify-between">
-                    <span>Pilih Periode Bulan</span>
-                    <span className="text-blue-600 font-bold">{selectedYear || 2026}</span>
-                  </div>
+          {/* ROW 2: Search Box + Filter Status Dropdown + Sort Selector + Reset */}
+          <div className="p-2.5 sm:px-4 py-2 flex flex-wrap items-center gap-2 sm:gap-2.5">
+            {/* Search Box */}
+            <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[200px] sm:max-w-sm">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cari pegawai, NIK, ID mesin..."
+                className="w-full pl-9 pr-7 py-1.5 text-xs bg-white rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all placeholder:text-slate-400"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs"
+                  title="Hapus pencarian"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
 
-                  {detectedPeriod && detectedPeriod.month === (selectedMonth || 9) && (
-                    <div className="mb-2.5 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-[10px] text-emerald-800 flex items-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      <span className="truncate">Data Transaksi: {detectedPeriod.formattedRange}</span>
-                    </div>
-                  )}
+            <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+              {/* Filter Status Button with Dropdown */}
+              <div className="relative" ref={filterDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+                  className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border shadow-2xs ${
+                    attendanceFilter !== 'ALL'
+                      ? 'bg-amber-500 text-white border-amber-600 shadow-sm ring-2 ring-amber-500/20'
+                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <Filter className={`w-3.5 h-3.5 ${attendanceFilter !== 'ALL' ? 'text-white' : 'text-slate-500'}`} />
+                  <span className="truncate max-w-[120px] sm:max-w-none">
+                    {attendanceFilter === 'ALL'
+                      ? 'Filter Presensi'
+                      : `Filter: ${activeFilterOption.shortLabel}`}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
 
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {MONTH_NAMES_ID.slice(1).map((mName, idx) => {
-                      const mNum = idx + 1;
-                      const isCurrent = (selectedMonth || 9) === mNum;
-                      return (
+                {/* Dropdown Menu */}
+                {isFilterDropdownOpen && (
+                  <div className="absolute left-0 mt-1.5 w-64 bg-white rounded-xl shadow-xl border border-slate-200/90 z-50 overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                      <span>Pilih Filter</span>
+                      {attendanceFilter !== 'ALL' && (
                         <button
-                          key={mNum}
                           type="button"
                           onClick={() => {
-                            onMonthChange?.(mNum, selectedYear || 2026);
-                            setIsMonthDropdownOpen(false);
+                            setAttendanceFilter('ALL');
+                            setIsFilterDropdownOpen(false);
                           }}
-                          className={`py-1.5 px-2 rounded-lg text-xs font-semibold text-center transition-all cursor-pointer ${
-                            isCurrent
-                              ? 'bg-blue-600 text-white shadow-xs'
-                              : 'text-slate-700 hover:bg-slate-100'
-                          }`}
+                          className="text-[11px] text-blue-600 hover:text-blue-800 font-semibold"
                         >
-                          {mName}
+                          Reset
                         </button>
-                      );
-                    })}
+                      )}
+                    </div>
+
+                    <div className="py-1">
+                      {FILTER_OPTIONS.map((opt) => {
+                        const Icon = opt.icon;
+                        const isSelected = attendanceFilter === opt.id;
+
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => {
+                              setAttendanceFilter(opt.id);
+                              setIsFilterDropdownOpen(false);
+                            }}
+                            className={`w-full px-3 py-2 text-left transition-colors flex items-center justify-between gap-2.5 text-xs ${
+                              isSelected
+                                ? 'bg-blue-50 text-blue-900 font-semibold'
+                                : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-blue-600' : opt.colorClass}`} />
+                              <span className="truncate">{opt.label}</span>
+                            </div>
+
+                            {isSelected && (
+                              <Check className="w-4 h-4 shrink-0 text-blue-600 stroke-[2.5]" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
+              </div>
+
+              {/* Sort Selector */}
+              <div className="relative">
+                <select
+                  value={sortOption}
+                  onChange={(e) => setSortOption(e.target.value as SortOption)}
+                  className="pl-2.5 pr-7 py-1.5 text-xs bg-white rounded-xl border border-slate-300 font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all appearance-none cursor-pointer shadow-2xs"
+                  title="Urutkan susunan baris pegawai"
+                >
+                  <option value="DEFAULT">⇅ Urutan</option>
+                  <option value="NAME_ASC">⇅ Nama: A-Z</option>
+                  <option value="ALPHA_DESC">⇅ Alpha</option>
+                  <option value="HADIR_DESC">⇅ Hadir</option>
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-2.5 pointer-events-none" />
+              </div>
+
+              {/* Reset button if any filter is active */}
+              {(attendanceFilter !== 'ALL' || selectedDepartment !== 'ALL' || searchQuery || sortOption !== 'DEFAULT') && (
+                <button
+                  onClick={() => {
+                    setAttendanceFilter('ALL');
+                    setSelectedDepartment('ALL');
+                    setSearchQuery('');
+                    setSortOption('DEFAULT');
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:text-rose-700 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors cursor-pointer"
+                  title="Reset semua filter dan pencarian"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span className="hidden xs:inline">Reset</span>
+                </button>
               )}
             </div>
           </div>
-
-          {/* Right side: Bulk Action & Counter Info */}
-          <div className="flex items-center gap-2.5">
-            {onSyncDatabase && (
-              <button
-                type="button"
-                onClick={onSyncDatabase}
-                disabled={isSyncingDatabase}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xs active:scale-[0.98] disabled:opacity-60 cursor-pointer"
-                title="Sinkronkan seluruh data matriks presensi (termasuk Sabtu/Minggu Libur, Jadwal Shift, dan status verifikasi) ke database Supabase"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isSyncingDatabase ? 'animate-spin' : ''}`} />
-                <span>{isSyncingDatabase ? 'Menyinkronkan...' : 'Sinkronkan DB'}</span>
-              </button>
-            )}
-            {onOpenBulk && (
-              <button
-                type="button"
-                onClick={onOpenBulk}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-xs active:scale-[0.98] cursor-pointer"
-                title="Verifikasi status presensi secara massal untuk beberapa pegawai atau divisi"
-              >
-                <Layers className="w-3.5 h-3.5 text-white" />
-                <span>Verifikasi Massal</span>
-              </button>
-            )}
-            <div className="text-xs text-slate-500 font-medium whitespace-nowrap">
-              Menampilkan <span className="font-bold text-slate-900">{filteredEmployees.length}</span> dari {employees.length} pegawai
-            </div>
-          </div>
         </div>
 
-        {/* ROW 2: Search Box + Filter Status Dropdown + Sort Selector + Reset */}
-        <div className="p-3 sm:px-4 py-2.5 flex flex-wrap items-center gap-2.5">
-          {/* Search Box */}
-          <div className="relative flex-1 min-w-[220px] max-w-sm">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari nama pegawai, NIK, ID mesin..."
-              className="w-full pl-9 pr-7 py-1.5 text-xs bg-white rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all placeholder:text-slate-400"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs"
-                title="Hapus pencarian"
-              >
-                ✕
-              </button>
-            )}
+        {/* Mobile Swipe Hint Banner (Visible only on small screens) */}
+        <div className="sm:hidden px-3 py-1.5 bg-blue-50/90 border-b border-blue-100 flex items-center justify-between text-[11px] text-blue-700">
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold">💡 Tip:</span>
+            <span>Geser tabel ke samping untuk melihat tanggal 1-31</span>
           </div>
-
-          {/* Filter Status Button with Dropdown */}
-          <div className="relative" ref={filterDropdownRef}>
-            <button
-              type="button"
-              onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border shadow-2xs ${
-                attendanceFilter !== 'ALL'
-                  ? 'bg-amber-500 text-white border-amber-600 shadow-sm ring-2 ring-amber-500/20'
-                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-              }`}
-            >
-              <Filter className={`w-3.5 h-3.5 ${attendanceFilter !== 'ALL' ? 'text-white' : 'text-slate-500'}`} />
-              <span>
-                {attendanceFilter === 'ALL'
-                  ? 'Filter Presensi'
-                  : `Filter: ${activeFilterOption.shortLabel}`}
-              </span>
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {/* Dropdown Menu */}
-            {isFilterDropdownOpen && (
-              <div className="absolute left-0 mt-1.5 w-64 bg-white rounded-xl shadow-xl border border-slate-200/90 z-50 overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-150">
-                <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  <span>Pilih Filter</span>
-                  {attendanceFilter !== 'ALL' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAttendanceFilter('ALL');
-                        setIsFilterDropdownOpen(false);
-                      }}
-                      className="text-[11px] text-blue-600 hover:text-blue-800 font-semibold"
-                    >
-                      Reset
-                    </button>
-                  )}
-                </div>
-
-                <div className="py-1">
-                  {FILTER_OPTIONS.map((opt) => {
-                    const Icon = opt.icon;
-                    const isSelected = attendanceFilter === opt.id;
-
-                    return (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => {
-                          setAttendanceFilter(opt.id);
-                          setIsFilterDropdownOpen(false);
-                        }}
-                        className={`w-full px-3 py-2 text-left transition-colors flex items-center justify-between gap-2.5 text-xs ${
-                          isSelected
-                            ? 'bg-blue-50 text-blue-900 font-semibold'
-                            : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <Icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-blue-600' : opt.colorClass}`} />
-                          <span className="truncate">{opt.label}</span>
-                        </div>
-
-                        {isSelected && (
-                          <Check className="w-4 h-4 shrink-0 text-blue-600 stroke-[2.5]" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Sort Selector */}
-          <div className="relative">
-            <select
-              value={sortOption}
-              onChange={(e) => setSortOption(e.target.value as SortOption)}
-              className="pl-2.5 pr-7 py-1.5 text-xs bg-white rounded-xl border border-slate-300 font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all appearance-none cursor-pointer shadow-2xs"
-              title="Urutkan susunan baris pegawai"
-            >
-              <option value="DEFAULT">⇅ Urutan Excel</option>
-              <option value="NAME_ASC">⇅ Nama: A s/d Z</option>
-              <option value="ALPHA_DESC">⇅ Alpha Terbanyak</option>
-              <option value="HADIR_DESC">⇅ Hadir Terbanyak</option>
-            </select>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-2.5 pointer-events-none" />
-          </div>
-
-          {/* Reset button if any filter is active */}
-          {(attendanceFilter !== 'ALL' || selectedDepartment !== 'ALL' || searchQuery || sortOption !== 'DEFAULT') && (
-            <button
-              onClick={() => {
-                setAttendanceFilter('ALL');
-                setSelectedDepartment('ALL');
-                setSearchQuery('');
-                setSortOption('DEFAULT');
-              }}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-500 hover:text-rose-700 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors"
-              title="Reset semua filter dan pencarian"
-            >
-              <X className="w-3.5 h-3.5" />
-              <span>Reset</span>
-            </button>
-          )}
+          <span className="font-bold text-blue-600">➔</span>
         </div>
-      </div>
 
-      {/* Matrix Table with sticky headers & sticky columns */}
-      <div className="overflow-x-auto overflow-y-auto max-h-[680px] relative z-10 border-b border-slate-300">
-        <table className="attendance-matrix-table w-full border-separate border-spacing-0 text-left text-xs">
-          <colgroup>
-            <col className="w-[56px] min-w-[56px] max-w-[56px]" />
-            <col className="w-[220px] min-w-[220px] max-w-[220px]" />
-            <col className="w-[110px] min-w-[110px] max-w-[110px]" />
-            {days.map((d) => (
-              <col key={`col-${d.day}`} className="w-[42px] min-w-[42px] max-w-[42px]" />
-            ))}
-          </colgroup>
+        {/* Matrix Table with sticky headers & sticky columns */}
+        <div className="overflow-x-auto overflow-y-auto max-h-[680px] relative z-10 border-b border-slate-300 smooth-scroll-touch">
+          <table className="attendance-matrix-table w-full border-separate border-spacing-0 text-left text-xs">
+            <colgroup>
+              <col className="w-[36px] sm:w-[56px] min-w-[36px] sm:min-w-[56px] max-w-[36px] sm:max-w-[56px]" />
+              <col className="w-[140px] sm:w-[220px] min-w-[140px] sm:min-w-[220px] max-w-[140px] sm:max-w-[220px]" />
+              <col className="w-[84px] sm:w-[110px] min-w-[84px] sm:min-w-[110px] max-w-[84px] sm:max-w-[110px]" />
+              {days.map((d) => (
+                <col key={`col-${d.day}`} className="w-[38px] sm:w-[42px] min-w-[38px] sm:min-w-[42px] max-w-[38px] sm:max-w-[42px]" />
+              ))}
+            </colgroup>
           <thead>
             {/* ROW 1: Day Names (MON / TUE / WED / THU / FRI / SAT / SUN) */}
             <tr className="bg-slate-100 text-[11px] font-bold text-slate-700 header-row-1">

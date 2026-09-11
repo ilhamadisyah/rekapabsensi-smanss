@@ -308,36 +308,36 @@ export default function HomePage() {
     <div className="min-h-screen bg-slate-50 print:bg-white print:min-h-0 flex flex-col">
       {/* Top Navbar */}
       <header className="bg-white border-b border-slate-200/90 sticky top-0 z-50 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3 sm:gap-4">
           {/* Logo & School Name */}
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-9 flex items-center justify-center shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="h-8 sm:h-10 w-7 sm:w-9 flex items-center justify-center shrink-0">
               <img
                 src="/logo-smanss.png"
                 alt="Logo SMAN Sumatera Selatan"
                 className="max-h-full max-w-full object-contain drop-shadow-xs"
               />
             </div>
-            <div>
-              <h1 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight leading-tight">
+            <div className="min-w-0">
+              <h1 className="text-xs sm:text-base font-extrabold text-slate-900 tracking-tight leading-tight truncate">
                 AutoAbsen SMANSS
               </h1>
-              <p className="text-[11px] text-slate-500">
-                SMAN Sumatera Selatan | Sistem Rekap Presensi Biometrik
+              <p className="text-[10px] text-slate-500 truncate hidden xs:block sm:block">
+                SMAN Sumatera Selatan | Presensi Biometrik
               </p>
             </div>
           </div>
 
           {/* User Profile Dropdown Menu */}
-          <div className="relative" ref={profileDropdownRef}>
+          <div className="relative shrink-0" ref={profileDropdownRef}>
             <button
               type="button"
               onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-              className="flex items-center gap-2.5 px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200/90 hover:border-slate-300 rounded-2xl shadow-2xs transition-all cursor-pointer group"
+              className="flex items-center gap-1.5 sm:gap-2.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-white hover:bg-slate-50 border border-slate-200/90 hover:border-slate-300 rounded-xl sm:rounded-2xl shadow-2xs transition-all cursor-pointer group"
               title="Menu Pengguna & Pengaturan Profil"
             >
               <div
-                className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shadow-2xs shrink-0 ${
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center font-bold text-xs shadow-2xs shrink-0 ${
                   userRole === 'superadmin'
                     ? 'bg-gradient-to-br from-purple-600 to-indigo-700 text-white'
                     : 'bg-gradient-to-br from-blue-600 to-teal-600 text-white'
@@ -363,7 +363,7 @@ export default function HomePage() {
                 {userRole === 'superadmin' ? 'SUPERADMIN' : 'ADMIN'}
               </span>
               <ChevronDown
-                className={`w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 ${
+                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 ${
                   isProfileDropdownOpen ? 'rotate-180' : ''
                 }`}
               />
@@ -371,52 +371,54 @@ export default function HomePage() {
 
             {/* Floating Dropdown Panel */}
             {isProfileDropdownOpen && (
-              <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] max-w-xs sm:w-72 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                 {/* Header User Identity */}
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
                   <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shadow-xs shrink-0 ${
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-sm text-white shrink-0 shadow-xs ${
                       userRole === 'superadmin'
-                        ? 'bg-gradient-to-br from-purple-600 to-indigo-700 text-white'
-                        : 'bg-gradient-to-br from-blue-600 to-teal-600 text-white'
+                        ? 'bg-gradient-to-tr from-purple-600 to-indigo-600'
+                        : 'bg-gradient-to-tr from-blue-600 to-teal-600'
                     }`}
                   >
                     {currentUser?.full_name ? currentUser.full_name.charAt(0).toUpperCase() : 'U'}
                   </div>
-                  <div className="overflow-hidden">
-                    <div className="text-xs font-bold text-slate-900 truncate">
-                      {currentUser?.full_name || 'Pengguna'}
+                  <div className="min-w-0">
+                    <p className="font-extrabold text-slate-900 text-xs truncate">
+                      {currentUser?.full_name || 'Administrator SMANSS'}
+                    </p>
+                    <p className="text-[11px] text-slate-500 font-mono truncate">
+                      {currentUser?.email || 'admin@smansumsel.sch.id'}
+                    </p>
+                    <div className="mt-1">
+                      <span
+                        className={`inline-block text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${
+                          userRole === 'superadmin'
+                            ? 'bg-purple-100 text-purple-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}
+                      >
+                        {userRole === 'superadmin' ? 'Super Administrator' : 'Admin Presensi TU'}
+                      </span>
                     </div>
-                    <div className="text-[11px] text-slate-500 truncate">
-                      {currentUser?.email || `@${currentUser?.username}`}
-                    </div>
-                    <span
-                      className={`inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] font-extrabold border uppercase tracking-wider ${
-                        userRole === 'superadmin'
-                          ? 'bg-purple-50 text-purple-700 border-purple-200'
-                          : 'bg-blue-50 text-blue-700 border-blue-200'
-                      }`}
-                    >
-                      {userRole === 'superadmin' ? 'Super Administrator' : 'Administrator Presensi'}
-                    </span>
                   </div>
                 </div>
 
                 {/* Dropdown Menu Items */}
                 <div className="p-1.5 space-y-0.5 text-xs">
-                  {/* Item 1: Edit Profil */}
+                  {/* Item 1: Edit Profil Saya */}
                   <button
                     type="button"
                     onClick={() => {
                       setIsProfileDropdownOpen(false);
                       setIsEditProfileOpen(true);
                     }}
-                    className="w-full px-3 py-2 rounded-xl flex items-center gap-2.5 text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left cursor-pointer"
+                    className="w-full px-3 py-2 rounded-xl flex items-center gap-2.5 text-slate-700 hover:bg-slate-100 transition-colors text-left cursor-pointer"
                   >
-                    <UserCog className="w-4 h-4 text-slate-500" />
+                    <UserCog className="w-4 h-4 text-blue-600" />
                     <div>
-                      <div className="font-semibold leading-tight">Edit Profil &amp; Sandi</div>
-                      <div className="text-[10px] text-slate-400">Ubah nama, email, dan kata sandi</div>
+                      <div className="font-semibold leading-tight text-slate-900">Ubah Profil & Password</div>
+                      <div className="text-[10px] text-slate-500">Perbarui nama, email, dan kata sandi</div>
                     </div>
                   </button>
 
@@ -458,15 +460,15 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Navigation Tabs (Uniform & Unified) */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between border-t border-slate-100 overflow-x-auto gap-4">
-          <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+        {/* Navigation Tabs (Uniform, Unified & Mobile Swipeable) */}
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 flex items-center justify-between border-t border-slate-100 overflow-x-auto no-scrollbar smooth-scroll-touch gap-2 sm:gap-4">
+          <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-1">
             {[
-              { id: 'matrix', label: 'Matriks Presensi', icon: Calendar },
-              { id: 'schedules', label: 'Jadwal & Shift Pegawai', icon: Clock },
-              { id: 'employees', label: `Master Pegawai (${employees.length || 107})`, icon: Users },
-              { id: 'guide', label: 'Panduan Perhitungan', icon: BookOpen },
-              { id: 'audit', label: 'Audit Trail', icon: History },
+              { id: 'matrix', label: 'Matriks Presensi', fullLabel: 'Matriks Presensi', icon: Calendar },
+              { id: 'schedules', label: 'Jadwal & Shift', fullLabel: 'Jadwal & Shift Pegawai', icon: Clock },
+              { id: 'employees', label: `Pegawai (${employees.length || 107})`, fullLabel: `Master Pegawai (${employees.length || 107})`, icon: Users },
+              { id: 'guide', label: 'Panduan', fullLabel: 'Panduan Perhitungan', icon: BookOpen },
+              { id: 'audit', label: 'Audit Trail', fullLabel: 'Audit Trail', icon: History },
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -481,14 +483,15 @@ export default function HomePage() {
                       window.history.replaceState({}, '', url.toString());
                     }
                   }}
-                  className={`py-3 px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                  className={`py-2.5 sm:py-3 px-2.5 sm:px-3.5 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0 ${
                     isActive
                       ? 'border-blue-600 text-blue-600'
                       : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
                   }`}
                 >
-                  <Icon className="w-3.5 h-3.5" />
-                  {tab.label}
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <span className="sm:hidden">{tab.label}</span>
+                  <span className="hidden sm:inline">{tab.fullLabel}</span>
                 </button>
               );
             })}
@@ -497,7 +500,7 @@ export default function HomePage() {
       </header>
 
       {/* Main Content Area */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+      <main className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 py-4 sm:py-6 flex-1 w-full space-y-4 sm:space-y-6">
         {/* TAB 1: Matriks Presensi */}
         {activeTab === 'matrix' && (
           <div className="space-y-6">

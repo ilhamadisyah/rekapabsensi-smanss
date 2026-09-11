@@ -84,6 +84,64 @@ input[type="date"]::-webkit-datetime-edit-year-field {
   z-index: 20;
 }
 
+/* Mobile responsive adjustments for sticky columns (<640px) */
+@media (max-width: 640px) {
+  .sticky-col-1 {
+    width: 36px;
+    min-width: 36px;
+    max-width: 36px;
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+    font-size: 10.5px !important;
+  }
+
+  .sticky-col-2 {
+    left: 36px;
+    width: 140px;
+    min-width: 140px;
+    max-width: 140px;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+
+  /* Ringkasan becomes non-sticky horizontally in mobile to allow viewing day cells */
+  .sticky-col-3 {
+    position: relative;
+    left: auto;
+    width: 84px;
+    min-width: 84px;
+    max-width: 84px;
+    z-index: 10;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+
+  .header-row-1 th.sticky-col-3,
+  .header-row-2 th.sticky-col-3 {
+    position: sticky;
+    top: 0;
+    left: auto;
+    z-index: 30;
+  }
+  .header-row-2 th.sticky-col-3 {
+    top: 32px;
+  }
+}
+
+/* Smooth touch momentum scrolling and no-scrollbar */
+.smooth-scroll-touch {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* Header Row 1 (Day Names) - Height exactly 32px */
 .header-row-1 th {
   position: sticky;

@@ -211,31 +211,31 @@ export const EmployeeScheduleDrawer: React.FC<EmployeeScheduleDrawerProps> = ({
   return (
     <div className="fixed inset-0 z-[100] overflow-hidden bg-slate-900/40 backdrop-blur-2xs animate-fade-in flex justify-end">
       <div
-        className="w-full max-w-2xl bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300"
+        className="w-full max-w-full sm:max-w-2xl bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drawer Header */}
-        <div className="p-5 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-extrabold text-sm flex items-center justify-center shadow-xs">
+        <div className="p-3.5 sm:p-5 border-b border-slate-200 bg-slate-50/70 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-extrabold text-xs sm:text-sm flex items-center justify-center shadow-xs shrink-0">
               {employee.full_name.charAt(0)}
             </div>
-            <div>
-              <h2 className="text-sm font-extrabold text-slate-900 leading-tight">
+            <div className="min-w-0">
+              <h2 className="text-xs sm:text-sm font-extrabold text-slate-900 leading-tight truncate">
                 {employee.full_name}
               </h2>
-              <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
+              <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 text-[11px] sm:text-xs text-slate-500">
                 <span className="font-sans font-medium">{employee.nik || employee.machine_id}</span>
                 <span>&bull;</span>
-                <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.2 rounded border border-blue-100">
+                <span className="font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100 text-[10px] sm:text-[11px] truncate">
                   {employee.department || 'Umum'}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 shadow-2xs">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <span className="px-2 sm:px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-[11px] sm:text-xs font-bold text-slate-700 shadow-2xs">
               {MONTH_NAMES_ID[selectedMonth - 1]} {selectedYear}
             </span>
             <button
@@ -249,13 +249,13 @@ export const EmployeeScheduleDrawer: React.FC<EmployeeScheduleDrawerProps> = ({
         </div>
 
         {/* Days Table List */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-2">
-          <div className="flex items-center justify-between pb-1">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-2 smooth-scroll-touch">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-1 gap-0.5">
             <span className="text-xs font-bold text-slate-800">
               Jadwal Kerja Tanggal 1 s/d {monthDays.length}
             </span>
-            <span className="text-[11px] text-slate-500">
-              Klik pada baris mana saja untuk mengatur jam kerja hari tersebut
+            <span className="text-[10px] sm:text-[11px] text-slate-500">
+              Tap baris untuk mengatur shift hari tersebut
             </span>
           </div>
 
@@ -282,9 +282,9 @@ export const EmployeeScheduleDrawer: React.FC<EmployeeScheduleDrawerProps> = ({
                   }`}
                 >
                   {/* Left: Date & Day */}
-                  <div className="flex items-center gap-3 w-36 shrink-0">
+                  <div className="flex items-center gap-2 sm:gap-3 w-28 sm:w-36 shrink-0">
                     <div
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center font-sans font-bold text-xs ${
+                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center font-sans font-bold text-xs shrink-0 ${
                         item.holiday
                           ? 'bg-rose-100 text-rose-800 border border-rose-200'
                           : item.isWeekend
@@ -294,14 +294,14 @@ export const EmployeeScheduleDrawer: React.FC<EmployeeScheduleDrawerProps> = ({
                     >
                       {item.day}
                     </div>
-                    <div>
-                      <p className="font-bold text-xs text-slate-900 leading-tight">
+                    <div className="min-w-0">
+                      <p className="font-bold text-[11px] sm:text-xs text-slate-900 leading-tight truncate">
                         {item.dayName}
                       </p>
                       {item.holiday ? (
-                        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-rose-700">
-                          <Tag className="w-2.5 h-2.5" />
-                          {item.holiday.name}
+                        <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-rose-700 truncate">
+                          <Tag className="w-2.5 h-2.5 shrink-0" />
+                          <span className="truncate">{item.holiday.name}</span>
                         </span>
                       ) : (
                         <span className="text-[10px] text-slate-400 font-sans font-medium">
@@ -312,20 +312,20 @@ export const EmployeeScheduleDrawer: React.FC<EmployeeScheduleDrawerProps> = ({
                   </div>
 
                   {/* Middle: Shift / Work Hours Display */}
-                  <div className="flex-1 flex items-center gap-2">
+                  <div className="flex-1 min-w-0 flex items-center gap-2">
                     {effectiveShift ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                         <span
-                          className="px-2 py-0.5 rounded-md text-[11px] font-sans font-bold text-white shadow-2xs"
+                          className="px-1.5 sm:px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-sans font-bold text-white shadow-2xs shrink-0"
                           style={{ backgroundColor: effectiveShift.color || '#2563eb' }}
                         >
                           {effectiveShift.code}
                         </span>
-                        <div>
-                          <p className="text-xs font-bold text-slate-800">
+                        <div className="min-w-0">
+                          <p className="text-[11px] sm:text-xs font-bold text-slate-800 truncate">
                             {hasCustomTime ? (
                               <span className="text-blue-700">
-                                Jam Kustom: {item.sched?.custom_start_time?.substring(0, 5)} -{' '}
+                                {item.sched?.custom_start_time?.substring(0, 5)} -{' '}
                                 {item.sched?.custom_end_time?.substring(0, 5)} WIB
                               </span>
                             ) : effectiveShift.is_off_day ? (
@@ -333,29 +333,29 @@ export const EmployeeScheduleDrawer: React.FC<EmployeeScheduleDrawerProps> = ({
                             ) : (
                               <span>
                                 {effectiveShift.name} ({effectiveShift.start_time.substring(0, 5)} -{' '}
-                                {effectiveShift.end_time.substring(0, 5)} WIB)
+                                {effectiveShift.end_time.substring(0, 5)})
                               </span>
                             )}
                           </p>
                           {item.sched?.notes && (
-                            <p className="text-[10px] text-slate-500 italic">
+                            <p className="text-[10px] text-slate-500 italic truncate">
                               Ket: {item.sched.notes}
                             </p>
                           )}
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1.5 text-rose-700 text-xs font-medium">
-                        <Coffee className="w-3.5 h-3.5 text-rose-500" />
-                        <span>{item.holiday ? `Hari Libur: ${item.holiday.name}` : 'Libur Akhir Pekan'}</span>
+                      <div className="flex items-center gap-1.5 text-rose-700 text-[11px] sm:text-xs font-medium truncate">
+                        <Coffee className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                        <span className="truncate">{item.holiday ? `Hari Libur: ${item.holiday.name}` : 'Libur Akhir Pekan'}</span>
                       </div>
                     )}
                   </div>
 
                   {/* Right: Badge Status & Chevron */}
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                     {isCustomSchedule && (
-                      <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[9px] font-bold rounded">
+                      <span className="hidden xs:inline-block px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[9px] font-bold rounded">
                         Shift Khusus
                       </span>
                     )}
@@ -369,8 +369,8 @@ export const EmployeeScheduleDrawer: React.FC<EmployeeScheduleDrawerProps> = ({
 
         {/* Modal Popover when editing a day */}
         {editingDay && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-2xs animate-fade-in">
-            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden p-5 space-y-4 animate-in zoom-in-95">
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-2xs animate-fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden p-4 sm:p-5 space-y-3 sm:space-y-4 animate-in zoom-in-95 max-h-[92vh] overflow-y-auto">
               <div className="border-b border-slate-100 pb-2.5 flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-extrabold text-slate-900">
