@@ -22,3 +22,7 @@ next-env.d.ts
 # Operating System Files
 .DS_Store
 Thumbs.db
+
+# Database & Supabase migrations (contains sensitive DDL / credentials)
+/supabase/migrations/
+supabase/migrations/
