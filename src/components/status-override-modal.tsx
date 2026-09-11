@@ -366,6 +366,31 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                 const lastOut = currentAttendance?.last_out;
                 const tapCount = currentAttendance?.tap_count || 0;
 
+                const isUnrecorded =
+                  !currentAttendance ||
+                  currentAttendance?.upload_id === 'virtual-unrecorded' ||
+                  currentAttendance?.upload_id === 'virtual-plan' ||
+                  (currentAttendance?.final_status as string) === '-';
+
+                // 1. Data Presensi Belum Masuk / Belum Terekap
+                if (isUnrecorded) {
+                  return (
+                    <div className="text-[11px] text-amber-900 bg-amber-50/90 p-2.5 rounded-lg border border-amber-200 flex items-start gap-2">
+                      <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-bold text-amber-950 flex items-center gap-1.5">
+                          <span>Notifikasi Sistem: Data Presensi Belum Masuk</span>
+                          <span className="px-1.5 py-0.5 bg-amber-200 text-amber-900 rounded text-[9px] font-bold">Belum Terekap</span>
+                        </div>
+                        <div className="text-amber-800 mt-0.5 leading-relaxed">
+                          Data presensi atau log mesin presensi belum masuk/diunggah untuk tanggal ini. Jam kerja yang berlaku adalah <strong>{scheduledStart} s/d {scheduledEnd} WIB</strong>. Anda dapat menetapkan status kehadiran secara manual jika ada dokumen pendukung (Dinas Luar, Sakit, Izin, Cuti) atau menunggu proses unggah log mesin presensi.
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // 2. Libur Shift (Bebas Tugas)
                 if (currentAttendance?.is_off_day) {
                   return (
                     <div className="text-[11px] text-slate-800 bg-slate-100/90 p-2.5 rounded-lg border border-slate-300 flex items-start gap-2">
@@ -380,6 +405,7 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                   );
                 }
 
+                // 3. Libur Akhir Pekan (Sabtu / Minggu)
                 if (isWeekendDay && !currentAttendance?.shift_id && !currentAttendance?.first_in && (!currentAttendance || !currentAttendance.is_verified)) {
                   return (
                     <div className="text-[11px] text-rose-900 bg-rose-50/90 p-2.5 rounded-lg border border-rose-200 flex items-start gap-2">
@@ -397,6 +423,7 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                   );
                 }
 
+                // 4. Hari Libur Resmi
                 if (currentAttendance?.is_holiday || currentAttendance?.final_status === 'LIBUR') {
                   return (
                     <div className="text-[11px] text-rose-900 bg-rose-50/90 p-2.5 rounded-lg border border-rose-200 flex items-start gap-2">
@@ -414,6 +441,24 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                   );
                 }
 
+                // 5. Belum ada tap (0 Tap) pada hari kerja aktif
+                if (tapCount === 0 || (!firstIn && !lastOut)) {
+                  return (
+                    <div className="text-[11px] text-rose-900 bg-rose-50/90 p-2.5 rounded-lg border border-rose-200 flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-bold text-rose-950 flex items-center gap-1.5">
+                          <span>Notifikasi Sistem: Belum Memenuhi Jam Kerja (Alpha)</span>
+                          <span className="px-1.5 py-0.5 bg-rose-200 text-rose-900 rounded text-[9px] font-bold">0 Tap</span>
+                        </div>
+                        <div className="text-rose-800 mt-0.5 leading-relaxed">
+                          Tidak ditemukan rekaman tap mesin pada tanggal ini. Jam kerja yang berlaku adalah <strong>{scheduledStart} s/d {scheduledEnd} WIB</strong>. Silakan pilih status override (DL, Sakit, Izin, Cuti) jika ada dokumen pendukung.
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
                 const isOvernight = (scheduledStart > scheduledEnd) || currentAttendance?.shift_code === 'MALAM';
                 const isCrossDay = Boolean(currentAttendance?.is_cross_day);
 
@@ -422,7 +467,8 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                 const isLegitimateNightShiftTaps = isOvernight && isCrossDay && Boolean(firstIn && firstIn >= '17:00:00' && lastOut && lastOut <= '11:00:00');
                 const isDaytimeTapsOnNightShift = isOvernight && Boolean(firstIn && (firstIn < '17:00:00' || (lastOut && lastOut > '12:00:00') || !isCrossDay));
 
-                if (currentAttendance?.system_status === 'HADIR' && (!isOvernight || isLegitimateNightShiftTaps)) {
+                // 6. Jam Kerja Terpenuhi (Hadir Penuh) - Wajib memiliki tap valid
+                if (currentAttendance?.system_status === 'HADIR' && firstIn && lastOut && tapCount > 0 && (!isOvernight || isLegitimateNightShiftTaps)) {
                   if (isOvernight) {
                     return (
                       <div className="text-[11px] text-emerald-900 bg-emerald-50/90 p-2.5 rounded-lg border border-emerald-200 flex items-start gap-2">
@@ -450,24 +496,6 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                         </div>
                         <div className="text-emerald-800 mt-0.5 leading-relaxed">
                           Tap presensi memenuhi jam kerja wajib shift {currentAttendance?.shift_name || 'Normal'} (<strong>{scheduledStart} s/d {scheduledEnd} WIB</strong>). Pegawai tercatat masuk pukul <strong>{firstIn}</strong> (&le; {scheduledStart}) dan pulang pukul <strong>{lastOut}</strong> (&ge; {scheduledEnd}) dengan total {tapCount} tap.
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-
-                if (tapCount === 0) {
-                  const isUnrecorded = currentAttendance?.upload_id === 'virtual-unrecorded' || (currentAttendance?.final_status as string) === '-';
-                  return (
-                    <div className="text-[11px] text-rose-900 bg-rose-50/90 p-2.5 rounded-lg border border-rose-200 flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                      <div>
-                        <div className="font-bold text-rose-950 flex items-center gap-1.5">
-                          <span>{isUnrecorded ? 'Notifikasi Sistem: Belum Ada Rekaman Tap' : 'Notifikasi Sistem: Belum Memenuhi Jam Kerja (Alpha)'}</span>
-                          <span className="px-1.5 py-0.5 bg-rose-200 text-rose-900 rounded text-[9px] font-bold">{isUnrecorded ? 'Belum Terekap' : '0 Tap'}</span>
-                        </div>
-                        <div className="text-rose-800 mt-0.5 leading-relaxed">
-                          Tidak ditemukan rekaman tap mesin pada tanggal ini. Jam kerja yang berlaku adalah <strong>{scheduledStart} s/d {scheduledEnd} WIB</strong>. Silakan pilih status override (DL, Sakit, Izin, Cuti) jika ada dokumen pendukung.
                         </div>
                       </div>
                     </div>
