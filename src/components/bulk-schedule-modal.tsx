@@ -265,26 +265,26 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
           {/* Shift Selection & Date Range in 2 Columns */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-4 bg-slate-50 border border-slate-200/80 rounded-xl">
             {/* Shift Template Selector */}
-            <div className="space-y-2">
+            <div className="space-y-2 flex flex-col h-full">
               <label className="block text-xs font-bold text-slate-800">
                 1. Pilih Template Shift
               </label>
-              <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+              <div className="space-y-2 flex-1 overflow-y-auto pr-1 max-h-[380px]">
                 {shifts.map((s) => {
                   const isSelected = s.id === selectedShiftId;
                   return (
                     <div
                       key={s.id}
                       onClick={() => setSelectedShiftId(s.id)}
-                      className={`p-2 rounded-lg border flex items-center justify-between cursor-pointer transition-all ${
+                      className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                         isSelected
-                          ? 'border-blue-500 bg-blue-50/70 shadow-xs'
-                          : 'border-slate-200 bg-white hover:border-slate-300'
+                          ? 'border-blue-600 bg-blue-50/80 shadow-xs ring-2 ring-blue-500/20'
+                          : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/80'
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
                         <span
-                          className="px-2 py-0.5 rounded-md text-[11px] text-white font-sans font-bold shadow-2xs"
+                          className="px-2.5 py-1 rounded-lg text-[11px] text-white font-sans font-bold shadow-2xs"
                           style={{ backgroundColor: s.color || '#2563eb' }}
                         >
                           {s.code}

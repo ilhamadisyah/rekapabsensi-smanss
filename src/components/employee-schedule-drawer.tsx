@@ -414,7 +414,7 @@ export const EmployeeScheduleDrawer: React.FC<EmployeeScheduleDrawerProps> = ({
 
               {/* Mode 1: Template Shift */}
               {mode === 'template' && (
-                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
                   {shifts.map((s) => {
                     const isSelected = selectedShiftId === s.id;
                     return (
