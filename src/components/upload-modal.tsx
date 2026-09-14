@@ -235,7 +235,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                   <strong>{detectedPeriod.uniqueEmployees} Pegawai</strong>
                 </span>
                 <span className="bg-white/80 px-2 py-0.5 rounded-md border border-emerald-200">
-                  <strong>{detectedPeriod.totalRawPunches} Ketukan Tap</strong>
+                  <strong>{detectedPeriod.totalRawPunches} Tap</strong>
                 </span>
               </div>
             </div>
