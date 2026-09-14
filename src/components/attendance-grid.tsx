@@ -992,14 +992,14 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
             <span className="inline-block w-5 h-4 rounded bg-[#FFEB9C] border border-[#ECC767] text-[#9C6500] text-center font-bold text-[9px] leading-4">
               HIP
             </span>
-            <span className="text-slate-600">Hak Izin Pagi (-1 Poin)</span>
+            <span className="text-slate-600">Hak Izin Pagi (Tidak Potong Poin)</span>
           </div>
 
           <div className="flex items-center gap-1.5">
             <span className="inline-block w-5 h-4 rounded bg-[#FFEB9C] border border-[#ECC767] text-[#9C6500] text-center font-bold text-[9px] leading-4">
               HIS
             </span>
-            <span className="text-slate-600">Hak Izin Siang (-1 Poin)</span>
+            <span className="text-slate-600">Hak Izin Siang (Tidak Potong Poin)</span>
           </div>
 
           <div className="flex items-center gap-1.5">

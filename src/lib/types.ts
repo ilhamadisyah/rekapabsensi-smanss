@@ -23,8 +23,8 @@ export interface AuthSession {
 export type AttendanceCode = 
   | 'HADIR'  // Hadir Penuh (Tepat Waktu)
   | 'A'      // Without Info (Alpha / Merah)
-  | 'HIP'    // Hak Izin Pagi (-1 poin)
-  | 'HIS'    // Hak Izin Siang (-1 poin)
+  | 'HIP'    // Hak Izin Pagi (Tidak Potong Poin / 0 Poin)
+  | 'HIS'    // Hak Izin Siang (Tidak Potong Poin / 0 Poin)
   | 'I'      // Ill (No Letter) (-1 poin)
   | 'IL'     // Ill (With Letter) (Bebas Pengurang)
   | 'PM'     // Permission (Izin Resmi)
@@ -78,7 +78,7 @@ export const ATTENDANCE_STATUS_MAP: Record<AttendanceCode, AttendanceStatusInfo>
     category: 'absent_verified',
     excelCode: 'HIP',
     targetCol: 'AH',
-    description: 'Izin Datang Terlambat Pagi (Bebas Denda / 0 Poin)',
+    description: 'Izin Datang Terlambat Pagi (Tidak Potong Poin / 0 Poin)',
     penaltyPoints: 0,
     bgHex: '#FFEB9C',
     textHex: '#9C6500',
@@ -90,7 +90,7 @@ export const ATTENDANCE_STATUS_MAP: Record<AttendanceCode, AttendanceStatusInfo>
     category: 'absent_verified',
     excelCode: 'HIS',
     targetCol: 'AI',
-    description: 'Izin Pulang Lebih Awal Siang (Bebas Denda / 0 Poin)',
+    description: 'Izin Pulang Lebih Awal Siang (Tidak Potong Poin / 0 Poin)',
     penaltyPoints: 0,
     bgHex: '#FFEB9C',
     textHex: '#9C6500',
