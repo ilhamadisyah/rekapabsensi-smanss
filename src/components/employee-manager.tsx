@@ -265,7 +265,8 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             <thead className="bg-slate-100/90 sticky top-0 border-b border-slate-200 z-10">
               <tr>
                 <th className="p-3 font-bold text-slate-700 w-12 text-center">No</th>
-                <th className="p-3 font-bold text-slate-700">Nama &amp; NIK</th>
+                <th className="p-3 font-bold text-slate-700">Nama</th>
+                <th className="p-3 font-bold text-slate-700 w-52">NIK</th>
                 <th className="p-3 font-bold text-slate-700 w-44">Unit / Jabatan</th>
                 <th className="p-3 font-bold text-slate-700 text-center w-28">Aksi</th>
               </tr>
@@ -273,7 +274,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             <tbody className="divide-y divide-slate-100">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="p-6 text-center text-slate-400 text-xs italic">
+                  <td colSpan={5} className="p-6 text-center text-slate-400 text-xs italic">
                     Tidak ditemukan pegawai dengan kata kunci &quot;{search}&quot;.
                   </td>
                 </tr>
@@ -286,32 +287,30 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                       <td className="p-3 text-center text-slate-400 font-semibold">{idx + 1}</td>
                       <td className="p-3">
                         {isEditing ? (
-                          <div className="space-y-1.5 max-w-sm">
-                            <input
-                              type="text"
-                              value={editFullName}
-                              onChange={(e) => setEditFullName(e.target.value)}
-                              placeholder="Nama lengkap pegawai"
-                              className="w-full px-2.5 py-1 text-xs font-bold border border-blue-400 rounded-lg text-slate-900 bg-white"
-                            />
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] font-semibold text-slate-400">NIK:</span>
-                              <input
-                                type="text"
-                                value={editNik}
-                                onChange={(e) => setEditNik(e.target.value)}
-                                placeholder="NIK (Wajib)"
-                                className="w-full px-2 py-0.5 text-xs font-sans font-bold border border-slate-300 rounded-lg text-blue-700 bg-white"
-                              />
-                            </div>
-                          </div>
+                          <input
+                            type="text"
+                            value={editFullName}
+                            onChange={(e) => setEditFullName(e.target.value)}
+                            placeholder="Nama lengkap pegawai"
+                            className="w-full px-2.5 py-1 text-xs font-bold border border-blue-400 rounded-lg text-slate-900 bg-white"
+                          />
                         ) : (
-                          <div>
-                            <div className="font-bold text-slate-900 text-[13px]">{emp.full_name}</div>
-                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 font-sans font-bold text-[10.5px] mt-0.5">
-                              NIK: {emp.nik || emp.id || '-'}
-                            </div>
-                          </div>
+                          <div className="font-bold text-slate-900 text-[13px]">{emp.full_name}</div>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editNik}
+                            onChange={(e) => setEditNik(e.target.value)}
+                            placeholder="NIK (Wajib)"
+                            className="w-full px-2.5 py-1 text-xs font-mono font-bold border border-blue-400 rounded-lg text-blue-700 bg-white"
+                          />
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 font-mono font-bold text-[11px]">
+                            {emp.nik || emp.id || '-'}
+                          </span>
                         )}
                       </td>
                       <td className="p-3 text-slate-600">
