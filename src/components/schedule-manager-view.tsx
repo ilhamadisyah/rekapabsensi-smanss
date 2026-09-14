@@ -161,11 +161,24 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
   // Schedule lookup map: key = `${employee_id}_${dateStr}`
   const scheduleLookup = useMemo(() => {
     const map = new Map<string, EmployeeSchedule>();
+    const empByAnyKey = new Map<string, Employee>();
+    employees.forEach((e) => {
+      if (e.id) empByAnyKey.set(e.id, e);
+      if (e.nik) empByAnyKey.set(e.nik, e);
+      if (e.machine_id) empByAnyKey.set(e.machine_id, e);
+    });
+
     schedules.forEach((s) => {
       map.set(`${s.employee_id}_${s.date}`, s);
+      const matchedEmp = empByAnyKey.get(s.employee_id);
+      if (matchedEmp) {
+        if (matchedEmp.id) map.set(`${matchedEmp.id}_${s.date}`, s);
+        if (matchedEmp.nik) map.set(`${matchedEmp.nik}_${s.date}`, s);
+        if (matchedEmp.machine_id) map.set(`${matchedEmp.machine_id}_${s.date}`, s);
+      }
     });
     return map;
-  }, [schedules]);
+  }, [schedules, employees]);
 
   // Default shift template (Normal)
   const defaultShift = useMemo(() => {
@@ -280,11 +293,13 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
     if (!activeCell) return;
     const { employee, dateStr } = activeCell;
 
+    const targetEmpId = employee.nik || employee.id || employee.machine_id;
+
     if (shiftId === null) {
       setActiveCell(null);
       try {
         const res = await fetch(
-          `/api/schedules?employee_id=${employee.machine_id}&date=${dateStr}`,
+          `/api/schedules?employee_id=${targetEmpId}&date=${dateStr}`,
           { method: 'DELETE' }
         );
         const data = await res.json();
@@ -301,7 +316,7 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
 
     try {
       const payload: any = {
-        employee_id: employee.machine_id,
+        employee_id: targetEmpId,
         date: dateStr,
         shift_id: shiftId,
         notes: popoverNotes.trim() || undefined,
@@ -838,8 +853,10 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                         </td>
 
                         {monthDays.map((d) => {
-                          const schedKey = `${emp.machine_id}_${d.dateStr}`;
-                          const customSchedule = scheduleLookup.get(schedKey);
+                          const customSchedule =
+                            (emp.nik ? scheduleLookup.get(`${emp.nik}_${d.dateStr}`) : undefined) ||
+                            scheduleLookup.get(`${emp.id}_${d.dateStr}`) ||
+                            (emp.machine_id ? scheduleLookup.get(`${emp.machine_id}_${d.dateStr}`) : undefined);
                           const assignedShift = customSchedule
                             ? shiftMap.get(customSchedule.shift_id)
                             : null;
@@ -968,7 +985,8 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredEmployees.map((emp, idx) => {
-                    const empSchedules = schedules.filter((s) => s.employee_id === emp.machine_id);
+                    const empKeys = [emp.nik, emp.id, emp.machine_id].filter(Boolean);
+                    const empSchedules = schedules.filter((s) => empKeys.includes(s.employee_id));
                     const hasCustom = empSchedules.length > 0;
 
                     return (

@@ -86,8 +86,9 @@ export const EmployeeScheduleDrawer: React.FC<EmployeeScheduleDrawerProps> = ({
   const employeeScheduleMap = useMemo(() => {
     const map = new Map<string, EmployeeSchedule>();
     if (!employee) return map;
+    const empKeys = [employee.nik, employee.id, employee.machine_id].filter(Boolean);
     schedules
-      .filter((s) => s.employee_id === employee.machine_id)
+      .filter((s) => empKeys.includes(s.employee_id))
       .forEach((s) => map.set(s.date, s));
     return map;
   }, [schedules, employee]);
@@ -156,8 +157,9 @@ export const EmployeeScheduleDrawer: React.FC<EmployeeScheduleDrawerProps> = ({
     setIsSaving(true);
 
     try {
+      const targetEmpId = employee.nik || employee.id || employee.machine_id;
       const payload: any = {
-        employee_id: employee.machine_id,
+        employee_id: targetEmpId,
         date: editingDay.dateStr,
         shift_id: selectedShiftId,
         notes: notes.trim(),
@@ -191,8 +193,9 @@ export const EmployeeScheduleDrawer: React.FC<EmployeeScheduleDrawerProps> = ({
 
   const handleResetDay = async (dateStr: string, dayNum: number) => {
     try {
+      const targetEmpId = employee.nik || employee.id || employee.machine_id;
       const res = await fetch(
-        `/api/schedules?employee_id=${employee.machine_id}&date=${dateStr}`,
+        `/api/schedules?employee_id=${targetEmpId}&date=${dateStr}`,
         { method: 'DELETE' }
       );
       const data = await res.json();

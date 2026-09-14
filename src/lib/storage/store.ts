@@ -597,6 +597,12 @@ const localDb = {
       data.shift_templates.push(fullTemplate);
     }
 
+    if (fullTemplate.is_default) {
+      data.shift_templates.forEach((st) => {
+        if (st.id !== id) st.is_default = false;
+      });
+    }
+
     writeDb(data);
     return fullTemplate;
   },
@@ -730,9 +736,14 @@ const localDb = {
     const data = ensureDbFile();
     if (!data.employee_schedules) return false;
 
+    const emp = data.employees?.find(
+      (e) => e.id === employee_id || e.nik === employee_id || e.machine_id === employee_id
+    );
+    const keys = emp ? [emp.id, emp.nik, emp.machine_id].filter(Boolean) : [employee_id];
+
     const initialLen = data.employee_schedules.length;
     data.employee_schedules = data.employee_schedules.filter(
-      (s) => !(s.employee_id === employee_id && s.date === date)
+      (s) => !(keys.includes(s.employee_id) && s.date === date)
     );
 
     if (data.employee_schedules.length !== initialLen) {

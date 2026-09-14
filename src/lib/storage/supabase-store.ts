@@ -592,6 +592,11 @@ export const supabaseStore = {
       console.error('[Supabase] Error saveShiftTemplate:', error);
       throw new Error(error.message);
     }
+
+    if (fullTemplate.is_default) {
+      await client.from('shift_templates').update({ is_default: false }).neq('id', id);
+    }
+
     return fullTemplate;
   },
 
@@ -819,10 +824,16 @@ export const supabaseStore = {
     const client = getSupabaseServerClient();
     if (!client) return false;
 
+    const employees = await this.getEmployees();
+    const emp = employees.find(
+      (e) => e.id === employee_id || e.nik === employee_id || e.machine_id === employee_id
+    );
+    const keys = emp ? [emp.id, emp.nik, emp.machine_id].filter(Boolean) : [employee_id];
+
     const { error } = await client
       .from('employee_schedules')
       .delete()
-      .eq('employee_id', employee_id)
+      .in('employee_id', keys)
       .eq('date', date);
 
     return !error;

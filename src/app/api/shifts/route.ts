@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       is_off_day: Boolean(body.is_off_day),
       color: body.color || '#2563eb',
       description: body.description || '',
-      is_default: false,
+      is_default: Boolean(body.is_default),
     });
 
     return NextResponse.json({ success: true, shift: newShift });
