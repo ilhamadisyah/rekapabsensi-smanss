@@ -4,6 +4,16 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { ShiftTemplate, Employee, Holiday } from '@/lib/types';
 import { X, Calendar, Users, Check, AlertCircle, Sparkles, Filter, Search, CheckSquare, Square } from 'lucide-react';
 
+const DAYS_OF_WEEK = [
+  { dayIndex: 1, label: 'Senin', short: 'Sen' },
+  { dayIndex: 2, label: 'Selasa', short: 'Sel' },
+  { dayIndex: 3, label: 'Rabu', short: 'Rab' },
+  { dayIndex: 4, label: 'Kamis', short: 'Kam' },
+  { dayIndex: 5, label: 'Jumat', short: 'Jum' },
+  { dayIndex: 6, label: 'Sabtu', short: 'Sab', isWeekend: true },
+  { dayIndex: 0, label: 'Minggu', short: 'Min', isWeekend: true },
+] as const;
+
 interface BulkScheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -35,6 +45,7 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
 
   const [startDay, setStartDay] = useState<number>(1);
   const [endDay, setEndDay] = useState<number>(30);
+  const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [skipWeekends, setSkipWeekends] = useState<boolean>(true);
   const [skipHolidays, setSkipHolidays] = useState<boolean>(false);
   const [notes, setNotes] = useState<string>('');
@@ -44,10 +55,46 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
     if (isOpen) {
       setStartDay(1);
       setEndDay(totalDaysInMonth);
+      setSelectedDays([1, 2, 3, 4, 5]);
+      setSkipWeekends(true);
       setErrorMsg(null);
       setSuccessMsg(null);
     }
   }, [isOpen, totalDaysInMonth]);
+
+  // Handler kustomisasi hari dalam seminggu
+  const toggleDay = (dayIndex: number) => {
+    setSelectedDays((prev) => {
+      const next = prev.includes(dayIndex)
+        ? prev.filter((d) => d !== dayIndex)
+        : [...prev, dayIndex];
+      const hasWeekend = next.includes(6) || next.includes(0);
+      setSkipWeekends(!hasWeekend);
+      return next;
+    });
+  };
+
+  const handleSelectDayPreset = (preset: 'all' | 'weekdays' | 'weekends') => {
+    if (preset === 'all') {
+      setSelectedDays([1, 2, 3, 4, 5, 6, 0]);
+      setSkipWeekends(false);
+    } else if (preset === 'weekdays') {
+      setSelectedDays([1, 2, 3, 4, 5]);
+      setSkipWeekends(true);
+    } else if (preset === 'weekends') {
+      setSelectedDays([6, 0]);
+      setSkipWeekends(false);
+    }
+  };
+
+  const handleToggleSkipWeekends = (checked: boolean) => {
+    setSkipWeekends(checked);
+    if (checked) {
+      setSelectedDays((prev) => prev.filter((d) => d !== 6 && d !== 0));
+    } else {
+      setSelectedDays((prev) => Array.from(new Set([...prev, 6, 0])));
+    }
+  };
 
   // Search & selection
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -56,6 +103,8 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const getEmpKey = (emp: Employee) => emp.nik || emp.id || emp.machine_id;
 
   // Filtered employees list
   const filteredEmployees = useMemo(() => {
@@ -89,20 +138,20 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
       if (isWeekend) weekends++;
       if (isHoliday) holidaysCount++;
 
-      if (skipWeekends && isWeekend) continue;
+      if (!selectedDays.includes(dayOfWeek)) continue;
       if (skipHolidays && isHoliday) continue;
       active++;
     }
     return { activeDaysCount: active, skippedWeekendsCount: weekends, skippedHolidaysCount: holidaysCount };
-  }, [currentYear, currentMonth, startDay, endDay, skipWeekends, skipHolidays, holidays]);
+  }, [currentYear, currentMonth, startDay, endDay, selectedDays, skipHolidays, holidays]);
 
   if (!isOpen) return null;
 
-  const toggleSelectEmp = (machineId: string) => {
+  const toggleSelectEmp = (empKey: string) => {
     setSelectedEmpIds((prev) => {
       const next = new Set(prev);
-      if (next.has(machineId)) next.delete(machineId);
-      else next.add(machineId);
+      if (next.has(empKey)) next.delete(empKey);
+      else next.add(empKey);
       return next;
     });
   };
@@ -110,7 +159,7 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
   const selectAllFiltered = () => {
     setSelectedEmpIds((prev) => {
       const next = new Set(prev);
-      filteredEmployees.forEach((e) => next.add(e.machine_id));
+      filteredEmployees.forEach((e) => next.add(getEmpKey(e)));
       return next;
     });
   };
@@ -118,7 +167,7 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
   const deselectAllFiltered = () => {
     setSelectedEmpIds((prev) => {
       const next = new Set(prev);
-      filteredEmployees.forEach((e) => next.delete(e.machine_id));
+      filteredEmployees.forEach((e) => next.delete(getEmpKey(e)));
       return next;
     });
   };
@@ -129,6 +178,10 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
     e.preventDefault();
     if (selectedEmpIds.size === 0) {
       setErrorMsg('Pilih minimal satu pegawai untuk ditugaskan jadwal.');
+      return;
+    }
+    if (selectedDays.length === 0) {
+      setErrorMsg('Pilih minimal satu hari dalam seminggu untuk ditugaskan jadwal.');
       return;
     }
     if (startDay > endDay) {
@@ -155,11 +208,10 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
       const dateStr = `${currentYear}-${monthPad}-${dayPad}`;
       const d = new Date(dateStr + 'T00:00:00');
       const dayOfWeek = d.getDay();
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const isHoliday = holidays.some((h) => h.date === dateStr || h.date.startsWith(dateStr));
 
-      if (skipWeekends && isWeekend) {
-        continue; // skip Saturday & Sunday
+      if (!selectedDays.includes(dayOfWeek)) {
+        continue; // skip days not selected
       }
 
       if (skipHolidays && isHoliday) {
@@ -177,7 +229,7 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
     }
 
     if (schedulesToSave.length === 0) {
-      setErrorMsg('Tidak ada hari kerja aktif dalam rentang tanggal yang dipilih (semua hari dilewati karena filter akhir pekan / libur).');
+      setErrorMsg('Tidak ada hari aktif dalam rentang tanggal yang dipilih (semua hari dilewati karena filter hari / libur).');
       setIsLoading(false);
       return;
     }
@@ -339,8 +391,80 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
                 </div>
               </div>
 
+              {/* Pilihan Hari Kustom dalam Seminggu */}
+              <div className="p-3 bg-white border border-slate-200/90 rounded-xl space-y-2.5 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-800">
+                    Pilih Hari yang Ditugaskan:
+                  </span>
+                  <div className="flex items-center gap-2 text-[10.5px] font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectDayPreset('all')}
+                      className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                    >
+                      Semua
+                    </button>
+                    <span className="text-slate-300">•</span>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectDayPreset('weekdays')}
+                      className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                    >
+                      Sen - Jum
+                    </button>
+                    <span className="text-slate-300">•</span>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectDayPreset('weekends')}
+                      className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                    >
+                      Sab - Min
+                    </button>
+                  </div>
+                </div>
+
+                {/* Day Buttons Grid */}
+                <div className="grid grid-cols-7 gap-1">
+                  {DAYS_OF_WEEK.map((d) => {
+                    const isSelected = selectedDays.includes(d.dayIndex);
+                    return (
+                      <button
+                        key={d.dayIndex}
+                        type="button"
+                        onClick={() => toggleDay(d.dayIndex)}
+                        className={`py-1.5 px-0.5 text-center rounded-lg font-bold transition-all border cursor-pointer ${
+                          isSelected
+                            ? 'bg-blue-600 border-blue-600 text-white shadow-2xs'
+                            : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-100'
+                        }`}
+                        title={d.label}
+                      >
+                        <div className="text-[11px] leading-tight font-sans">{d.short}</div>
+                        <div className="text-[9px] mt-0.5 leading-none opacity-90">
+                          {isSelected ? '✓' : '-'}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="text-[10px] text-slate-500 flex items-center justify-between pt-0.5 border-t border-slate-100">
+                  {selectedDays.length === 0 ? (
+                    <span className="text-rose-600 font-bold">⚠️ Pilih minimal 1 hari</span>
+                  ) : (
+                    <span>
+                      Hari terpilih: <strong>{selectedDays.length} dari 7 hari</strong>
+                    </span>
+                  )}
+                  <span className="text-blue-600 font-bold">
+                    {activeDaysCount} hari aktif ({startDay} s/d {endDay})
+                  </span>
+                </div>
+              </div>
+
               {/* Custom Checkbox Group (Bebas dari bug double-outline native browser) */}
-              <div className="pt-1 space-y-2">
+              <div className="space-y-2">
                 {/* 1. Checkbox: Lewati Hari Sabtu & Minggu */}
                 <label className="flex items-start gap-2.5 cursor-pointer select-none group p-2 rounded-xl hover:bg-white/80 border border-transparent hover:border-slate-200 transition-all">
                   <div
@@ -355,7 +479,7 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
                   <input
                     type="checkbox"
                     checked={skipWeekends}
-                    onChange={(e) => setSkipWeekends(e.target.checked)}
+                    onChange={(e) => handleToggleSkipWeekends(e.target.checked)}
                     className="sr-only"
                   />
                   <div className="flex-1 leading-snug">
@@ -485,11 +609,12 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
                 </div>
               ) : (
                 filteredEmployees.map((emp) => {
-                  const isChecked = selectedEmpIds.has(emp.machine_id);
+                  const empKey = getEmpKey(emp);
+                  const isChecked = selectedEmpIds.has(empKey);
                   return (
                     <div
                       key={emp.id}
-                      onClick={() => toggleSelectEmp(emp.machine_id)}
+                      onClick={() => toggleSelectEmp(empKey)}
                       className={`px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors ${
                         isChecked ? 'bg-blue-50/40' : ''
                       }`}
@@ -505,7 +630,8 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
                         <div>
                           <span className="font-bold text-slate-900 text-xs">{emp.full_name}</span>
                           <span className="text-[11px] text-slate-500 ml-2">
-                            NIK: {emp.nik} | ID: {emp.machine_id}
+                            {emp.nik ? `NIK: ${emp.nik}` : `ID: ${emp.machine_id}`}
+                            {emp.nik && emp.machine_id && emp.machine_id !== emp.nik && ` (ID: ${emp.machine_id})`}
                           </span>
                         </div>
                       </div>
