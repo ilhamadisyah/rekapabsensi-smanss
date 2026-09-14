@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       id: cleanNik,
       machine_id: cleanMachineId,
       full_name: String(full_name).trim(),
-      department: department ? String(department).trim() : 'Tenaga Pendidik (Guru)',
+      department: department ? String(department).trim() : 'Guru',
       nik: cleanNik,
       excel_row_index: nextRow,
       is_active: is_active !== false,

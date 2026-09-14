@@ -29,7 +29,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
   const [newFullName, setNewFullName] = useState('');
   const [newMachineId, setNewMachineId] = useState('');
   const [newNik, setNewNik] = useState('');
-  const [newDepartment, setNewDepartment] = useState('Tenaga Pendidik (Guru)');
+  const [newDepartment, setNewDepartment] = useState('Guru');
   const [newRowIndex, setNewRowIndex] = useState<number>(employees.length + 1);
   const [isSubmittingNew, setIsSubmittingNew] = useState(false);
 
@@ -46,7 +46,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
     setEditMachineId(emp.machine_id);
     setEditRowIndex(emp.excel_row_index);
     setEditFullName(emp.full_name);
-    setEditDepartment(emp.department || 'Pegawai');
+    setEditDepartment(emp.department && emp.department.includes('Guru') ? 'Guru' : 'Staff');
     setEditNik(emp.nik || '');
     setMsg(null);
   };
@@ -118,7 +118,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
     setNewFullName('');
     setNewMachineId('');
     setNewNik('');
-    setNewDepartment('Tenaga Pendidik (Guru)');
+    setNewDepartment('Guru');
     setNewRowIndex(employees.length + 1);
     setMsg(null);
     setIsAddModalOpen(true);
@@ -316,14 +316,24 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                       </td>
                       <td className="p-3 text-slate-600">
                         {isEditing ? (
-                          <input
-                            type="text"
-                            value={editDepartment}
+                          <select
+                            value={editDepartment === 'Guru' || editDepartment.includes('Guru') ? 'Guru' : 'Staff'}
                             onChange={(e) => setEditDepartment(e.target.value)}
-                            className="w-full px-2 py-1 text-xs border border-blue-400 rounded-lg"
-                          />
+                            className="w-full px-2 py-1 text-xs border border-blue-400 rounded-lg font-semibold bg-white"
+                          >
+                            <option value="Guru">Guru</option>
+                            <option value="Staff">Staff</option>
+                          </select>
                         ) : (
-                          emp.department
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                              emp.department && emp.department.includes('Guru')
+                                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            }`}
+                          >
+                            {emp.department && emp.department.includes('Guru') ? 'Guru' : 'Staff'}
+                          </span>
                         )}
                       </td>
                       <td className="p-3 text-center">
@@ -504,14 +514,10 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                 <select
                   value={newDepartment}
                   onChange={(e) => setNewDepartment(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-xs font-semibold"
                 >
-                  <option value="Tenaga Pendidik (Guru)">Tenaga Pendidik (Guru)</option>
-                  <option value="Tenaga Kependidikan (Staff)">Tenaga Kependidikan (Staff)</option>
-                  <option value="Kebersihan (Cleaning Service)">Kebersihan (Cleaning Service)</option>
-                  <option value="Keamanan (Security)">Keamanan (Security)</option>
-                  <option value="Pengelola Asrama / Piket">Pengelola Asrama / Piket</option>
-                  <option value="Pegawai">Pegawai / Staf Umum</option>
+                  <option value="Guru">Guru</option>
+                  <option value="Staff">Staff</option>
                 </select>
               </div>
 

@@ -138,7 +138,7 @@ export const BulkUpdateModal: React.FC<BulkUpdateModalProps> = ({
             <div className="grid grid-cols-3 gap-2">
               {[
                 { id: 'ALL', label: `Semua (${employees.length})` },
-                { id: 'Guru', label: 'Tenaga Pendidik' },
+                { id: 'Guru', label: 'Guru' },
                 { id: 'TU', label: 'Staff' },
               ].map((group) => (
                 <button

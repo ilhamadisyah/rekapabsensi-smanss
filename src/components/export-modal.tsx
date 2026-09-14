@@ -313,7 +313,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl">
               {[
                 { id: 'ALL', label: 'Semua Pegawai' },
-                { id: 'Guru', label: 'Tenaga Pendidik' },
+                { id: 'Guru', label: 'Guru' },
                 { id: 'TU', label: 'Staff' },
               ].map((d) => (
                 <button
