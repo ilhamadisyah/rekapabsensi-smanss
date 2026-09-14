@@ -54,26 +54,105 @@ const MONTH_NAMES_ID = [
 ];
 
 /**
- * Automatically inspects a raw attendance file (.xls / .xlsx)
+ * Parse CSV text into array of rows respecting RFC 4180 quotes and delimiters (, or ;)
+ */
+export function parseCsvToRows(csvContent: string): string[][] {
+  const firstLine = csvContent.split(/\r?\n/)[0] || '';
+  const commaCount = (firstLine.match(/,/g) || []).length;
+  const semiCount = (firstLine.match(/;/g) || []).length;
+  const tabCount = (firstLine.match(/\t/g) || []).length;
+
+  let delimiter = ',';
+  if (semiCount > commaCount && semiCount > tabCount) delimiter = ';';
+  else if (tabCount > commaCount && tabCount > semiCount) delimiter = '\t';
+
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentCell = '';
+  let insideQuotes = false;
+
+  const text = csvContent.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = text[i + 1];
+
+    if (char === '"') {
+      if (insideQuotes && nextChar === '"') {
+        currentCell += '"';
+        i++;
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+    } else if (char === delimiter && !insideQuotes) {
+      currentRow.push(currentCell.trim());
+      currentCell = '';
+    } else if (char === '\n' && !insideQuotes) {
+      currentRow.push(currentCell.trim());
+      if (currentRow.some((c) => c !== '')) {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      currentCell = '';
+    } else {
+      currentCell += char;
+    }
+  }
+
+  if (currentCell || currentRow.length > 0) {
+    currentRow.push(currentCell.trim());
+    if (currentRow.some((c) => c !== '')) {
+      rows.push(currentRow);
+    }
+  }
+
+  return rows;
+}
+
+/**
+ * Extract 2D raw rows from CSV, XLS, or XLSX buffer
+ */
+export function extractRawRowsFromBuffer(fileBuffer: Buffer): (string | number | undefined)[][] {
+  const isBinaryExcel =
+    fileBuffer.length >= 4 &&
+    ((fileBuffer[0] === 0x50 && fileBuffer[1] === 0x4B) || // PK (xlsx/zip)
+      (fileBuffer[0] === 0xD0 && fileBuffer[1] === 0xCF)); // OLE2 (xls)
+
+  if (!isBinaryExcel) {
+    try {
+      let text = fileBuffer.toString('utf-8');
+      if (text.charCodeAt(0) === 0xFEFF) {
+        text = text.slice(1);
+      }
+      const csvRows = parseCsvToRows(text);
+      if (csvRows.length > 0) {
+        return csvRows;
+      }
+    } catch {
+      // Fallback to XLSX
+    }
+  }
+
+  const workbook = XLSX.read(fileBuffer, { type: 'buffer', cellDates: false });
+  const firstSheetName = workbook.SheetNames[0];
+  if (!firstSheetName) return [];
+  const sheet = workbook.Sheets[firstSheetName];
+  return XLSX.utils.sheet_to_json<(string | number | undefined)[]>(sheet, {
+    header: 1,
+    defval: '',
+    blankrows: false,
+  });
+}
+
+/**
+ * Automatically inspects a raw attendance file (.csv / .xls / .xlsx)
  * and detects the date range (start date to end date) and month/year.
  */
 export function detectPeriodFromFile(fileBuffer: Buffer): { success: boolean; period?: DetectedPeriod; error?: string } {
   try {
-    const workbook = XLSX.read(fileBuffer, { type: 'buffer', cellDates: false });
-    const firstSheetName = workbook.SheetNames[0];
-    if (!firstSheetName) {
-      return { success: false, error: 'Berkas tidak memiliki sheet yang valid.' };
-    }
-
-    const sheet = workbook.Sheets[firstSheetName];
-    const rawRows = XLSX.utils.sheet_to_json<(string | number | undefined)[]>(sheet, {
-      header: 1,
-      defval: '',
-      blankrows: false,
-    });
-
+    const rawRows = extractRawRowsFromBuffer(fileBuffer);
     if (rawRows.length === 0) {
-      return { success: false, error: 'Berkas kosong.' };
+      return { success: false, error: 'Berkas kosong atau tidak dapat dibaca.' };
     }
 
     // Locate header row containing 'No. ID', 'Nama', 'Waktu', 'Status'
@@ -500,32 +579,12 @@ export function parseAttendanceFile(
         detectedDates: [],
       };
     }
-    const workbook = XLSX.read(fileBuffer, { type: 'buffer', cellDates: false });
-    const firstSheetName = workbook.SheetNames[0];
-    if (!firstSheetName) {
-      return {
-        success: false,
-        error: 'Berkas tidak memiliki sheet yang valid.',
-        records: [],
-        totalRawRows: 0,
-        uniqueEmployees: 0,
-        totalPresent: 0,
-        totalUnverifiedRed: 0,
-        detectedDates: [],
-      };
-    }
-
-    const sheet = workbook.Sheets[firstSheetName];
-    const rawRows = XLSX.utils.sheet_to_json<(string | number | undefined)[]>(sheet, {
-      header: 1,
-      defval: '',
-      blankrows: false,
-    });
+    const rawRows = extractRawRowsFromBuffer(fileBuffer);
 
     if (rawRows.length === 0) {
       return {
         success: false,
-        error: 'Berkas kosong.',
+        error: 'Berkas kosong atau format tidak didukung.',
         records: [],
         totalRawRows: 0,
         uniqueEmployees: 0,

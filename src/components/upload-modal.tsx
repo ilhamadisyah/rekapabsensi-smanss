@@ -72,7 +72,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
   const handleSubmit = async () => {
     if (!file) {
-      setErrorMsg('Pilih berkas mesin absensi (.xls atau .xlsx) terlebih dahulu.');
+      setErrorMsg('Pilih berkas mesin absensi (.csv, .xls, atau .xlsx) terlebih dahulu.');
       return;
     }
 
@@ -175,7 +175,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
             <input
               ref={fileInputRef}
               type="file"
-              accept=".xls,.xlsx"
+              accept=".csv,.xls,.xlsx"
               onChange={handleFileChange}
               className="hidden"
             />
@@ -200,7 +200,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                     Pilih atau Tarik Berkas ke Sini
                   </div>
                   <div className="text-[11px] text-slate-400">
-                    Mendukung file .xls &amp; .xlsx mesin absensi (Maks. 15 MB)
+                    Mendukung file .csv, .xls &amp; .xlsx mesin absensi (Maks. 15 MB)
                   </div>
                 </div>
               )}

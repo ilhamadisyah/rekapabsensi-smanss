@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json(
-        { success: false, error: 'Berkas .xls atau .xlsx wajib diunggah.' },
+        { success: false, error: 'Berkas .csv, .xls atau .xlsx wajib diunggah.' },
         { status: 400 }
       );
     }
