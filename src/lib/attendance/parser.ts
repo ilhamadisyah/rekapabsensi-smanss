@@ -426,13 +426,9 @@ export function evaluateAttendanceStatus(
     if (isOnTimeIn && isFullOut) {
       return { systemStatus: 'HADIR', finalStatus: 'HADIR' };
     }
-    if (!isOnTimeIn && isFullOut) {
-      return { systemStatus: 'HADIR', finalStatus: 'HIP' };
-    }
-    if (isOnTimeIn && !isFullOut) {
-      return { systemStatus: 'HADIR', finalStatus: 'HIS' };
-    }
-    return { systemStatus: 'HADIR', finalStatus: 'HIP' };
+
+    // Terlambat atau pulang lebih awal dari jam wajib shift -> ALPA (A)
+    return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
   }
 
   // Regular daytime shift (e.g. 07:30 - 16:00 or 08:00 - 14:30)
@@ -441,26 +437,17 @@ export function evaluateAttendanceStatus(
 
   // Pegawai dianggap tepat waktu jika datang sebelum / tepat batas check-in limit
   const isOnTimeIn = firstIn <= checkInLimit;
-  // Pegawai dianggap memenuhi jam kerja jika pulang pada atau setelah jam selesai shift
+  // Pegawai dianggap memenuhi jam kerja jika pulang pada atau setelah jam selesai shift (termasuk lembur)
   const isFullDayOut = lastOut >= checkOutLimit;
 
-  // Kasus 1: Datang tepat waktu & pulang sesuai / lembur setelah jam kerja selesai -> HADIR PENUH
+  // Kasus 1: Datang tepat waktu & pulang memenuhi jam kerja -> HADIR PENUH
   if (isOnTimeIn && isFullDayOut) {
     return { systemStatus: 'HADIR', finalStatus: 'HADIR' };
   }
 
-  // Kasus 2: Datang terlambat, tetapi pulang sesuai / melebihi jam kerja selesai -> HIP (Hak Izin Pagi / Terlambat)
-  if (!isOnTimeIn && isFullDayOut) {
-    return { systemStatus: 'HADIR', finalStatus: 'HIP' };
-  }
-
-  // Kasus 3: Datang tepat waktu, tetapi pulang lebih cepat sebelum jam kerja selesai -> HIS (Hak Izin Siang / Pulang Cepat)
-  if (isOnTimeIn && !isFullDayOut) {
-    return { systemStatus: 'HADIR', finalStatus: 'HIS' };
-  }
-
-  // Kasus 4: Datang terlambat & pulang lebih cepat (namun tetap ada 2 rekaman tap kehadiran fisik di sekolah)
-  return { systemStatus: 'HADIR', finalStatus: 'HIP' };
+  // Kasus 2: Datang terlambat (firstIn > checkInLimit) ATAU pulang lebih cepat sebelum jam kerja selesai (lastOut < checkOutLimit) -> ALPA (A)
+  // Aturan ketat sekolah (FR-04): Pokoknya telat = ALPA (A), tanpa toleransi otomatis menjadi izin
+  return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
 }
 
 export interface ParseAttendanceOptions {
@@ -655,15 +642,26 @@ export function parseAttendanceFile(
     const uniqueEmployeesSet = new Set<string>();
 
     for (const punch of rawPunches) {
-      let resolvedNik = punch.nik || '';
+      let resolvedNik = '';
 
-      // Fallback: check if machineId maps to an existing employee with NIK
-      if (!resolvedNik && punch.machineId && existingByMachineId.has(punch.machineId)) {
+      // 1. Tetap utamakan pembacaan berdasarkan NIK:
+      // a. Cek jika punch sudah memiliki NIK terisi
+      if (punch.nik && punch.nik.trim()) {
+        resolvedNik = punch.nik.trim();
+      }
+      // b. Cek jika punch.machineId sebenarnya adalah NIK pegawai di master
+      else if (punch.machineId && existingByNik.has(punch.machineId)) {
+        resolvedNik = punch.machineId;
+      }
+      // 2. Jika tidak ada NIK, baru periksa ID Mesin:
+      // Cek apakah machineId terdaftar di master pegawai dan memiliki NIK
+      else if (punch.machineId && existingByMachineId.has(punch.machineId)) {
         resolvedNik = existingByMachineId.get(punch.machineId)?.nik || '';
       }
 
       const isMissingNik = !resolvedNik;
-      const empKey = resolvedNik || `UNREGISTERED-ID-${punch.machineId}`;
+      // Identifier: Utamakan NIK, jika tidak ada NIK baru gunakan ID Mesin
+      const empKey = resolvedNik || punch.machineId;
 
       if (!punchesByEmployee.has(empKey)) {
         punchesByEmployee.set(empKey, {
@@ -692,7 +690,12 @@ export function parseAttendanceFile(
       punches.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
       const rawName = punches[0]?.name || group.name || '';
-      const existingEmployee = existingByMachineId.get(group.machineId);
+      // Cari data master pegawai: prioritas NIK, jika tidak ada baru ID Mesin
+      const existingEmployee =
+        (group.nik ? existingByNik.get(group.nik) : undefined) ||
+        (group.machineId && existingByNik.has(group.machineId) ? existingByNik.get(group.machineId) : undefined) ||
+        (group.machineId ? existingByMachineId.get(group.machineId) : undefined);
+
       const realName =
         existingEmployee?.full_name ||
         getEmployeeNameByMachineId(group.machineId, rawName);
@@ -720,8 +723,10 @@ export function parseAttendanceFile(
         const punch = punches[i];
         const dateStr = punch.dateStr;
         const sched =
+          (group.nik ? options?.scheduleMap?.get(`${group.nik}___${dateStr}`) : undefined) ||
           options?.scheduleMap?.get(`${empKey}___${dateStr}`) ||
-          options?.scheduleMap?.get(`${group.machineId}___${dateStr}`);
+          (existingEmployee?.id ? options?.scheduleMap?.get(`${existingEmployee.id}___${dateStr}`) : undefined) ||
+          (group.machineId ? options?.scheduleMap?.get(`${group.machineId}___${dateStr}`) : undefined);
 
         // Check if this punch is candidate for beginning an overnight shift:
         // Must be scheduled as overnight AND punch must be in the evening/night window (not daytime)!

@@ -37,10 +37,11 @@ export async function POST(request: NextRequest) {
       ]);
       existingEmployees = emps || [];
       const shiftMap = new Map(shifts.map((s) => [s.id, s]));
+      const empMapById = new Map(existingEmployees.map((e) => [e.id, e]));
       scheduleMap = new Map();
       for (const sc of schedules) {
         const sh = shiftMap.get(sc.shift_id);
-        scheduleMap.set(`${sc.employee_id}___${sc.date}`, {
+        const schedItem = {
           isOvernight: Boolean(sh?.is_overnight),
           startTime: sc.custom_start_time || sh?.start_time,
           endTime: sc.custom_end_time || sh?.end_time,
@@ -48,7 +49,13 @@ export async function POST(request: NextRequest) {
           gracePeriodMinutes: sh?.grace_period_minutes,
           checkInWindowMinutes: sh?.check_in_window_minutes,
           checkOutWindowMinutes: sh?.check_out_window_minutes,
-        });
+        };
+        scheduleMap.set(`${sc.employee_id}___${sc.date}`, schedItem);
+        const matchedEmp = empMapById.get(sc.employee_id);
+        if (matchedEmp) {
+          if (matchedEmp.nik) scheduleMap.set(`${matchedEmp.nik}___${sc.date}`, schedItem);
+          if (matchedEmp.machine_id) scheduleMap.set(`${matchedEmp.machine_id}___${sc.date}`, schedItem);
+        }
       }
     } catch {
       // Ignore if schedules cannot be pre-loaded

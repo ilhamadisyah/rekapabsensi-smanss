@@ -171,7 +171,10 @@ export async function GET(request: NextRequest) {
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
         const isHoliday = holidayMap.has(dateStr);
 
-        const customSched = scheduleMap.get(`${emp.machine_id}_${dateStr}`);
+        const customSched =
+          (emp.nik ? scheduleMap.get(`${emp.nik}_${dateStr}`) : undefined) ||
+          scheduleMap.get(`${emp.machine_id}_${dateStr}`) ||
+          (emp.id ? scheduleMap.get(`${emp.id}_${dateStr}`) : undefined);
         const assignedShift = customSched ? shiftMap.get(customSched.shift_id) : null;
 
         const effectiveShift = assignedShift || (isWeekend || isHoliday ? null : defaultShift);
