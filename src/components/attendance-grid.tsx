@@ -346,7 +346,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
         {/* Table Control Bar: 2 Clean Rows */}
         <div className="relative z-30 border-b border-slate-200/80 bg-slate-50/60 divide-y divide-slate-200/60">
           {/* ROW 1: Department Pills + Period Selector Button (Left) & Bulk Action + Counter (Right) */}
-          <div className="p-2.5 sm:px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+          <div className="p-2.5 sm:px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 relative z-20">
             <div className="flex flex-wrap items-center gap-2">
               {/* Department Filter Pills */}
               <div className="flex items-center gap-1 bg-slate-200/70 p-1 rounded-xl text-xs font-semibold">
@@ -371,7 +371,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
               </div>
 
               {/* Periode Bulan Dropdown Button */}
-              <div className="relative" ref={monthDropdownRef}>
+              <div className="relative z-30" ref={monthDropdownRef}>
                 <button
                   type="button"
                   onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
@@ -463,7 +463,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
           </div>
 
           {/* ROW 2: Search Box + Filter Status Dropdown + Sort Selector + Reset */}
-          <div className="p-2.5 sm:px-4 py-2 flex flex-wrap items-center gap-2 sm:gap-2.5">
+          <div className="p-2.5 sm:px-4 py-2 flex flex-wrap items-center gap-2 sm:gap-2.5 relative z-10">
             {/* Search Box */}
             <div className="relative w-full sm:w-auto sm:flex-1 sm:min-w-[200px] sm:max-w-sm">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -487,7 +487,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
 
             <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
               {/* Filter Status Button with Dropdown */}
-              <div className="relative" ref={filterDropdownRef}>
+              <div className="relative z-20" ref={filterDropdownRef}>
                 <button
                   type="button"
                   onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}

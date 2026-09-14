@@ -557,9 +557,9 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
       {activeSubTab === 'matrix' && (
         <div className="space-y-3 sm:space-y-4">
           {/* Toolbar Aksi Cepat & Periode */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+          <div className="relative z-40 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
             {/* Di sebelah kiri: Dropdown Select Periode */}
-            <div className="relative z-20" ref={monthDropdownRef}>
+            <div className="relative z-50" ref={monthDropdownRef}>
               <button
                 type="button"
                 onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
@@ -579,7 +579,7 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
 
               {/* Month Selector Dropdown Popover */}
               {isMonthDropdownOpen && (
-                <div className="absolute left-0 mt-1.5 w-72 bg-white rounded-xl shadow-xl border border-slate-200 z-30 p-3 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute left-0 mt-1.5 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 p-3 animate-in fade-in zoom-in-95 duration-150">
                   <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center justify-between">
                     <span>Pilih Periode Bulan</span>
                     <div className="flex items-center gap-1">
@@ -684,9 +684,9 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col relative z-10">
             {/* Table Control Bar */}
-            <div className="relative z-30 border-b border-slate-200/80 bg-slate-50/60">
+            <div className="border-b border-slate-200/80 bg-slate-50/60">
               <div className="p-2.5 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
                 <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 flex-1 max-w-xl">
                   {/* Department Filter Pills */}
@@ -752,12 +752,12 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
 
             <div className="overflow-x-auto max-h-[640px] relative smooth-scroll-touch">
               <table className="w-full text-left border-collapse text-xs">
-                <thead className="bg-slate-50 sticky top-0 z-30 shadow-xs">
+                <thead className="bg-slate-50 sticky top-0 z-20 shadow-xs">
                   <tr className="border-b border-slate-200">
-                    <th className="sticky left-0 z-40 bg-slate-50 px-1.5 sm:px-3 py-2 sm:py-3 font-bold text-slate-700 w-8 sm:w-10 text-center border-r border-slate-200 text-[11px] sm:text-xs">
+                    <th className="sticky left-0 z-20 bg-slate-50 px-1.5 sm:px-3 py-2 sm:py-3 font-bold text-slate-700 w-8 sm:w-10 text-center border-r border-slate-200 text-[11px] sm:text-xs">
                       #
                     </th>
-                    <th className="sticky left-8 sm:left-10 z-40 bg-slate-50 px-2 sm:px-3 py-2 sm:py-3 font-bold text-slate-700 min-w-[140px] sm:min-w-[220px] max-w-[160px] sm:max-w-[260px] border-r border-slate-200 text-[11px] sm:text-xs">
+                    <th className="sticky left-8 sm:left-10 z-20 bg-slate-50 px-2 sm:px-3 py-2 sm:py-3 font-bold text-slate-700 min-w-[140px] sm:min-w-[220px] max-w-[160px] sm:max-w-[260px] border-r border-slate-200 text-[11px] sm:text-xs">
                       Identitas Pegawai
                     </th>
                     {monthDays.map((d) => {
