@@ -364,7 +364,7 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <span className="block text-[11px] text-slate-600 font-medium mb-1">
+                  <span className="block text-[11px] text-slate-600 font-medium mb-1 whitespace-nowrap">
                     Dari Tanggal:
                   </span>
                   <input
@@ -377,8 +377,8 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
                   />
                 </div>
                 <div>
-                  <span className="block text-[11px] text-slate-600 font-medium mb-1">
-                    Sampai Tanggal (Maks {totalDaysInMonth}):
+                  <span className="block text-[11px] text-slate-600 font-medium mb-1 whitespace-nowrap">
+                    Sampai Tanggal: <span className="text-[10px] text-slate-400 font-normal">(Maks {totalDaysInMonth})</span>
                   </span>
                   <input
                     type="number"
@@ -393,33 +393,43 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
 
               {/* Pilihan Hari Kustom dalam Seminggu */}
               <div className="p-3 bg-white border border-slate-200/90 rounded-xl space-y-2.5 shadow-2xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-800">
-                    Pilih Hari yang Ditugaskan:
+                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                  <span className="text-[11px] font-bold text-slate-800 whitespace-nowrap">
+                    Hari Penugasan:
                   </span>
-                  <div className="flex items-center gap-2 text-[10.5px] font-semibold">
+                  <div className="inline-flex items-center p-0.5 bg-slate-100/90 rounded-lg border border-slate-200/80 text-[10px]">
                     <button
                       type="button"
                       onClick={() => handleSelectDayPreset('all')}
-                      className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      className={`px-2 py-0.5 rounded-md font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                        selectedDays.length === 7
+                          ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
                     >
                       Semua
                     </button>
-                    <span className="text-slate-300">•</span>
                     <button
                       type="button"
                       onClick={() => handleSelectDayPreset('weekdays')}
-                      className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      className={`px-2 py-0.5 rounded-md font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                        selectedDays.length === 5 && [1, 2, 3, 4, 5].every((d) => selectedDays.includes(d))
+                          ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
                     >
-                      Sen - Jum
+                      Sen–Jum
                     </button>
-                    <span className="text-slate-300">•</span>
                     <button
                       type="button"
                       onClick={() => handleSelectDayPreset('weekends')}
-                      className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      className={`px-2 py-0.5 rounded-md font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                        selectedDays.length === 2 && [6, 0].every((d) => selectedDays.includes(d))
+                          ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
                     >
-                      Sab - Min
+                      Sab–Min
                     </button>
                   </div>
                 </div>
@@ -449,15 +459,15 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
                   })}
                 </div>
 
-                <div className="text-[10px] text-slate-500 flex items-center justify-between pt-0.5 border-t border-slate-100">
+                <div className="text-[10px] text-slate-500 flex items-center justify-between pt-1 border-t border-slate-100 gap-1">
                   {selectedDays.length === 0 ? (
                     <span className="text-rose-600 font-bold">⚠️ Pilih minimal 1 hari</span>
                   ) : (
-                    <span>
-                      Hari terpilih: <strong>{selectedDays.length} dari 7 hari</strong>
+                    <span className="text-slate-600 whitespace-nowrap">
+                      Terpilih: <strong className="text-slate-800">{selectedDays.length}/7 hari</strong>
                     </span>
                   )}
-                  <span className="text-blue-600 font-bold">
+                  <span className="text-blue-700 font-bold bg-blue-50 border border-blue-100/80 px-2 py-0.5 rounded-md text-[10px] whitespace-nowrap">
                     {activeDaysCount} hari aktif ({startDay} s/d {endDay})
                   </span>
                 </div>
