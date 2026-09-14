@@ -26,13 +26,28 @@ function formatTimeOffset(baseTime: string, offsetMinutes: number, isNextDay?: b
   const newM = totalMinutes % 60;
   const timeStr = `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')} WIB`;
 
-  if (isNextDay || dayOffset > 0) {
-    return `${timeStr} (+1 hari)`;
+  const totalDays = (isNextDay ? 1 : 0) + dayOffset;
+  if (totalDays > 0) {
+    return `${timeStr} (+${totalDays} hari)`;
   }
-  if (dayOffset < 0) {
-    return `${timeStr} (-1 hari)`;
+  if (totalDays < 0) {
+    return `${timeStr} (${totalDays} hari)`;
   }
   return timeStr;
+}
+
+function getMinutesFromMidnight(timeStr: string): number {
+  if (!timeStr) return 0;
+  const [h, m] = timeStr.split(':').map(Number);
+  return (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
+}
+
+function getMinutesToEndOfDay(timeStr: string): number {
+  if (!timeStr) return 0;
+  const [h, m] = timeStr.split(':').map(Number);
+  const total = (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
+  const diff = 1439 - total;
+  return diff >= 0 ? diff : 0;
 }
 
 function calculateWorkDuration(startTime: string, endTime: string, isOvernight: boolean): string {
@@ -209,8 +224,8 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
           start_time: formIsOffDay ? '00:00:00' : sTime,
           end_time: formIsOffDay ? '00:00:00' : eTime,
           grace_period_minutes: formGracePeriod,
-          check_in_window_minutes: formCheckInWindow,
-          check_out_window_minutes: formCheckOutWindow,
+          check_in_window_minutes: typeof formCheckInWindow === 'number' && !isNaN(formCheckInWindow) ? formCheckInWindow : 120,
+          check_out_window_minutes: typeof formCheckOutWindow === 'number' && !isNaN(formCheckOutWindow) ? formCheckOutWindow : 240,
           is_overnight: formIsOvernight,
           is_off_day: formIsOffDay,
           color: formColor,
@@ -533,7 +548,7 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                       {/* Jendela Buka Tap Masuk */}
-                      <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-2xs space-y-2">
+                      <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-2xs space-y-2.5">
                         <div className="flex items-center justify-between text-[11px]">
                           <span className="font-bold text-slate-700">Batas Maksimal Absen Masuk</span>
                           <span className="text-blue-600 font-bold text-[10px] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
@@ -544,16 +559,69 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                         <div className="relative">
                           <input
                             type="number"
-                            min={15}
-                            max={360}
-                            step={15}
+                            min={0}
+                            max={1440}
+                            step={1}
                             value={formCheckInWindow}
-                            onChange={(e) => setFormCheckInWindow(Number(e.target.value))}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setFormCheckInWindow(val === '' ? 0 : Number(val));
+                            }}
                             className="w-full pl-3 pr-12 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                           />
                           <span className="absolute right-3 top-2 text-[10px] text-slate-400 font-medium">
                             menit
                           </span>
+                        </div>
+
+                        {/* Quick Presets for Check-In */}
+                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                          <button
+                            type="button"
+                            onClick={() => setFormCheckInWindow(60)}
+                            className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all border ${
+                              formCheckInWindow === 60
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
+                            }`}
+                          >
+                            60m
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormCheckInWindow(120)}
+                            className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all border ${
+                              formCheckInWindow === 120
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
+                            }`}
+                          >
+                            120m
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormCheckInWindow(getMinutesFromMidnight(formStartTime))}
+                            className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all border ${
+                              formCheckInWindow === getMinutesFromMidnight(formStartTime)
+                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
+                                : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200'
+                            }`}
+                            title="Buka tap sejak pergantian hari (00:00 WIB)"
+                          >
+                            Awal Hari 00:00 ({getMinutesFromMidnight(formStartTime)}m)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormCheckInWindow(getMinutesFromMidnight(formStartTime) + 1)}
+                            className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all border ${
+                              formCheckInWindow === getMinutesFromMidnight(formStartTime) + 1
+                                ? 'bg-purple-600 text-white border-purple-600 shadow-2xs'
+                                : 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200'
+                            }`}
+                            title="Buka tap sejak batas hari sebelumnya (23:59 WIB)"
+                          >
+                            Batas 23:59 (-1h)
+                          </button>
                         </div>
 
                         <div className="text-[10.5px] text-slate-600 flex items-center gap-1.5 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-100">
@@ -565,7 +633,7 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                       </div>
 
                       {/* Batas Akhir Tap Pulang */}
-                      <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-2xs space-y-2">
+                      <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-2xs space-y-2.5">
                         <div className="flex items-center justify-between text-[11px]">
                           <span className="font-bold text-slate-700">Batas Maksimal Absen Pulang</span>
                           <span className="text-blue-600 font-bold text-[10px] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
@@ -576,16 +644,57 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                         <div className="relative">
                           <input
                             type="number"
-                            min={30}
-                            max={480}
-                            step={15}
+                            min={0}
+                            max={1440}
+                            step={1}
                             value={formCheckOutWindow}
-                            onChange={(e) => setFormCheckOutWindow(Number(e.target.value))}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setFormCheckOutWindow(val === '' ? 0 : Number(val));
+                            }}
                             className="w-full pl-3 pr-12 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                           />
                           <span className="absolute right-3 top-2 text-[10px] text-slate-400 font-medium">
                             menit
                           </span>
+                        </div>
+
+                        {/* Quick Presets for Check-Out */}
+                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                          <button
+                            type="button"
+                            onClick={() => setFormCheckOutWindow(120)}
+                            className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all border ${
+                              formCheckOutWindow === 120
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
+                            }`}
+                          >
+                            120m
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormCheckOutWindow(240)}
+                            className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all border ${
+                              formCheckOutWindow === 240
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
+                            }`}
+                          >
+                            240m
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormCheckOutWindow(getMinutesToEndOfDay(formEndTime))}
+                            className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all border ${
+                              formCheckOutWindow === getMinutesToEndOfDay(formEndTime)
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                            }`}
+                            title="Perpanjang batas tap pulang hingga batas ganti hari (23:59 WIB)"
+                          >
+                            Sampai 23:59 ({getMinutesToEndOfDay(formEndTime)}m)
+                          </button>
                         </div>
 
                         <div className="text-[10.5px] text-slate-600 flex items-center gap-1.5 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-100">
