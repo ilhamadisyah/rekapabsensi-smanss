@@ -265,18 +265,15 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             <thead className="bg-slate-100/90 sticky top-0 border-b border-slate-200 z-10">
               <tr>
                 <th className="p-3 font-bold text-slate-700 w-12 text-center">No</th>
-                <th className="p-3 font-bold text-slate-700">NIK &amp; Nama Pegawai</th>
-                <th className="p-3 font-bold text-slate-700">Unit / Jabatan</th>
-                <th className="p-3 font-bold text-slate-700 text-center w-36">ID Mesin Biometrik</th>
-                <th className="p-3 font-bold text-slate-700 text-center w-32">Baris Excel Template</th>
-                <th className="p-3 font-bold text-slate-700 text-center w-24">Status</th>
-                <th className="p-3 font-bold text-slate-700 text-center w-24">Aksi</th>
+                <th className="p-3 font-bold text-slate-700">Nama &amp; NIK</th>
+                <th className="p-3 font-bold text-slate-700 w-44">Unit / Jabatan</th>
+                <th className="p-3 font-bold text-slate-700 text-center w-28">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-6 text-center text-slate-400 text-xs italic">
+                  <td colSpan={4} className="p-6 text-center text-slate-400 text-xs italic">
                     Tidak ditemukan pegawai dengan kata kunci &quot;{search}&quot;.
                   </td>
                 </tr>
@@ -289,28 +286,31 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                       <td className="p-3 text-center text-slate-400 font-semibold">{idx + 1}</td>
                       <td className="p-3">
                         {isEditing ? (
-                          <div className="space-y-1">
-                            <input
-                              type="text"
-                              value={editNik}
-                              onChange={(e) => setEditNik(e.target.value)}
-                              placeholder="NIK (Wajib)"
-                              className="w-full px-2 py-0.5 text-xs font-sans font-bold border border-blue-400 rounded-lg text-blue-700"
-                            />
+                          <div className="space-y-1.5 max-w-sm">
                             <input
                               type="text"
                               value={editFullName}
                               onChange={(e) => setEditFullName(e.target.value)}
-                              placeholder="Nama lengkap"
-                              className="w-full px-2 py-1 text-xs border border-slate-300 rounded-lg font-semibold"
+                              placeholder="Nama lengkap pegawai"
+                              className="w-full px-2.5 py-1 text-xs font-bold border border-blue-400 rounded-lg text-slate-900 bg-white"
                             />
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-semibold text-slate-400">NIK:</span>
+                              <input
+                                type="text"
+                                value={editNik}
+                                onChange={(e) => setEditNik(e.target.value)}
+                                placeholder="NIK (Wajib)"
+                                className="w-full px-2 py-0.5 text-xs font-sans font-bold border border-slate-300 rounded-lg text-blue-700 bg-white"
+                              />
+                            </div>
                           </div>
                         ) : (
                           <div>
-                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 font-sans font-bold text-[11px]">
+                            <div className="font-bold text-slate-900 text-[13px]">{emp.full_name}</div>
+                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 font-sans font-bold text-[10.5px] mt-0.5">
                               NIK: {emp.nik || emp.id || '-'}
                             </div>
-                            <div className="font-bold text-slate-900 mt-1">{emp.full_name}</div>
                           </div>
                         )}
                       </td>
@@ -319,14 +319,14 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                           <select
                             value={editDepartment === 'Guru' || editDepartment.includes('Guru') ? 'Guru' : 'Staff'}
                             onChange={(e) => setEditDepartment(e.target.value)}
-                            className="w-full px-2 py-1 text-xs border border-blue-400 rounded-lg font-semibold bg-white"
+                            className="w-full px-2.5 py-1 text-xs border border-blue-400 rounded-lg font-semibold bg-white"
                           >
                             <option value="Guru">Guru</option>
                             <option value="Staff">Staff</option>
                           </select>
                         ) : (
                           <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                            className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold ${
                               emp.department && emp.department.includes('Guru')
                                 ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                                 : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -338,59 +338,18 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                       </td>
                       <td className="p-3 text-center">
                         {isEditing ? (
-                          <input
-                            type="text"
-                            value={editMachineId}
-                            onChange={(e) => setEditMachineId(e.target.value)}
-                            className="w-24 px-2 py-1 text-center font-sans font-bold text-xs border border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500/20"
-                          />
-                        ) : (
-                          <span className="px-2.5 py-1 bg-slate-100 text-slate-800 rounded-lg font-sans font-bold text-xs">
-                            {emp.machine_id}
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-3 text-center">
-                        {isEditing ? (
-                          <input
-                            type="number"
-                            min={1}
-                            max={500}
-                            value={editRowIndex}
-                            onChange={(e) => setEditRowIndex(Number(e.target.value))}
-                            className="w-20 px-2 py-1 text-center font-sans font-bold text-xs border border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500/20"
-                          />
-                        ) : (
-                          <span className="font-sans text-slate-600 font-semibold">
-                            Baris {emp.excel_row_index}
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-3 text-center">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            emp.is_active !== false
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-slate-100 text-slate-600'
-                          }`}
-                        >
-                          {emp.is_active !== false ? 'Aktif' : 'Nonaktif'}
-                        </span>
-                      </td>
-                      <td className="p-3 text-center">
-                        {isEditing ? (
                           <div className="flex items-center justify-center gap-1">
                             <button
                               onClick={() => saveEdit(emp.id)}
                               disabled={isSaving}
-                              className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
+                              className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors cursor-pointer"
                               title="Simpan Perubahan"
                             >
                               <Check className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={cancelEdit}
-                              className="p-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg transition-colors"
+                              className="p-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg transition-colors cursor-pointer"
                               title="Batal"
                             >
                               <X className="w-3.5 h-3.5" />
@@ -400,7 +359,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                           <div className="flex items-center justify-center gap-1">
                             <button
                               onClick={() => startEdit(emp)}
-                              className="p-1.5 hover:bg-blue-50 text-slate-500 hover:text-blue-600 rounded-lg transition-colors"
+                              className="p-1.5 hover:bg-blue-50 text-slate-500 hover:text-blue-600 rounded-lg transition-colors cursor-pointer"
                               title="Ubah Pegawai"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
@@ -408,7 +367,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                             <button
                               onClick={() => handleDelete(emp)}
                               disabled={isDeleting === emp.id}
-                              className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-colors"
+                              className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
                               title="Hapus Pegawai"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
