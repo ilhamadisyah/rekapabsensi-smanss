@@ -44,19 +44,21 @@ export async function GET(request: NextRequest) {
     const scheduleMap = new Map(schedules.map((s) => [`${s.employee_id}___${s.date}`, s]));
 
     // Ensure all employees with attendance records are present in the list with their real names
-    const existingEmpIds = new Set(employees.map((e) => e.machine_id));
+    const existingEmpKeys = new Set(
+      employees.flatMap((e) => [e.id, e.nik, e.machine_id].filter(Boolean))
+    );
     for (const rec of attendanceRecords) {
-      if (!existingEmpIds.has(rec.employee_id)) {
-        existingEmpIds.add(rec.employee_id);
+      if (!existingEmpKeys.has(rec.employee_id)) {
+        existingEmpKeys.add(rec.employee_id);
         const resolvedName =
           rec.employee_name ||
           getEmployeeNameByMachineId(rec.employee_id) ||
           `Pegawai ${rec.employee_id}`;
 
         employees.push({
-          id: `emp-auto-${rec.employee_id}`,
+          id: rec.employee_id,
           machine_id: rec.employee_id,
-          nik: '',
+          nik: rec.employee_id,
           full_name: resolvedName,
           department: 'Pegawai',
           excel_row_index: employees.length + 1,
@@ -105,19 +107,24 @@ export async function GET(request: NextRequest) {
       new Set(datesWithLogs.map((d) => parseInt(d.split('-')[2], 10)))
     ).sort((a, b) => a - b);
 
-    // Build fast lookup map: employeeId -> day -> DailyAttendance
+    // Build fast lookup map: employeeId (nik, machine_id, id) -> day -> DailyAttendance
     const attendanceMap: Record<string, Record<number, any>> = {};
     for (const emp of employees) {
-      attendanceMap[emp.machine_id] = {};
+      const dayRecord: Record<number, any> = {};
+      if (emp.nik) attendanceMap[emp.nik] = dayRecord;
+      if (emp.machine_id) attendanceMap[emp.machine_id] = dayRecord;
+      if (emp.id) attendanceMap[emp.id] = dayRecord;
     }
 
     // Populate existing records
     for (const rec of attendanceRecords) {
       const day = parseInt(rec.attendance_date.split('-')[2], 10);
-      if (!attendanceMap[rec.employee_id]) {
-        attendanceMap[rec.employee_id] = {};
+      let dayRecord = attendanceMap[rec.employee_id];
+      if (!dayRecord) {
+        dayRecord = {};
+        attendanceMap[rec.employee_id] = dayRecord;
       }
-      attendanceMap[rec.employee_id][day] = { ...rec };
+      dayRecord[day] = { ...rec };
     }
 
     // Evaluate attendance dynamically against database schedules & shifts
@@ -127,9 +134,22 @@ export async function GET(request: NextRequest) {
     let totalRequiredWorkSessions = 0;
 
     for (const emp of employees) {
+      const empKey = emp.nik || emp.machine_id || emp.id;
+      const empDayMap =
+        (emp.nik && attendanceMap[emp.nik]) ||
+        attendanceMap[emp.machine_id] ||
+        (emp.id && attendanceMap[emp.id]) ||
+        {};
+      if (emp.nik) attendanceMap[emp.nik] = empDayMap;
+      if (emp.machine_id) attendanceMap[emp.machine_id] = empDayMap;
+      if (emp.id) attendanceMap[emp.id] = empDayMap;
+
       for (const d of days) {
         const isRecordedDay = recordedDays.includes(d.day);
-        const sched = scheduleMap.get(`${emp.machine_id}___${d.dateStr}`);
+        const sched =
+          (emp.nik ? scheduleMap.get(`${emp.nik}___${d.dateStr}`) : undefined) ||
+          scheduleMap.get(`${emp.machine_id}___${d.dateStr}`) ||
+          (emp.id ? scheduleMap.get(`${emp.id}___${d.dateStr}`) : undefined);
         const hol = holidayMap.get(d.dateStr);
         const shift = sched ? shiftMap.get(sched.shift_id) : null;
 
@@ -151,7 +171,7 @@ export async function GET(request: NextRequest) {
         const shiftName = sched?.shift_name || shift?.name || (isHoliday ? (hol?.name || 'Hari Libur Resmi') : (d.isWeekend ? 'Akhir Pekan' : defaultShift.name));
         const shiftColor = shift?.color || (isHoliday ? '#f43f5e' : (d.isWeekend ? '#94a3b8' : defaultShift.color));
 
-        let rec = attendanceMap[emp.machine_id]?.[d.day];
+        let rec = empDayMap[d.day];
 
         if (rec) {
           // Record exists from biometric punch or manual verification
@@ -177,7 +197,7 @@ export async function GET(request: NextRequest) {
               // Only pair if starting punch is legitimately in the evening window (>= earliestEveningIn)
               // If punch was in the daytime (e.g. 06:22), it is NEVER an overnight shift!
               if (rec.first_in && rec.first_in >= earliestEveningIn && (!rec.last_out || rec.last_out >= '15:00:00' || rec.tap_count < 2)) {
-                const nextDayRec = attendanceMap[emp.machine_id]?.[d.day + 1];
+                const nextDayRec = empDayMap[d.day + 1];
                 if (nextDayRec && nextDayRec.first_in && nextDayRec.first_in >= endTime && nextDayRec.first_in <= latestMorningOut) {
                   rec.last_out = nextDayRec.first_in;
                   rec.tap_count = Math.max(rec.tap_count || 1, 2);
@@ -219,9 +239,9 @@ export async function GET(request: NextRequest) {
             if ((isHoliday || isWeekendLibur) && !hasAssignedDuty) {
               // Designated Holiday or Weekend without assigned active duty -> LIBUR
               rec = {
-                id: `att-hol-${emp.machine_id}-${d.dateStr}`,
+                id: `att-hol-${empKey}-${d.dateStr}`,
                 upload_id: 'virtual-holiday',
-                employee_id: emp.machine_id,
+                employee_id: empKey,
                 employee_name: emp.full_name,
                 attendance_date: d.dateStr,
                 first_in: null,
@@ -238,13 +258,13 @@ export async function GET(request: NextRequest) {
                 is_custom_schedule: false,
                 updated_at: new Date().toISOString(),
               };
-              attendanceMap[emp.machine_id][d.day] = rec;
+              empDayMap[d.day] = rec;
             } else if (isOffDay) {
               // Explicit OFF shift schedule -> OFF
               rec = {
-                id: `att-off-${emp.machine_id}-${d.dateStr}`,
+                id: `att-off-${empKey}-${d.dateStr}`,
                 upload_id: 'virtual-schedule',
-                employee_id: emp.machine_id,
+                employee_id: empKey,
                 employee_name: emp.full_name,
                 attendance_date: d.dateStr,
                 first_in: null,
@@ -262,13 +282,13 @@ export async function GET(request: NextRequest) {
                 is_custom_schedule: Boolean(sched),
                 updated_at: new Date().toISOString(),
               };
-              attendanceMap[emp.machine_id][d.day] = rec;
+              empDayMap[d.day] = rec;
             } else if (isWorkRequired) {
               // Required to work on this recorded day, but absent -> Alpha (A)
               rec = {
-                id: `att-alpha-${emp.machine_id}-${d.dateStr}`,
+                id: `att-alpha-${empKey}-${d.dateStr}`,
                 upload_id: 'virtual-alpha',
-                employee_id: emp.machine_id,
+                employee_id: empKey,
                 employee_name: emp.full_name,
                 attendance_date: d.dateStr,
                 first_in: null,
@@ -288,15 +308,15 @@ export async function GET(request: NextRequest) {
                 is_custom_schedule: Boolean(sched),
                 updated_at: new Date().toISOString(),
               };
-              attendanceMap[emp.machine_id][d.day] = rec;
+              empDayMap[d.day] = rec;
             }
           } else {
             // Future / unrecorded day
             if (sched) {
               rec = {
-                id: `att-plan-${emp.machine_id}-${d.dateStr}`,
+                id: `att-plan-${empKey}-${d.dateStr}`,
                 upload_id: 'virtual-plan',
-                employee_id: emp.machine_id,
+                employee_id: empKey,
                 employee_name: emp.full_name,
                 attendance_date: d.dateStr,
                 first_in: null,
@@ -316,12 +336,12 @@ export async function GET(request: NextRequest) {
                 is_custom_schedule: true,
                 updated_at: new Date().toISOString(),
               };
-              attendanceMap[emp.machine_id][d.day] = rec;
+              empDayMap[d.day] = rec;
             } else if (isHoliday) {
               rec = {
-                id: `att-hol-${emp.machine_id}-${d.dateStr}`,
+                id: `att-hol-${empKey}-${d.dateStr}`,
                 upload_id: 'virtual-holiday',
-                employee_id: emp.machine_id,
+                employee_id: empKey,
                 employee_name: emp.full_name,
                 attendance_date: d.dateStr,
                 first_in: null,
@@ -338,13 +358,13 @@ export async function GET(request: NextRequest) {
                 is_custom_schedule: false,
                 updated_at: new Date().toISOString(),
               };
-              attendanceMap[emp.machine_id][d.day] = rec;
+              empDayMap[d.day] = rec;
             } else {
               // Unrecorded regular workday (logs not uploaded yet)
               rec = {
-                id: `att-unrecorded-${emp.machine_id}-${d.dateStr}`,
+                id: `att-unrecorded-${empKey}-${d.dateStr}`,
                 upload_id: 'virtual-unrecorded',
-                employee_id: emp.machine_id,
+                employee_id: empKey,
                 employee_name: emp.full_name,
                 attendance_date: d.dateStr,
                 first_in: null,
@@ -364,7 +384,7 @@ export async function GET(request: NextRequest) {
                 is_custom_schedule: false,
                 updated_at: new Date().toISOString(),
               };
-              attendanceMap[emp.machine_id][d.day] = rec;
+              empDayMap[d.day] = rec;
             }
           }
         }

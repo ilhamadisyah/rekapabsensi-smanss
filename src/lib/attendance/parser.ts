@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { DailyAttendance, AttendanceCode } from '../types';
+import { DailyAttendance, AttendanceCode, Employee } from '../types';
 import { getEmployeeNameByMachineId } from './employee-mapping';
 
 export interface DetectedPeriod {
@@ -18,10 +18,17 @@ export interface DetectedPeriod {
 
 export interface RawPunchRecord {
   machineId: string;
+  nik?: string;
   name: string;
   timestamp: Date;
   dateStr: string;
   timeStr: string;
+}
+
+export interface MissingNikRecord {
+  machineId: string;
+  name: string;
+  punchCount: number;
 }
 
 export interface ParseResult {
@@ -35,6 +42,10 @@ export interface ParseResult {
   detectedDates: string[];
   detectedPeriod?: DetectedPeriod;
   employeeNames?: Record<string, string>;
+  hasMissingNik?: boolean;
+  missingNikCount?: number;
+  missingNikRecords?: MissingNikRecord[];
+  employeeMeta?: Record<string, { nik: string; machineId: string; name: string }>;
 }
 
 const MONTH_NAMES_ID = [
@@ -458,6 +469,7 @@ export interface ParseAttendanceOptions {
     checkOutWindowMinutes?: number;
   }>;
   enableCrossDayPairing?: boolean;
+  masterEmployees?: Employee[];
 }
 
 /**
@@ -531,9 +543,10 @@ export function parseAttendanceFile(
       };
     }
 
-    // Locate header row containing 'No. ID', 'Nama', 'Waktu', 'Status'
+    // Locate header row containing 'No. ID', 'Nama', 'Waktu', 'Status' or 'NIK'
     let headerRowIdx = -1;
     let colIdIdx = -1;
+    let colNikIdx = -1;
     let colNameIdx = -1;
     let colTimeIdx = -1;
     let colStatusIdx = -1;
@@ -544,13 +557,15 @@ export function parseAttendanceFile(
 
       const rowStr = row.map((cell) => String(cell || '').trim().toLowerCase());
       const idIdx = rowStr.findIndex((c) => c === 'no. id' || c === 'id' || c === 'no.id');
+      const nikIdx = rowStr.findIndex((c) => c === 'nik' || c === 'nip' || c === 'no. nik' || c === 'no.nik');
       const nameIdx = rowStr.findIndex((c) => c === 'nama' || c === 'name');
       const timeIdx = rowStr.findIndex((c) => c === 'waktu' || c === 'time' || c === 'jam');
       const statusIdx = rowStr.findIndex((c) => c === 'status');
 
-      if (idIdx !== -1 && nameIdx !== -1 && timeIdx !== -1) {
+      if ((idIdx !== -1 || nikIdx !== -1) && nameIdx !== -1 && timeIdx !== -1) {
         headerRowIdx = i;
         colIdIdx = idIdx;
+        colNikIdx = nikIdx;
         colNameIdx = nameIdx;
         colTimeIdx = timeIdx;
         colStatusIdx = statusIdx;
@@ -561,7 +576,7 @@ export function parseAttendanceFile(
     if (headerRowIdx === -1) {
       return {
         success: false,
-        error: 'Header berkas tidak valid. Berkas wajib memuat kolom: No. ID, Nama, Waktu, Status.',
+        error: 'Header berkas tidak valid. Berkas wajib memuat kolom: No. ID / NIK, Nama, Waktu, Status.',
         records: [],
         totalRawRows: 0,
         uniqueEmployees: 0,
@@ -579,16 +594,18 @@ export function parseAttendanceFile(
       const row = rawRows[r];
       if (!Array.isArray(row)) continue;
 
-      const rawId = row[colIdIdx];
-      const rawName = row[colNameIdx];
-      const rawTime = row[colTimeIdx];
+      const rawId = colIdIdx !== -1 ? row[colIdIdx] : '';
+      const rawNik = colNikIdx !== -1 ? row[colNikIdx] : '';
+      const rawName = colNameIdx !== -1 ? row[colNameIdx] : '';
+      const rawTime = colTimeIdx !== -1 ? row[colTimeIdx] : '';
 
       // Ignore header repetitions or empty rows
-      if (!rawId || !rawTime || String(rawId).toLowerCase().includes('no. id') || String(rawTime).toLowerCase().includes('waktu')) {
+      if ((!rawId && !rawNik) || !rawTime || String(rawId).toLowerCase().includes('no. id') || String(rawTime).toLowerCase().includes('waktu')) {
         continue;
       }
 
-      const machineId = String(rawId).trim().replace(/\.0$/, '');
+      const machineId = String(rawId || '').trim().replace(/\.0$/, '');
+      const nik = String(rawNik || '').trim().replace(/\.0$/, '');
       const name = String(rawName || '').trim();
 
       const timestamp = parseTransactionTimestamp(rawTime, activeMonth, activeYear);
@@ -605,6 +622,7 @@ export function parseAttendanceFile(
       validRowCount++;
       rawPunches.push({
         machineId,
+        nik,
         name,
         timestamp,
         dateStr: formatDate(timestamp),
@@ -612,32 +630,78 @@ export function parseAttendanceFile(
       });
     }
 
-    // Group punches by employee to support Cross-Day Punch Pairing (Overnight Shifts)
-    const punchesByEmployee = new Map<string, RawPunchRecord[]>();
+    // Build master lookup maps
+    const existingByNik = new Map<string, Employee>();
+    const existingByMachineId = new Map<string, Employee>();
+    (options?.masterEmployees || []).forEach((e) => {
+      if (e.nik) existingByNik.set(e.nik, e);
+      if (e.machine_id) existingByMachineId.set(e.machine_id, e);
+    });
+
+    // Group punches by employee primarily based on NIK
+    const punchesByEmployee = new Map<string, {
+      nik: string;
+      machineId: string;
+      name: string;
+      punches: RawPunchRecord[];
+      isMissingNik: boolean;
+    }>();
     const detectedDatesSet = new Set<string>();
     const uniqueEmployeesSet = new Set<string>();
 
     for (const punch of rawPunches) {
-      if (!punchesByEmployee.has(punch.machineId)) {
-        punchesByEmployee.set(punch.machineId, []);
+      let resolvedNik = punch.nik || '';
+
+      // Fallback: check if machineId maps to an existing employee with NIK
+      if (!resolvedNik && punch.machineId && existingByMachineId.has(punch.machineId)) {
+        resolvedNik = existingByMachineId.get(punch.machineId)?.nik || '';
       }
-      punchesByEmployee.get(punch.machineId)!.push(punch);
+
+      const isMissingNik = !resolvedNik;
+      const empKey = resolvedNik || `UNREGISTERED-ID-${punch.machineId}`;
+
+      if (!punchesByEmployee.has(empKey)) {
+        punchesByEmployee.set(empKey, {
+          nik: resolvedNik,
+          machineId: punch.machineId,
+          name: punch.name,
+          punches: [],
+          isMissingNik,
+        });
+      }
+      punchesByEmployee.get(empKey)!.punches.push(punch);
       detectedDatesSet.add(punch.dateStr);
-      uniqueEmployeesSet.add(punch.machineId);
+      uniqueEmployeesSet.add(empKey);
     }
 
     const records: DailyAttendance[] = [];
     const employeeNames: Record<string, string> = {};
+    const employeeMeta: Record<string, { nik: string; machineId: string; name: string }> = {};
+    const missingNikRecords: MissingNikRecord[] = [];
     let totalPresent = 0;
     let totalUnverifiedRed = 0;
     const enableCrossDayPairing = options?.enableCrossDayPairing ?? true;
 
-    for (const [machineId, punches] of punchesByEmployee.entries()) {
+    for (const [empKey, group] of punchesByEmployee.entries()) {
+      if (group.isMissingNik) {
+        missingNikRecords.push({
+          machineId: group.machineId,
+          name: group.name || `Pegawai ID ${group.machineId}`,
+          punchCount: group.punches.length,
+        });
+      }
+
+      const punches = group.punches;
       punches.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-      const rawName = punches[0]?.name || '';
-      const realName = getEmployeeNameByMachineId(machineId, rawName);
-      employeeNames[machineId] = realName;
+      const rawName = punches[0]?.name || group.name || '';
+      const realName = getEmployeeNameByMachineId(group.machineId, rawName);
+      employeeNames[empKey] = realName;
+      employeeMeta[empKey] = {
+        nik: group.nik,
+        machineId: group.machineId,
+        name: realName,
+      };
 
       const consumedIndices = new Set<number>();
 
@@ -646,7 +710,9 @@ export function parseAttendanceFile(
 
         const punch = punches[i];
         const dateStr = punch.dateStr;
-        const sched = options?.scheduleMap?.get(`${machineId}___${dateStr}`);
+        const sched =
+          options?.scheduleMap?.get(`${empKey}___${dateStr}`) ||
+          options?.scheduleMap?.get(`${group.machineId}___${dateStr}`);
 
         // Check if this punch is candidate for beginning an overnight shift:
         // Must be scheduled as overnight AND punch must be in the evening/night window (not daytime)!
@@ -699,21 +765,18 @@ export function parseAttendanceFile(
           }
 
           if (nextDayMorningPunches.length > 0) {
+            const bestMorningOut = nextDayMorningPunches[nextDayMorningPunches.length - 1];
+            sessionPunches.push(bestMorningOut.punch);
+            consumedIndices.add(bestMorningOut.index);
             isOvernightSession = true;
-            for (const item of nextDayMorningPunches) {
-              sessionPunches.push(item.punch);
-              consumedIndices.add(item.index);
-            }
           }
-        }
-
-        // If not paired with next morning checkout, collect remaining punches on the same date
-        if (!isOvernightSession) {
+        } else {
+          // Standard daytime pairing: collect punches on the same calendar date
           for (let j = i + 1; j < punches.length; j++) {
             if (consumedIndices.has(j)) continue;
-            const pSame = punches[j];
-            if (pSame.dateStr === dateStr) {
-              sessionPunches.push(pSame);
+            const p2 = punches[j];
+            if (p2.dateStr === dateStr) {
+              sessionPunches.push(p2);
               consumedIndices.add(j);
             } else {
               break;
@@ -722,25 +785,27 @@ export function parseAttendanceFile(
         }
 
         sessionPunches.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-        const firstIn = sessionPunches[0].timeStr;
-        const lastOut = sessionPunches[sessionPunches.length - 1].timeStr;
         const tapCount = sessionPunches.length;
+        const firstIn = sessionPunches[0].timeStr;
+        const lastOut = sessionPunches.length > 1 ? sessionPunches[sessionPunches.length - 1].timeStr : null;
 
         // Check weekend
-        const d = new Date(dateStr + 'T00:00:00');
-        const dayOfWeek = d.getDay(); // 0 is Sun, 6 is Sat
+        const pDate = new Date(dateStr + 'T00:00:00');
+        const dayOfWeek = pDate.getDay(); // 0 is Sun, 6 is Sat
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-        const scheduleContext: ScheduleEvaluationContext = {
-          startTime: sched?.startTime,
-          endTime: sched?.endTime,
-          gracePeriodMinutes: sched?.gracePeriodMinutes,
-          checkInWindowMinutes: sched?.checkInWindowMinutes,
-          checkOutWindowMinutes: sched?.checkOutWindowMinutes,
-          isOvernight: isOvernightSession || Boolean(sched?.isOvernight),
-          isOffDay: sched?.isOffDay,
-          isCrossDaySession: isOvernightSession,
-        };
+        const scheduleContext = sched
+          ? {
+              startTime: sched.startTime || '07:30:00',
+              endTime: sched.endTime || '16:00:00',
+              gracePeriodMinutes: sched.gracePeriodMinutes,
+              isOffDay: sched.isOffDay,
+              checkInWindowMinutes: sched.checkInWindowMinutes,
+              checkOutWindowMinutes: sched.checkOutWindowMinutes,
+              isOvernight: isOvernightSession || Boolean(sched?.isOvernight),
+              isCrossDaySession: isOvernightSession,
+            }
+          : undefined;
 
         const { systemStatus, finalStatus } = evaluateAttendanceStatus(
           firstIn,
@@ -757,9 +822,9 @@ export function parseAttendanceFile(
         }
 
         records.push({
-          id: `att-${machineId}-${dateStr}`,
+          id: `att-${empKey}-${dateStr}`,
           upload_id: uploadId,
-          employee_id: machineId,
+          employee_id: empKey, // Primary ID: NIK (or UNREGISTERED-ID-xxx if missing)
           employee_name: realName,
           attendance_date: dateStr,
           first_in: firstIn,
@@ -784,6 +849,10 @@ export function parseAttendanceFile(
       detectedDates: Array.from(detectedDatesSet).sort(),
       detectedPeriod,
       employeeNames,
+      hasMissingNik: missingNikRecords.length > 0,
+      missingNikCount: missingNikRecords.length,
+      missingNikRecords,
+      employeeMeta,
     };
   } catch (err: any) {
     return {

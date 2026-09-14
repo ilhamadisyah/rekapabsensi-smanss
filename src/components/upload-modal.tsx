@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, X, FileSpreadsheet, CheckCircle2, AlertCircle, Sparkles, Calendar, CheckCheck, ShieldCheck } from 'lucide-react';
+import { Upload, X, FileSpreadsheet, CheckCircle2, AlertCircle, Sparkles, Calendar, ShieldCheck, AlertTriangle, UserCheck } from 'lucide-react';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -22,6 +22,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   const [detectedPeriod, setDetectedPeriod] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [missingNikData, setMissingNikData] = useState<{
+    count: number;
+    records: { machine_id: string; employee_name: string; punch_count: number }[];
+  } | null>(null);
+  const [autoRegisteredCount, setAutoRegisteredCount] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -38,6 +43,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({
       setFile(selected);
       setErrorMsg(null);
       setSuccessMsg(null);
+      setMissingNikData(null);
+      setAutoRegisteredCount(0);
       setDetectedPeriod(null);
       setIsAnalyzing(true);
 
@@ -72,6 +79,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     setIsUploading(true);
     setErrorMsg(null);
     setSuccessMsg(null);
+    setMissingNikData(null);
+    setAutoRegisteredCount(0);
 
     try {
       const formData = new FormData();
@@ -103,10 +112,21 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
       setSuccessMsg(message);
 
-      setTimeout(() => {
-        onUploadSuccess(data.detected_period || detectedPeriod);
-        onClose();
-      }, 1200);
+      if (data.auto_registered_count > 0) {
+        setAutoRegisteredCount(data.auto_registered_count);
+      }
+
+      if (data.has_missing_nik) {
+        setMissingNikData({
+          count: data.missing_nik_count || (data.missing_nik_records?.length || 0),
+          records: data.missing_nik_records || [],
+        });
+      } else {
+        setTimeout(() => {
+          onUploadSuccess(data.detected_period || detectedPeriod);
+          onClose();
+        }, 1400);
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'Gagal mengunggah berkas.');
     } finally {
@@ -229,6 +249,51 @@ export const UploadModal: React.FC<UploadModalProps> = ({
             </div>
           )}
 
+          {/* Auto registered count notification */}
+          {autoRegisteredCount > 0 && (
+            <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs flex items-start gap-2">
+              <UserCheck className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <div className="font-bold">Pendaftaran Otomatis Berhasil:</div>
+                <div>Sebanyak <strong>{autoRegisteredCount}</strong> pegawai baru berhasil ditambahkan ke master berdasarkan NIK dari berkas.</div>
+              </div>
+            </div>
+          )}
+
+          {/* Missing NIK Warning Notification */}
+          {missingNikData && (
+            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs space-y-2 animate-in fade-in">
+              <div className="flex items-start gap-2 font-bold text-amber-950">
+                <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  Pemberitahuan: Terdapat {missingNikData.count} data pegawai yang belum memiliki NIK!
+                </div>
+              </div>
+              <p className="text-[11px] text-amber-800 leading-relaxed">
+                Log absensi pegawai berikut tetap diproses menggunakan ID Mesin sementara. Silakan lengkapi NIK mereka di menu <strong>Master Pegawai</strong> agar pengenalan presensi berbasis NIK berjalan optimal.
+              </p>
+              {missingNikData.records.length > 0 && (
+                <div className="max-h-32 overflow-y-auto rounded-lg border border-amber-200 bg-white/80 p-2 space-y-1">
+                  {missingNikData.records.slice(0, 20).map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-[11px] text-slate-700 py-0.5 border-b border-amber-100/60 last:border-0">
+                      <span className="font-medium truncate max-w-[240px]">
+                        {item.employee_name || 'Tanpa Nama'}
+                      </span>
+                      <span className="font-mono font-bold text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">
+                        ID Mesin: {item.machine_id}
+                      </span>
+                    </div>
+                  ))}
+                  {missingNikData.records.length > 20 && (
+                    <div className="text-[10px] text-amber-700 text-center pt-1 italic">
+                      ... dan {missingNikData.records.length - 20} pegawai lainnya
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Status Messages */}
           {errorMsg && (
             <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
@@ -240,7 +305,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
             </div>
           )}
 
-          {successMsg && (
+          {successMsg && !missingNikData && (
             <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs flex items-start gap-2.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
               <div className="font-medium leading-relaxed">{successMsg}</div>
@@ -249,21 +314,36 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
           {/* Actions */}
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
-            >
-              Tutup
-            </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={!file || isUploading || isAnalyzing}
-              className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 rounded-xl shadow-md flex items-center gap-1.5 transition-all"
-            >
-              {isUploading ? 'Mengolah Log...' : 'Mulai Pengolahan'}
-            </button>
+            {missingNikData ? (
+              <button
+                type="button"
+                onClick={() => {
+                  onUploadSuccess(detectedPeriod);
+                  onClose();
+                }}
+                className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md transition-all flex items-center gap-1.5"
+              >
+                <span>Selesai &amp; Lihat Rekap Presensi</span>
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Tutup
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={!file || isUploading || isAnalyzing}
+                  className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 rounded-xl shadow-md flex items-center gap-1.5 transition-all"
+                >
+                  {isUploading ? 'Mengolah Log...' : 'Mulai Pengolahan'}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

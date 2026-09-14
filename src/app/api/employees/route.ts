@@ -27,19 +27,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!machine_id || !String(machine_id).trim()) {
+    const cleanNik = nik ? String(nik).trim() : '';
+    if (!cleanNik) {
       return NextResponse.json(
-        { success: false, error: 'ID Mesin biometrik wajib diisi.' },
+        { success: false, error: 'NIK (Nomor Induk Karyawan/Pegawai) wajib diisi sebagai identitas utama.' },
         { status: 400 }
       );
     }
 
-    const cleanMachineId = String(machine_id).trim();
+    const cleanMachineId = machine_id && String(machine_id).trim() ? String(machine_id).trim() : cleanNik;
     const allEmployees = await db.getEmployees();
-    const duplicate = allEmployees.find((e) => e.machine_id === cleanMachineId);
-    if (duplicate) {
+
+    const duplicateNik = allEmployees.find((e) => e.nik === cleanNik || e.id === cleanNik);
+    if (duplicateNik) {
       return NextResponse.json(
-        { success: false, error: `ID Mesin ${cleanMachineId} sudah digunakan oleh ${duplicate.full_name}.` },
+        { success: false, error: `NIK ${cleanNik} sudah terdaftar atas nama ${duplicateNik.full_name}.` },
+        { status: 400 }
+      );
+    }
+
+    const duplicateMachine = allEmployees.find((e) => e.machine_id === cleanMachineId);
+    if (duplicateMachine) {
+      return NextResponse.json(
+        { success: false, error: `ID Mesin ${cleanMachineId} sudah digunakan oleh ${duplicateMachine.full_name}.` },
         { status: 400 }
       );
     }
@@ -47,10 +57,11 @@ export async function POST(request: NextRequest) {
     const nextRow = Number(excel_row_index) || (allEmployees.length + 1);
 
     const newEmployee = await db.createEmployee({
+      id: cleanNik,
       machine_id: cleanMachineId,
       full_name: String(full_name).trim(),
       department: department ? String(department).trim() : 'Tenaga Pendidik (Guru)',
-      nik: nik ? String(nik).trim() : '',
+      nik: cleanNik,
       excel_row_index: nextRow,
       is_active: is_active !== false,
     });

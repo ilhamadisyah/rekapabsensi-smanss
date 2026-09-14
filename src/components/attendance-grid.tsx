@@ -210,7 +210,11 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
 
   // Helper to calculate statistics for any employee
   const getEmployeeStats = (emp: Employee) => {
-    const empAttendance = attendanceMap[emp.machine_id] || {};
+    const empAttendance =
+      (emp.nik && attendanceMap[emp.nik]) ||
+      attendanceMap[emp.machine_id] ||
+      (emp.id && attendanceMap[emp.id]) ||
+      {};
     let hadirCount = 0;
     let alphaCount = 0;
     let permissionCount = 0;
@@ -690,7 +694,11 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
               </tr>
             ) : (
               filteredEmployees.map((emp, empIdx) => {
-                const empAttendance = attendanceMap[emp.machine_id] || {};
+                const empAttendance =
+                  (emp.nik && attendanceMap[emp.nik]) ||
+                  attendanceMap[emp.machine_id] ||
+                  (emp.id && attendanceMap[emp.id]) ||
+                  {};
                 // Calculate summary counts for this row
                 let hadirCount = 0;
                 let alphaCount = 0;
@@ -737,9 +745,14 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                         {emp.full_name}
                       </div>
                       <div className="flex items-center gap-1.5 text-[9.5px] sm:text-[10px] text-slate-500 mt-0.5">
-                        <span className="bg-slate-100 text-slate-700 px-1 py-0.2 sm:px-1.5 sm:py-0.5 rounded font-sans font-bold text-[9px] sm:text-[10px]">
-                          ID: {emp.machine_id}
+                        <span className="bg-blue-50 text-blue-800 border border-blue-200 px-1 py-0.2 sm:px-1.5 sm:py-0.5 rounded font-sans font-bold text-[9px] sm:text-[10px]">
+                          {emp.nik ? `NIK: ${emp.nik}` : `ID: ${emp.machine_id}`}
                         </span>
+                        {emp.nik && emp.machine_id && emp.machine_id !== emp.nik && (
+                          <span className="text-slate-400 text-[9px] font-sans">
+                            (ID: {emp.machine_id})
+                          </span>
+                        )}
                         <span className="truncate">{emp.department}</span>
                       </div>
                       {/* Mobile Row Quick Stats */}
@@ -1029,11 +1042,14 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
 
     {/* Floating Cell Details Hover Popover (Clean White Minimalist Design) */}
     {hoveredCell && (() => {
-      const hEmp = employees.find((e) => e.id === hoveredCell.empId || e.machine_id === hoveredCell.empId);
+      const hEmp = employees.find((e) => e.id === hoveredCell.empId || e.nik === hoveredCell.empId || e.machine_id === hoveredCell.empId);
       const hDay = days.find((d) => d.day === hoveredCell.day);
       if (!hEmp || !hDay) return null;
 
-      const hRec = attendanceMap[hEmp.machine_id]?.[hDay.day];
+      const hRec =
+        (hEmp.nik && attendanceMap[hEmp.nik]?.[hDay.day]) ||
+        attendanceMap[hEmp.machine_id]?.[hDay.day] ||
+        (hEmp.id && attendanceMap[hEmp.id]?.[hDay.day]);
       const isOff = hRec?.is_off_day || hRec?.final_status === 'OFF';
       const isHol = hRec?.is_holiday || Boolean(hDay.holiday) || hRec?.final_status === 'LIBUR';
       const hEmpShift = shifts.find((s) => s.id === hRec?.shift_id || s.code === hRec?.shift_code) || defaultShift;
@@ -1099,7 +1115,9 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
           <div className="bg-white text-slate-800 text-xs rounded-xl p-3 shadow-xl border border-slate-200/90 max-w-xs min-w-[210px] animate-in fade-in zoom-in-95 duration-75">
             <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-1.5 mb-2">
               <span className="font-bold text-slate-900 text-xs truncate">{hEmp.full_name}</span>
-              <span className="text-[10px] text-slate-400 font-sans font-medium shrink-0">ID: {hEmp.machine_id}</span>
+              <span className="text-[10px] text-slate-400 font-sans font-medium shrink-0">
+                {hEmp.nik ? `NIK: ${hEmp.nik}` : `ID: ${hEmp.machine_id}`}
+              </span>
             </div>
 
             <div className="space-y-1.5 text-[11px]">

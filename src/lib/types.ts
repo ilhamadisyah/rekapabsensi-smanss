@@ -218,7 +218,7 @@ export interface UploadHistory {
 export interface DailyAttendance {
   id: string;
   upload_id: string;
-  employee_id: string; // machine_id
+  employee_id: string; // NIK pegawai (primary identifier)
   employee_name?: string; // Employee full name
   attendance_date: string; // YYYY-MM-DD
   first_in: string | null; // HH:mm:ss
@@ -238,33 +238,32 @@ export interface DailyAttendance {
   is_custom_schedule?: boolean;
   has_assigned_duty?: boolean;
   is_cross_day?: boolean;
-  checkout_date?: string;
-  is_verified: boolean;
-  verified_by?: string;
-  updated_at: string;
+  is_verified?: boolean;
+  verified_by?: string | null;
+  updated_at?: string;
 }
 
 export interface ShiftTemplate {
   id: string;
   code: string;
   name: string;
-  start_time: string; // "HH:mm:ss"
-  end_time: string; // "HH:mm:ss"
+  start_time: string;
+  end_time: string;
   grace_period_minutes: number;
-  check_in_window_minutes?: number; // Menit sebelum start_time tap mulai diterima (default: 120)
-  check_out_window_minutes?: number; // Menit setelah end_time tap masih diterima (default: 240)
+  check_in_window_minutes?: number;
+  check_out_window_minutes?: number;
   is_overnight: boolean;
   is_off_day: boolean;
   color: string;
   description?: string;
-  is_default: boolean;
+  is_default?: boolean;
   created_at: string;
   updated_at: string;
 }
 
 export interface EmployeeSchedule {
   id: string; // `sched-${employee_id}-${date}`
-  employee_id: string; // machine_id
+  employee_id: string; // NIK pegawai (primary identifier)
   employee_name?: string;
   date: string; // "YYYY-MM-DD"
   shift_id: string;

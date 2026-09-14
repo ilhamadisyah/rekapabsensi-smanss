@@ -199,19 +199,34 @@ const localDb = {
     return data.employees;
   },
 
-  createEmployee(employeeData: Omit<Employee, 'id' | 'created_at'>): Employee {
+  createEmployee(employeeData: Omit<Employee, 'id' | 'created_at'> & { id?: string }): Employee {
     const data = ensureDbFile();
-    const cleanMachineId = String(employeeData.machine_id).trim();
-    const existing = data.employees.find((e) => e.machine_id === cleanMachineId);
-    if (existing) {
-      throw new Error(`Pegawai dengan ID Mesin ${cleanMachineId} sudah terdaftar (${existing.full_name}).`);
+    const cleanNik = String(employeeData.nik || '').trim();
+    if (!cleanNik) {
+      throw new Error('NIK pegawai wajib diisi sebagai identitas utama.');
     }
+    const cleanMachineId = String(employeeData.machine_id || '').trim();
+
+    // Cek duplikasi NIK
+    const existingNik = data.employees.find((e) => e.nik === cleanNik || e.id === cleanNik);
+    if (existingNik) {
+      throw new Error(`Pegawai dengan NIK ${cleanNik} sudah terdaftar (${existingNik.full_name}).`);
+    }
+
+    // Cek duplikasi ID Mesin jika diisi
+    if (cleanMachineId) {
+      const existingMachine = data.employees.find((e) => e.machine_id === cleanMachineId);
+      if (existingMachine) {
+        throw new Error(`ID Mesin ${cleanMachineId} sudah digunakan oleh ${existingMachine.full_name}.`);
+      }
+    }
+
     const newEmp: Employee = {
-      id: `emp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      machine_id: cleanMachineId,
-      nik: (employeeData.nik || '').trim(),
+      id: cleanNik,
+      nik: cleanNik,
+      machine_id: cleanMachineId || cleanNik,
       full_name: employeeData.full_name.trim(),
-      department: (employeeData.department || 'Pegawai').trim(),
+      department: (employeeData.department || 'Tenaga Pendidik (Guru)').trim(),
       excel_row_index: Number(employeeData.excel_row_index) || (data.employees.length + 1),
       is_active: employeeData.is_active ?? true,
       created_at: new Date().toISOString(),
@@ -224,7 +239,7 @@ const localDb = {
   deleteEmployee(id: string): boolean {
     const data = ensureDbFile();
     const initialLen = data.employees.length;
-    data.employees = data.employees.filter((e) => e.id !== id && e.machine_id !== id);
+    data.employees = data.employees.filter((e) => e.id !== id && e.nik !== id && e.machine_id !== id);
     if (data.employees.length === initialLen) return false;
     data.employee_schedules = (data.employee_schedules || []).filter(
       (s) => s.employee_id !== id
@@ -248,7 +263,7 @@ const localDb = {
 
   updateEmployee(id: string, updates: Partial<Employee>): Employee | null {
     const data = ensureDbFile();
-    const idx = data.employees.findIndex((e) => e.id === id || e.machine_id === id);
+    const idx = data.employees.findIndex((e) => e.id === id || e.nik === id || e.machine_id === id);
     if (idx === -1) return null;
 
     data.employees[idx] = { ...data.employees[idx], ...updates };
@@ -273,7 +288,8 @@ const localDb = {
     uploadRecord: UploadHistory,
     records: DailyAttendance[],
     _overwriteExisting: boolean = true,
-    employeeNames?: Record<string, string>
+    employeeNames?: Record<string, string>,
+    employeeMeta?: Record<string, { nik: string; machineId: string; name: string }>
   ): {
     savedCount: number;
     preservedVerifiedCount: number;
@@ -293,26 +309,43 @@ const localDb = {
       data.upload_history.push(uploadRecord);
     }
 
-    // 2. Ensure all employees from attendance records exist in data.employees with their real names
-    const existingEmpIds = new Set(data.employees.map((e) => e.machine_id));
+    // 2. Ensure all employees from attendance records exist in data.employees with their real names and NIK
+    const existingNiks = new Set(data.employees.map((e) => e.nik).filter(Boolean));
+    const existingMachineIds = new Set(data.employees.map((e) => e.machine_id).filter(Boolean));
+
     for (const rec of records) {
-      if (!existingEmpIds.has(rec.employee_id)) {
-        existingEmpIds.add(rec.employee_id);
+      const empId = rec.employee_id;
+      const isRealNik = Boolean(empId && !empId.startsWith('UNREGISTERED-ID-'));
+      const meta = employeeMeta?.[empId];
+      const nik = isRealNik ? empId : (meta?.nik || '');
+      const machineId = meta?.machineId || (!isRealNik ? empId.replace('UNREGISTERED-ID-', '') : '');
+
+      if (nik && !existingNiks.has(nik)) {
+        existingNiks.add(nik);
+        if (machineId) existingMachineIds.add(machineId);
+
         const resolvedName =
-          employeeNames?.[rec.employee_id] ||
+          meta?.name ||
+          employeeNames?.[empId] ||
           rec.employee_name ||
-          getEmployeeNameByMachineId(rec.employee_id) ||
-          `Pegawai ${rec.employee_id}`;
+          getEmployeeNameByMachineId(machineId) ||
+          `Pegawai ${nik}`;
+
         data.employees.push({
-          id: `emp-auto-${rec.employee_id}`,
-          machine_id: rec.employee_id,
-          nik: '',
+          id: nik,
+          nik: nik,
+          machine_id: machineId || nik,
           full_name: resolvedName,
-          department: 'Pegawai',
+          department: 'Tenaga Pendidik (Guru)',
           excel_row_index: data.employees.length + 1,
           is_active: true,
           created_at: new Date().toISOString(),
         });
+      } else if (nik && existingNiks.has(nik) && machineId) {
+        const emp = data.employees.find((e) => e.nik === nik || e.id === nik);
+        if (emp && (!emp.machine_id || emp.machine_id === emp.nik)) {
+          emp.machine_id = machineId;
+        }
       }
     }
 
@@ -881,7 +914,7 @@ export const db = {
     return localDb.getEmployees();
   },
 
-  async createEmployee(employeeData: Omit<Employee, 'id' | 'created_at'>): Promise<Employee | null> {
+  async createEmployee(employeeData: Omit<Employee, 'id' | 'created_at'> & { id?: string }): Promise<Employee | null> {
     let created: Employee | null = null;
     if (isSupabaseConfigured) {
       try {
@@ -938,12 +971,13 @@ export const db = {
     uploadRecord: UploadHistory,
     records: DailyAttendance[],
     overwriteExisting: boolean = true,
-    employeeNames?: Record<string, string>
+    employeeNames?: Record<string, string>,
+    employeeMeta?: Record<string, { nik: string; machineId: string; name: string }>
   ) {
     if (isSupabaseConfigured) {
-      return supabaseStore.saveAttendanceBatch(uploadRecord, records, overwriteExisting, employeeNames);
+      return supabaseStore.saveAttendanceBatch(uploadRecord, records, overwriteExisting, employeeNames, employeeMeta);
     }
-    return localDb.saveAttendanceBatch(uploadRecord, records, overwriteExisting, employeeNames);
+    return localDb.saveAttendanceBatch(uploadRecord, records, overwriteExisting, employeeNames, employeeMeta);
   },
 
   async updateAttendanceCell(params: {

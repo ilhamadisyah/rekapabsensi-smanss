@@ -26,13 +26,16 @@ export async function POST(request: NextRequest) {
     let month = parseInt(monthStr || '', 10);
     let year = parseInt(yearStr || '', 10);
 
-    // Optional: Pre-load shift schedules to enhance cross-day pairing accuracy
+    // Optional: Pre-load shift schedules & master employees to enhance NIK mapping & pairing
     let scheduleMap: ParseAttendanceOptions['scheduleMap'];
+    let existingEmployees: any[] = [];
     try {
-      const [schedules, shifts] = await Promise.all([
+      const [schedules, shifts, emps] = await Promise.all([
         db.getEmployeeSchedules(month || undefined, year || undefined),
         db.getShiftTemplates(),
+        db.getEmployees(),
       ]);
+      existingEmployees = emps || [];
       const shiftMap = new Map(shifts.map((s) => [s.id, s]));
       scheduleMap = new Map();
       for (const sc of schedules) {
@@ -48,13 +51,14 @@ export async function POST(request: NextRequest) {
         });
       }
     } catch {
-      // Ignore if schedules cannot be pre-loaded, parser will use intelligent heuristics
+      // Ignore if schedules cannot be pre-loaded
     }
 
     const uploadId = `upload-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const parseResult = parseAttendanceFile(buffer, month, year, uploadId, {
       scheduleMap,
       enableCrossDayPairing: true,
+      masterEmployees: existingEmployees,
     });
 
     if (!parseResult.success) {
@@ -81,7 +85,13 @@ export async function POST(request: NextRequest) {
     };
 
     // Save batch with smart merge: preserves already verified data (data lama) if duplicates exist
-    const saveResult = await db.saveAttendanceBatch(uploadRecord, parseResult.records, true, parseResult.employeeNames);
+    const saveResult = await db.saveAttendanceBatch(
+      uploadRecord,
+      parseResult.records,
+      true,
+      parseResult.employeeNames,
+      parseResult.employeeMeta
+    );
 
     return NextResponse.json({
       success: true,
@@ -91,6 +101,9 @@ export async function POST(request: NextRequest) {
       updated_count: saveResult.updatedCount,
       new_count: saveResult.newCount,
       detected_period: parseResult.detectedPeriod,
+      has_missing_nik: Boolean(parseResult.hasMissingNik),
+      missing_nik_count: parseResult.missingNikCount || 0,
+      missing_nik_records: parseResult.missingNikRecords || [],
       summary: {
         total_employees: parseResult.uniqueEmployees,
         total_present: parseResult.totalPresent,

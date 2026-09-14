@@ -126,14 +126,16 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
   const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newNik.trim()) {
+      alert('NIK (Nomor Induk Karyawan/Pegawai) wajib diisi sebagai identitas utama.');
+      return;
+    }
     if (!newFullName.trim()) {
       alert('Nama lengkap wajib diisi.');
       return;
     }
-    if (!newMachineId.trim()) {
-      alert('ID Mesin biometrik wajib diisi.');
-      return;
-    }
+
+    const cleanMachineId = newMachineId.trim() || newNik.trim();
 
     setIsSubmittingNew(true);
     try {
@@ -142,7 +144,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           full_name: newFullName.trim(),
-          machine_id: newMachineId.trim(),
+          machine_id: cleanMachineId,
           nik: newNik.trim(),
           department: newDepartment.trim(),
           excel_row_index: Number(newRowIndex) || (employees.length + 1),
@@ -263,7 +265,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             <thead className="bg-slate-100/90 sticky top-0 border-b border-slate-200 z-10">
               <tr>
                 <th className="p-3 font-bold text-slate-700 w-12 text-center">No</th>
-                <th className="p-3 font-bold text-slate-700">Nama Pegawai &amp; NIK</th>
+                <th className="p-3 font-bold text-slate-700">NIK &amp; Nama Pegawai</th>
                 <th className="p-3 font-bold text-slate-700">Unit / Jabatan</th>
                 <th className="p-3 font-bold text-slate-700 text-center w-36">ID Mesin Biometrik</th>
                 <th className="p-3 font-bold text-slate-700 text-center w-32">Baris Excel Template</th>
@@ -290,25 +292,25 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                           <div className="space-y-1">
                             <input
                               type="text"
-                              value={editFullName}
-                              onChange={(e) => setEditFullName(e.target.value)}
-                              placeholder="Nama lengkap"
-                              className="w-full px-2 py-1 text-xs border border-blue-400 rounded-lg font-bold"
+                              value={editNik}
+                              onChange={(e) => setEditNik(e.target.value)}
+                              placeholder="NIK (Wajib)"
+                              className="w-full px-2 py-0.5 text-xs font-sans font-bold border border-blue-400 rounded-lg text-blue-700"
                             />
                             <input
                               type="text"
-                              value={editNik}
-                              onChange={(e) => setEditNik(e.target.value)}
-                              placeholder="NIK (opsional)"
-                              className="w-full px-2 py-0.5 text-[11px] border border-slate-300 rounded"
+                              value={editFullName}
+                              onChange={(e) => setEditFullName(e.target.value)}
+                              placeholder="Nama lengkap"
+                              className="w-full px-2 py-1 text-xs border border-slate-300 rounded-lg font-semibold"
                             />
                           </div>
                         ) : (
                           <div>
-                            <div className="font-bold text-slate-900">{emp.full_name}</div>
-                            <div className="text-[11px] text-slate-400 font-sans font-medium mt-0.5">
-                              {emp.nik ? `NIK: ${emp.nik}` : '-'}
+                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 font-sans font-bold text-[11px]">
+                              NIK: {emp.nik || emp.id || '-'}
                             </div>
+                            <div className="font-bold text-slate-900 mt-1">{emp.full_name}</div>
                           </div>
                         )}
                       </td>
@@ -438,6 +440,21 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             <form onSubmit={handleCreateEmployee} className="space-y-3.5 text-xs">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
+                  NIK / NIP Pegawai <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newNik}
+                  onChange={(e) => setNewNik(e.target.value)}
+                  placeholder="Contoh: 198501012010011001"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-sans font-bold text-slate-900"
+                />
+                <p className="text-[10px] text-slate-400 mt-0.5">Identitas utama pegawai dalam sistem presensi</p>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
                   Nama Lengkap Pegawai <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -453,28 +470,28 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
-                    ID Mesin Biometrik <span className="text-rose-500">*</span>
+                    ID Mesin Biometrik
                   </label>
                   <input
                     type="text"
-                    required
                     value={newMachineId}
                     onChange={(e) => setNewMachineId(e.target.value)}
-                    placeholder="Contoh: 15"
+                    placeholder="Contoh: 15 (opsional)"
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-sans font-bold"
                   />
-                  <p className="text-[10px] text-slate-400 mt-0.5">Nomor ID pada mesin finger/wajah</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Jika kosong, otomatis disamakan dengan NIK</p>
                 </div>
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
-                    NIK / NIP (Opsional)
+                    Nomor Baris Excel Rekap
                   </label>
                   <input
-                    type="text"
-                    value={newNik}
-                    onChange={(e) => setNewNik(e.target.value)}
-                    placeholder="Contoh: 19800101..."
+                    type="number"
+                    min={1}
+                    max={500}
+                    value={newRowIndex}
+                    onChange={(e) => setNewRowIndex(Number(e.target.value))}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-sans"
                   />
                 </div>
@@ -496,21 +513,6 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                   <option value="Pengelola Asrama / Piket">Pengelola Asrama / Piket</option>
                   <option value="Pegawai">Pegawai / Staf Umum</option>
                 </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Nomor Baris Excel Template Rekap
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={500}
-                  value={newRowIndex}
-                  onChange={(e) => setNewRowIndex(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-sans"
-                />
-                <p className="text-[10px] text-slate-400 mt-0.5">Posisi baris pegawai saat ekspor berkas Excel rekap bulanan</p>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">

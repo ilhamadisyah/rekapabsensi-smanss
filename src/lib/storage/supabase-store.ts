@@ -79,7 +79,7 @@ export const supabaseStore = {
     const { data, error } = await client
       .from('employees')
       .update(updates)
-      .or(`id.eq.${id},machine_id.eq.${id}`)
+      .or(`id.eq.${id},nik.eq.${id},machine_id.eq.${id}`)
       .select()
       .single();
 
@@ -90,17 +90,22 @@ export const supabaseStore = {
     return data;
   },
 
-  async createEmployee(employeeData: Omit<Employee, 'id' | 'created_at'>): Promise<Employee | null> {
+  async createEmployee(employeeData: Omit<Employee, 'id' | 'created_at'> & { id?: string }): Promise<Employee | null> {
     const client = getSupabaseServerClient();
     if (!client) return null;
 
-    const cleanMachineId = String(employeeData.machine_id).trim();
+    const cleanNik = String(employeeData.nik || '').trim();
+    if (!cleanNik) {
+      throw new Error('NIK pegawai wajib diisi sebagai identitas utama.');
+    }
+    const cleanMachineId = String(employeeData.machine_id || '').trim();
+
     const newEmp: Employee = {
-      id: `emp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      machine_id: cleanMachineId,
-      nik: (employeeData.nik || '').trim(),
+      id: cleanNik,
+      nik: cleanNik,
+      machine_id: cleanMachineId || cleanNik,
       full_name: employeeData.full_name.trim(),
-      department: (employeeData.department || 'Pegawai').trim(),
+      department: (employeeData.department || 'Tenaga Pendidik (Guru)').trim(),
       excel_row_index: Number(employeeData.excel_row_index) || 1,
       is_active: employeeData.is_active ?? true,
       created_at: new Date().toISOString(),
@@ -129,7 +134,7 @@ export const supabaseStore = {
     const { error } = await client
       .from('employees')
       .delete()
-      .or(`id.eq.${id},machine_id.eq.${id}`);
+      .or(`id.eq.${id},nik.eq.${id},machine_id.eq.${id}`);
 
     if (error) {
       console.error('[Supabase] Error deleteEmployee:', error);
@@ -212,7 +217,8 @@ export const supabaseStore = {
     uploadRecord: UploadHistory,
     records: DailyAttendance[],
     _overwriteExisting: boolean = true,
-    employeeNames?: Record<string, string>
+    employeeNames?: Record<string, string>,
+    employeeMeta?: Record<string, { nik: string; machineId: string; name: string }>
   ): Promise<{
     savedCount: number;
     preservedVerifiedCount: number;
@@ -227,26 +233,33 @@ export const supabaseStore = {
     // 1. Record upload history
     await client.from('upload_history').upsert(uploadRecord);
 
-    // 2. Ensure all employees exist in employees table
+    // 2. Ensure all employees exist in employees table based on NIK
     const existingEmployees = await this.getEmployees();
-    const existingEmpIds = new Set(existingEmployees.map((e) => e.machine_id));
+    const existingNiks = new Set(existingEmployees.map((e) => e.nik).filter(Boolean));
     const newEmployeesToInsert: Employee[] = [];
 
     for (const rec of records) {
-      if (!existingEmpIds.has(rec.employee_id)) {
-        existingEmpIds.add(rec.employee_id);
+      const empId = rec.employee_id;
+      const isRealNik = Boolean(empId && !empId.startsWith('UNREGISTERED-ID-'));
+      const meta = employeeMeta?.[empId];
+      const nik = isRealNik ? empId : (meta?.nik || '');
+      const machineId = meta?.machineId || (!isRealNik ? empId.replace('UNREGISTERED-ID-', '') : '');
+
+      if (nik && !existingNiks.has(nik)) {
+        existingNiks.add(nik);
         const resolvedName =
-          employeeNames?.[rec.employee_id] ||
+          meta?.name ||
+          employeeNames?.[empId] ||
           rec.employee_name ||
-          getEmployeeNameByMachineId(rec.employee_id) ||
-          `Pegawai ${rec.employee_id}`;
+          getEmployeeNameByMachineId(machineId) ||
+          `Pegawai ${nik}`;
 
         newEmployeesToInsert.push({
-          id: `emp-auto-${rec.employee_id}`,
-          machine_id: rec.employee_id,
-          nik: '',
+          id: nik,
+          nik: nik,
+          machine_id: machineId || nik,
           full_name: resolvedName,
-          department: 'Pegawai',
+          department: 'Tenaga Pendidik (Guru)',
           excel_row_index: existingEmployees.length + newEmployeesToInsert.length + 1,
           is_active: true,
           created_at: new Date().toISOString(),
@@ -255,7 +268,7 @@ export const supabaseStore = {
     }
 
     if (newEmployeesToInsert.length > 0) {
-      await client.from('employees').upsert(newEmployeesToInsert, { onConflict: 'machine_id' });
+      await client.from('employees').upsert(newEmployeesToInsert, { onConflict: 'id' });
     }
 
     // 3. Fetch existing attendance for this month with deterministic order to preserve verified data

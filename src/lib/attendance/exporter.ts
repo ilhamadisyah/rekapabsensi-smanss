@@ -392,7 +392,9 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
 
   // 7. Bangun daftar seluruh pegawai (master employees + pegawai baru yang ada di log)
   const allEmployees: Employee[] = [...employees];
-  const existingMachineIds = new Set(employees.map((e) => e.machine_id));
+  const existingMachineIds = new Set(
+    employees.flatMap((e) => [e.id, e.nik, e.machine_id].filter(Boolean))
+  );
 
   for (const record of attendanceRecords) {
     if (!existingMachineIds.has(record.employee_id)) {
@@ -409,9 +411,9 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
         `Pegawai ${record.employee_id}`;
 
       allEmployees.push({
-        id: `emp-auto-${record.employee_id}`,
+        id: record.employee_id,
         machine_id: record.employee_id,
-        nik: '',
+        nik: record.employee_id,
         full_name: resolvedName,
         department: options.department === 'Guru' ? 'Guru' : options.department === 'TU' ? 'Tata Usaha' : 'Pegawai',
         excel_row_index: 999,
@@ -510,7 +512,10 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
       const dayOfWeek = dateObj.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const isHoliday = holidayMap.has(dateStr);
-      const sched = scheduleMap.get(`${emp.machine_id}___${dateStr}`);
+      const sched =
+        (emp.nik ? scheduleMap.get(`${emp.nik}___${dateStr}`) : undefined) ||
+        scheduleMap.get(`${emp.machine_id}___${dateStr}`) ||
+        (emp.id ? scheduleMap.get(`${emp.id}___${dateStr}`) : undefined);
       const hasAssignedDuty = Boolean(sched && sched.shift_id && sched.shift_id !== 'shift-off');
 
       delete (cell as any).note;
@@ -538,7 +543,10 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
         continue;
       }
 
-      const rec = attendanceMap.get(`${emp.machine_id}__${day}`);
+      const rec =
+        (emp.nik ? attendanceMap.get(`${emp.nik}__${day}`) : undefined) ||
+        attendanceMap.get(`${emp.machine_id}__${day}`) ||
+        (emp.id ? attendanceMap.get(`${emp.id}__${day}`) : undefined);
       const isRecorded = recordedDays.size > 0 ? recordedDays.has(day) : false;
       const isVerified = rec && rec.is_verified;
 
