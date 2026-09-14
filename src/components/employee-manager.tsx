@@ -1,6 +1,35 @@
 import React, { useState } from 'react';
 import { Employee } from '@/lib/types';
-import { Search, Edit2, Check, X, Shield, Users, PlusCircle, Trash2, AlertTriangle, FileSpreadsheet, UserPlus } from 'lucide-react';
+import {
+  Search,
+  Edit2,
+  Check,
+  X,
+  Shield,
+  Users,
+  PlusCircle,
+  Trash2,
+  AlertTriangle,
+  FileSpreadsheet,
+  UserPlus,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from 'lucide-react';
+
+function getPageNumbers(current: number, total: number): (number | '...')[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, '...', total];
+  }
+  if (current >= total - 3) {
+    return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, '...', current - 1, current, current + 1, '...', total];
+}
 
 interface EmployeeManagerProps {
   employees: Employee[];
@@ -14,6 +43,8 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
   userRole,
 }) => {
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editMachineId, setEditMachineId] = useState('');
   const [editRowIndex, setEditRowIndex] = useState<number>(0);
@@ -40,6 +71,13 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
       (e.nik && e.nik.toLowerCase().includes(search.toLowerCase())) ||
       (e.department && e.department.toLowerCase().includes(search.toLowerCase()))
   );
+
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const validCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (validCurrentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedEmployees = filtered.slice(startIndex, endIndex);
 
   const startEdit = (emp: Employee) => {
     setEditingId(emp.id);
@@ -187,7 +225,10 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
               placeholder="Cari nama, NIK, unit..."
               className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
@@ -260,126 +301,222 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
           </div>
         </div>
       ) : (
-        <div className="overflow-x-auto max-h-[550px] border border-slate-200 rounded-xl">
-          <table className="w-full border-collapse text-left text-xs">
-            <thead className="bg-slate-100/90 sticky top-0 border-b border-slate-200 z-10">
-              <tr>
-                <th className="p-3 font-bold text-slate-700 w-12 text-center">No</th>
-                <th className="p-3 font-bold text-slate-700">Nama</th>
-                <th className="p-3 font-bold text-slate-700 w-52">NIK</th>
-                <th className="p-3 font-bold text-slate-700 w-44">Unit / Jabatan</th>
-                <th className="p-3 font-bold text-slate-700 text-center w-28">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.length === 0 ? (
+        <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs bg-white">
+          <div className="overflow-x-auto max-h-[550px]">
+            <table className="w-full border-collapse text-left text-xs">
+              <thead className="bg-slate-100/90 sticky top-0 border-b border-slate-200 z-10">
                 <tr>
-                  <td colSpan={5} className="p-6 text-center text-slate-400 text-xs italic">
-                    Tidak ditemukan pegawai dengan kata kunci &quot;{search}&quot;.
-                  </td>
+                  <th className="p-3 font-bold text-slate-700 w-12 text-center">No</th>
+                  <th className="p-3 font-bold text-slate-700">Nama</th>
+                  <th className="p-3 font-bold text-slate-700 w-52">NIK</th>
+                  <th className="p-3 font-bold text-slate-700 w-44">Unit / Jabatan</th>
+                  <th className="p-3 font-bold text-slate-700 text-center w-28">Aksi</th>
                 </tr>
-              ) : (
-                filtered.map((emp, idx) => {
-                  const isEditing = editingId === emp.id;
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {paginatedEmployees.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="p-6 text-center text-slate-400 text-xs italic">
+                      Tidak ditemukan pegawai dengan kata kunci &quot;{search}&quot;.
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedEmployees.map((emp, idx) => {
+                    const isEditing = editingId === emp.id;
 
-                  return (
-                    <tr key={emp.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="p-3 text-center text-slate-400 font-semibold">{idx + 1}</td>
-                      <td className="p-3">
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editFullName}
-                            onChange={(e) => setEditFullName(e.target.value)}
-                            placeholder="Nama lengkap pegawai"
-                            className="w-full px-2.5 py-1 text-xs font-bold border border-blue-400 rounded-lg text-slate-900 bg-white"
-                          />
-                        ) : (
-                          <div className="font-bold text-slate-900 text-[13px]">{emp.full_name}</div>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={editNik}
-                            onChange={(e) => setEditNik(e.target.value)}
-                            placeholder="NIK (Wajib)"
-                            className="w-full px-2.5 py-1 text-xs font-mono font-bold border border-blue-400 rounded-lg text-blue-700 bg-white"
-                          />
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 font-mono font-bold text-[11px]">
-                            {emp.nik || emp.id || '-'}
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-3 text-slate-600">
-                        {isEditing ? (
-                          <select
-                            value={editDepartment === 'Guru' || editDepartment.includes('Guru') ? 'Guru' : 'Staff'}
-                            onChange={(e) => setEditDepartment(e.target.value)}
-                            className="w-full px-2.5 py-1 text-xs border border-blue-400 rounded-lg font-semibold bg-white"
-                          >
-                            <option value="Guru">Guru</option>
-                            <option value="Staff">Staff</option>
-                          </select>
-                        ) : (
-                          <span
-                            className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold ${
-                              emp.department && emp.department.includes('Guru')
-                                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            }`}
-                          >
-                            {emp.department && emp.department.includes('Guru') ? 'Guru' : 'Staff'}
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-3 text-center">
-                        {isEditing ? (
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              onClick={() => saveEdit(emp.id)}
-                              disabled={isSaving}
-                              className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors cursor-pointer"
-                              title="Simpan Perubahan"
+                    return (
+                      <tr key={emp.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="p-3 text-center text-slate-400 font-semibold">{startIndex + idx + 1}</td>
+                        <td className="p-3">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editFullName}
+                              onChange={(e) => setEditFullName(e.target.value)}
+                              placeholder="Nama lengkap pegawai"
+                              className="w-full px-2.5 py-1 text-xs font-bold border border-blue-400 rounded-lg text-slate-900 bg-white"
+                            />
+                          ) : (
+                            <div className="font-bold text-slate-900 text-[13px]">{emp.full_name}</div>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editNik}
+                              onChange={(e) => setEditNik(e.target.value)}
+                              placeholder="NIK (Wajib)"
+                              className="w-full px-2.5 py-1 text-xs font-mono font-bold border border-blue-400 rounded-lg text-blue-700 bg-white"
+                            />
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 font-mono font-bold text-[11px]">
+                              {emp.nik || emp.id || '-'}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 text-slate-600">
+                          {isEditing ? (
+                            <select
+                              value={editDepartment === 'Guru' || editDepartment.includes('Guru') ? 'Guru' : 'Staff'}
+                              onChange={(e) => setEditDepartment(e.target.value)}
+                              className="w-full px-2.5 py-1 text-xs border border-blue-400 rounded-lg font-semibold bg-white"
                             >
-                              <Check className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={cancelEdit}
-                              className="p-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg transition-colors cursor-pointer"
-                              title="Batal"
+                              <option value="Guru">Guru</option>
+                              <option value="Staff">Staff</option>
+                            </select>
+                          ) : (
+                            <span
+                              className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold ${
+                                emp.department && emp.department.includes('Guru')
+                                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              }`}
                             >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              onClick={() => startEdit(emp)}
-                              className="p-1.5 hover:bg-blue-50 text-slate-500 hover:text-blue-600 rounded-lg transition-colors cursor-pointer"
-                              title="Ubah Pegawai"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(emp)}
-                              disabled={isDeleting === emp.id}
-                              className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
-                              title="Hapus Pegawai"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                              {emp.department && emp.department.includes('Guru') ? 'Guru' : 'Staff'}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 text-center">
+                          {isEditing ? (
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => saveEdit(emp.id)}
+                                disabled={isSaving}
+                                className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors cursor-pointer"
+                                title="Simpan Perubahan"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={cancelEdit}
+                                className="p-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg transition-colors cursor-pointer"
+                                title="Batal"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => startEdit(emp)}
+                                className="p-1.5 hover:bg-blue-50 text-slate-500 hover:text-blue-600 rounded-lg transition-colors cursor-pointer"
+                                title="Ubah Pegawai"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(emp)}
+                                disabled={isDeleting === emp.id}
+                                className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
+                                title="Hapus Pegawai"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination Footer */}
+          {totalItems > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 bg-slate-50/70 text-xs text-slate-600">
+              <div className="flex items-center gap-2">
+                <span>
+                  Menampilkan <span className="font-bold text-slate-800">{totalItems === 0 ? 0 : startIndex + 1}</span>–<span className="font-bold text-slate-800">{endIndex}</span> dari <span className="font-bold text-slate-800">{totalItems}</span> pegawai
+                  {search && employees.length !== totalItems && (
+                    <span className="text-slate-400 text-[11px] ml-1">
+                      (difilter dari {employees.length} total)
+                    </span>
+                  )}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Rows per page selector */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-slate-500">Tampilkan:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer shadow-2xs"
+                  >
+                    <option value={10}>10 / hal</option>
+                    <option value={25}>25 / hal</option>
+                    <option value={50}>50 / hal</option>
+                    <option value={100}>100 / hal</option>
+                  </select>
+                </div>
+
+                {/* Navigation buttons */}
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentPage(1)}
+                    disabled={validCurrentPage === 1}
+                    className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed text-slate-600 transition-colors shadow-2xs"
+                    title="Halaman Pertama"
+                  >
+                    <ChevronsLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={validCurrentPage === 1}
+                    className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed text-slate-600 transition-colors shadow-2xs"
+                    title="Halaman Sebelumnya"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+
+                  {/* Page Number Buttons with smart ellipsis */}
+                  {getPageNumbers(validCurrentPage, totalPages).map((p, pIdx) =>
+                    p === '...' ? (
+                      <span key={`dots-${pIdx}`} className="px-1.5 py-1 text-slate-400 select-none">
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={`page-${p}`}
+                        onClick={() => setCurrentPage(Number(p))}
+                        className={`min-w-[28px] h-7 px-2 rounded-lg text-xs font-bold transition-colors shadow-2xs ${
+                          validCurrentPage === p
+                            ? 'bg-blue-600 text-white shadow-xs'
+                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={validCurrentPage === totalPages}
+                    className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed text-slate-600 transition-colors shadow-2xs"
+                    title="Halaman Selanjutnya"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={validCurrentPage === totalPages}
+                    className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed text-slate-600 transition-colors shadow-2xs"
+                    title="Halaman Terakhir"
+                  >
+                    <ChevronsRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
