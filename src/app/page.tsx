@@ -466,7 +466,7 @@ export default function HomePage() {
             {[
               { id: 'matrix', label: 'Matriks Presensi', fullLabel: 'Matriks Presensi', icon: Calendar },
               { id: 'schedules', label: 'Jadwal & Shift', fullLabel: 'Jadwal & Shift Pegawai', icon: Clock },
-              { id: 'employees', label: `Pegawai (${employees.length || 107})`, fullLabel: `Master Pegawai (${employees.length || 107})`, icon: Users },
+              { id: 'employees', label: `Pegawai (${employees.length})`, fullLabel: `Master Pegawai (${employees.length})`, icon: Users },
               { id: 'guide', label: 'Panduan', fullLabel: 'Panduan Perhitungan', icon: BookOpen },
               { id: 'audit', label: 'Audit Trail', fullLabel: 'Audit Trail', icon: History },
             ].map((tab) => {

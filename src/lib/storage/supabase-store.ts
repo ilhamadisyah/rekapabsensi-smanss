@@ -90,6 +90,67 @@ export const supabaseStore = {
     return data;
   },
 
+  async createEmployee(employeeData: Omit<Employee, 'id' | 'created_at'>): Promise<Employee | null> {
+    const client = getSupabaseServerClient();
+    if (!client) return null;
+
+    const cleanMachineId = String(employeeData.machine_id).trim();
+    const newEmp: Employee = {
+      id: `emp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      machine_id: cleanMachineId,
+      nik: (employeeData.nik || '').trim(),
+      full_name: employeeData.full_name.trim(),
+      department: (employeeData.department || 'Pegawai').trim(),
+      excel_row_index: Number(employeeData.excel_row_index) || 1,
+      is_active: employeeData.is_active ?? true,
+      created_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await client
+      .from('employees')
+      .insert(newEmp)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[Supabase] Error createEmployee:', error);
+      throw new Error(error.message || 'Gagal menambahkan pegawai ke Supabase');
+    }
+    return data;
+  },
+
+  async deleteEmployee(id: string): Promise<boolean> {
+    const client = getSupabaseServerClient();
+    if (!client) return false;
+
+    // Delete schedules for this employee first
+    await client.from('employee_schedules').delete().or(`employee_id.eq.${id}`);
+
+    const { error } = await client
+      .from('employees')
+      .delete()
+      .or(`id.eq.${id},machine_id.eq.${id}`);
+
+    if (error) {
+      console.error('[Supabase] Error deleteEmployee:', error);
+      return false;
+    }
+    return true;
+  },
+
+  async clearAllEmployeesAndAttendance(): Promise<{ deletedEmployees: number; deletedAttendance: number }> {
+    const client = getSupabaseServerClient();
+    if (!client) return { deletedEmployees: 0, deletedAttendance: 0 };
+
+    await client.from('audit_logs').delete().neq('id', '___non_existent___');
+    await client.from('daily_attendance').delete().neq('id', '___non_existent___');
+    await client.from('employee_schedules').delete().neq('id', '___non_existent___');
+    await client.from('upload_history').delete().neq('id', '___non_existent___');
+    await client.from('employees').delete().neq('id', '___non_existent___');
+
+    return { deletedEmployees: 0, deletedAttendance: 0 };
+  },
+
   async getUploadHistory(): Promise<UploadHistory[]> {
     const client = getSupabaseServerClient();
     if (!client) return [];

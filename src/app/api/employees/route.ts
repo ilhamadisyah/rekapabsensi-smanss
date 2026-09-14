@@ -15,6 +15,55 @@ export async function GET() {
   }
 }
 
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { full_name, machine_id, department, nik, excel_row_index, is_active } = body;
+
+    if (!full_name || !String(full_name).trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Nama lengkap pegawai wajib diisi.' },
+        { status: 400 }
+      );
+    }
+
+    if (!machine_id || !String(machine_id).trim()) {
+      return NextResponse.json(
+        { success: false, error: 'ID Mesin biometrik wajib diisi.' },
+        { status: 400 }
+      );
+    }
+
+    const cleanMachineId = String(machine_id).trim();
+    const allEmployees = await db.getEmployees();
+    const duplicate = allEmployees.find((e) => e.machine_id === cleanMachineId);
+    if (duplicate) {
+      return NextResponse.json(
+        { success: false, error: `ID Mesin ${cleanMachineId} sudah digunakan oleh ${duplicate.full_name}.` },
+        { status: 400 }
+      );
+    }
+
+    const nextRow = Number(excel_row_index) || (allEmployees.length + 1);
+
+    const newEmployee = await db.createEmployee({
+      machine_id: cleanMachineId,
+      full_name: String(full_name).trim(),
+      department: department ? String(department).trim() : 'Tenaga Pendidik (Guru)',
+      nik: nik ? String(nik).trim() : '',
+      excel_row_index: nextRow,
+      is_active: is_active !== false,
+    });
+
+    return NextResponse.json({ success: true, employee: newEmployee }, { status: 201 });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || 'Gagal menambahkan pegawai baru.' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
@@ -39,6 +88,45 @@ export async function PATCH(request: NextRequest) {
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message || 'Gagal memperbarui pegawai.' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    const action = searchParams.get('action');
+
+    if (action === 'clear_all') {
+      const result = await db.clearAllEmployeesAndAttendance();
+      return NextResponse.json({
+        success: true,
+        message: 'Seluruh data pegawai dan riwayat presensi berhasil dikosongkan.',
+        ...result,
+      });
+    }
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'ID pegawai yang akan dihapus wajib disertakan.' },
+        { status: 400 }
+      );
+    }
+
+    const deleted = await db.deleteEmployee(id);
+    if (!deleted) {
+      return NextResponse.json(
+        { success: false, error: 'Pegawai tidak ditemukan atau gagal dihapus.' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true, message: 'Pegawai berhasil dihapus.' });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || 'Gagal menghapus pegawai.' },
       { status: 500 }
     );
   }

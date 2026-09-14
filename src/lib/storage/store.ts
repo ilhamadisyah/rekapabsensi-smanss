@@ -127,7 +127,7 @@ function ensureDbFile(): DbSchema {
 
   if (!fs.existsSync(DB_PATH)) {
     const initialData: DbSchema = {
-      employees: INITIAL_EMPLOYEES,
+      employees: [],
       upload_history: [],
       daily_attendance: [],
       audit_logs: [],
@@ -136,31 +136,6 @@ function ensureDbFile(): DbSchema {
       holidays: [],
       admin_users: [{ ...DEFAULT_SUPERADMIN_USER }],
     };
-
-    // Auto-seed with ABSENSI 1111.xls if available
-    const samplePath = path.resolve(process.cwd(), 'ABSENSI 1111.xls');
-    if (fs.existsSync(samplePath)) {
-      try {
-        const fileBuffer = fs.readFileSync(samplePath);
-        const uploadId = 'seed-upload-09-2026';
-        const parseResult = parseAttendanceFile(fileBuffer, 9, 2026, uploadId);
-
-        if (parseResult.success && parseResult.records.length > 0) {
-          initialData.upload_history.push({
-            id: uploadId,
-            file_name: 'ABSENSI 1111.xls',
-            period_month: 9,
-            period_year: 2026,
-            total_raw_rows: parseResult.totalRawRows,
-            uploaded_by: 'system_seed',
-            created_at: new Date().toISOString(),
-          });
-          initialData.daily_attendance = parseResult.records;
-        }
-      } catch (e) {
-        console.error('Failed to auto-seed ABSENSI 1111.xls:', e);
-      }
-    }
 
     fs.writeFileSync(DB_PATH, JSON.stringify(initialData, null, 2), 'utf-8');
     return initialData;
@@ -196,13 +171,14 @@ function ensureDbFile(): DbSchema {
   } catch (err) {
     console.error('Error reading DB_PATH, fallback to empty structure:', err);
     return {
-      employees: INITIAL_EMPLOYEES,
+      employees: [],
       upload_history: [],
       daily_attendance: [],
       audit_logs: [],
       shift_templates: [...DEFAULT_SHIFT_TEMPLATES],
       employee_schedules: [],
       holidays: [],
+      admin_users: [{ ...DEFAULT_SUPERADMIN_USER }],
     };
   }
 }
@@ -221,6 +197,53 @@ const localDb = {
   getEmployees(): Employee[] {
     const data = ensureDbFile();
     return data.employees;
+  },
+
+  createEmployee(employeeData: Omit<Employee, 'id' | 'created_at'>): Employee {
+    const data = ensureDbFile();
+    const cleanMachineId = String(employeeData.machine_id).trim();
+    const existing = data.employees.find((e) => e.machine_id === cleanMachineId);
+    if (existing) {
+      throw new Error(`Pegawai dengan ID Mesin ${cleanMachineId} sudah terdaftar (${existing.full_name}).`);
+    }
+    const newEmp: Employee = {
+      id: `emp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      machine_id: cleanMachineId,
+      nik: (employeeData.nik || '').trim(),
+      full_name: employeeData.full_name.trim(),
+      department: (employeeData.department || 'Pegawai').trim(),
+      excel_row_index: Number(employeeData.excel_row_index) || (data.employees.length + 1),
+      is_active: employeeData.is_active ?? true,
+      created_at: new Date().toISOString(),
+    };
+    data.employees.push(newEmp);
+    writeDb(data);
+    return newEmp;
+  },
+
+  deleteEmployee(id: string): boolean {
+    const data = ensureDbFile();
+    const initialLen = data.employees.length;
+    data.employees = data.employees.filter((e) => e.id !== id && e.machine_id !== id);
+    if (data.employees.length === initialLen) return false;
+    data.employee_schedules = (data.employee_schedules || []).filter(
+      (s) => s.employee_id !== id
+    );
+    writeDb(data);
+    return true;
+  },
+
+  clearAllEmployeesAndAttendance(): { deletedEmployees: number; deletedAttendance: number } {
+    const data = ensureDbFile();
+    const empCount = data.employees.length;
+    const attCount = data.daily_attendance.length;
+    data.employees = [];
+    data.daily_attendance = [];
+    data.upload_history = [];
+    data.audit_logs = [];
+    data.employee_schedules = [];
+    writeDb(data);
+    return { deletedEmployees: empCount, deletedAttendance: attCount };
   },
 
   updateEmployee(id: string, updates: Partial<Employee>): Employee | null {
@@ -856,6 +879,44 @@ export const db = {
   async getEmployees(): Promise<Employee[]> {
     if (isSupabaseConfigured) return supabaseStore.getEmployees();
     return localDb.getEmployees();
+  },
+
+  async createEmployee(employeeData: Omit<Employee, 'id' | 'created_at'>): Promise<Employee | null> {
+    let created: Employee | null = null;
+    if (isSupabaseConfigured) {
+      try {
+        created = await supabaseStore.createEmployee(employeeData);
+      } catch (e: any) {
+        console.error('[Store] Supabase createEmployee error:', e);
+        throw e;
+      }
+    }
+    const localCreated = localDb.createEmployee(employeeData);
+    return created || localCreated;
+  },
+
+  async deleteEmployee(id: string): Promise<boolean> {
+    let success = false;
+    if (isSupabaseConfigured) {
+      try {
+        success = await supabaseStore.deleteEmployee(id);
+      } catch (e) {
+        console.warn('[Store] Supabase deleteEmployee error:', e);
+      }
+    }
+    const localSuccess = localDb.deleteEmployee(id);
+    return success || localSuccess;
+  },
+
+  async clearAllEmployeesAndAttendance(): Promise<{ deletedEmployees: number; deletedAttendance: number }> {
+    if (isSupabaseConfigured) {
+      try {
+        await supabaseStore.clearAllEmployeesAndAttendance();
+      } catch (e) {
+        console.warn('[Store] Supabase clearAllEmployeesAndAttendance error:', e);
+      }
+    }
+    return localDb.clearAllEmployeesAndAttendance();
   },
 
   async updateEmployee(id: string, updates: Partial<Employee>): Promise<Employee | null> {
