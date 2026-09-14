@@ -302,8 +302,8 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
                   </div>
                 </div>
 
-                <span className="px-2 py-0.5 bg-white border border-slate-200 text-slate-700 rounded-md font-sans text-[11px] font-bold shrink-0">
-                  ID: {employee.machine_id}
+                <span className="px-2 py-0.5 bg-blue-50 border border-blue-200 text-blue-800 rounded-md font-sans text-[11px] font-bold shrink-0">
+                  {employee.nik ? `NIK: ${employee.nik}` : `ID: ${employee.machine_id}`}
                 </span>
               </div>
 

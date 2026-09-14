@@ -745,15 +745,14 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                         {emp.full_name}
                       </div>
                       <div className="flex items-center gap-1.5 text-[9.5px] sm:text-[10px] text-slate-500 mt-0.5">
-                        <span className="bg-blue-50 text-blue-800 border border-blue-200 px-1 py-0.2 sm:px-1.5 sm:py-0.5 rounded font-sans font-bold text-[9px] sm:text-[10px]">
+                        <span className="bg-blue-50 text-blue-800 border border-blue-200 px-1.5 py-0.5 rounded font-sans font-bold text-[9px] sm:text-[10px] shrink-0 whitespace-nowrap">
                           {emp.nik ? `NIK: ${emp.nik}` : `ID: ${emp.machine_id}`}
                         </span>
-                        {emp.nik && emp.machine_id && emp.machine_id !== emp.nik && (
-                          <span className="text-slate-400 text-[9px] font-sans">
-                            (ID: {emp.machine_id})
+                        {emp.department && (
+                          <span className="text-slate-500 font-medium text-[9.5px] sm:text-[10px] truncate">
+                            {emp.department}
                           </span>
                         )}
-                        <span className="truncate">{emp.department}</span>
                       </div>
                       {/* Mobile Row Quick Stats */}
                       <div className="sm:hidden flex items-center gap-1 mt-1 text-[9.5px] font-bold tabular-nums">

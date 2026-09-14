@@ -641,7 +641,6 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
                           <span className="font-bold text-slate-900 text-xs">{emp.full_name}</span>
                           <span className="text-[11px] text-slate-500 ml-2">
                             {emp.nik ? `NIK: ${emp.nik}` : `ID: ${emp.machine_id}`}
-                            {emp.nik && emp.machine_id && emp.machine_id !== emp.nik && ` (ID: ${emp.machine_id})`}
                           </span>
                         </div>
                       </div>
