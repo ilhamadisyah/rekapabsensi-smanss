@@ -314,7 +314,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               {[
                 { id: 'ALL', label: 'Semua Pegawai' },
                 { id: 'Guru', label: 'Tenaga Pendidik' },
-                { id: 'TU', label: 'Tata Usaha' },
+                { id: 'TU', label: 'Staff' },
               ].map((d) => (
                 <button
                   key={d.id}

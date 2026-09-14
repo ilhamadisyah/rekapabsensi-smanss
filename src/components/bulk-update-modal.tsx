@@ -42,7 +42,7 @@ export const BulkUpdateModal: React.FC<BulkUpdateModalProps> = ({
   const filteredEmployees = employees.filter((e) => {
     if (selectedDept === 'ALL') return true;
     if (selectedDept === 'Guru') return e.department.includes('Guru');
-    if (selectedDept === 'TU') return e.department.includes('TU');
+    if (selectedDept === 'TU') return e.department.includes('TU') || e.department.toLowerCase().includes('staff') || e.department.toLowerCase().includes('staf') || e.department.toLowerCase().includes('kependidikan');
     return true;
   });
 
@@ -139,7 +139,7 @@ export const BulkUpdateModal: React.FC<BulkUpdateModalProps> = ({
               {[
                 { id: 'ALL', label: `Semua (${employees.length})` },
                 { id: 'Guru', label: 'Tenaga Pendidik' },
-                { id: 'TU', label: 'Tenaga Kependidikan' },
+                { id: 'TU', label: 'Staff' },
               ].map((group) => (
                 <button
                   key={group.id}

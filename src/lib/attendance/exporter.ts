@@ -87,7 +87,7 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
   if (options.department === 'Guru') {
     employees = employees.filter((e) => e.department.includes('Guru'));
   } else if (options.department === 'TU') {
-    employees = employees.filter((e) => e.department.includes('TU'));
+    employees = employees.filter((e) => e.department.includes('TU') || e.department.toLowerCase().includes('staff') || e.department.toLowerCase().includes('staf') || e.department.toLowerCase().includes('kependidikan'));
   }
 
   const templatePath = options.templatePath || path.resolve(process.cwd(), 'formt rekap absen.xlsx');
@@ -401,7 +401,7 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
       if (options.department === 'Guru' && !record.employee_name?.includes('Guru')) {
         continue;
       }
-      if (options.department === 'TU' && !record.employee_name?.includes('TU')) {
+      if (options.department === 'TU' && !record.employee_name?.includes('TU') && !record.employee_name?.toLowerCase().includes('staff') && !record.employee_name?.toLowerCase().includes('staf')) {
         continue;
       }
       existingMachineIds.add(record.employee_id);
@@ -415,7 +415,7 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
         machine_id: record.employee_id,
         nik: record.employee_id,
         full_name: resolvedName,
-        department: options.department === 'Guru' ? 'Guru' : options.department === 'TU' ? 'Tata Usaha' : 'Pegawai',
+        department: options.department === 'Guru' ? 'Guru' : options.department === 'TU' ? 'Staff' : 'Pegawai',
         excel_row_index: 999,
         is_active: true,
         created_at: new Date().toISOString(),

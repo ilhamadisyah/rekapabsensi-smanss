@@ -290,7 +290,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
 
       // 2. Department Filter
       if (selectedDepartment === 'Guru' && !emp.department.includes('Guru')) return false;
-      if (selectedDepartment === 'TU' && !emp.department.includes('TU')) return false;
+      if (selectedDepartment === 'TU' && !emp.department.includes('TU') && !emp.department.toLowerCase().includes('staff') && !emp.department.toLowerCase().includes('staf') && !emp.department.toLowerCase().includes('kependidikan')) return false;
 
       // 3. Attendance Filter
       if (attendanceFilter === 'ALL') return true;
@@ -353,7 +353,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                 {[
                   { id: 'ALL', label: 'Semua' },
                   { id: 'Guru', label: 'Guru' },
-                  { id: 'TU', label: 'Tata Usaha' },
+                  { id: 'TU', label: 'Staff' },
                 ].map((d) => (
                   <button
                     key={d.id}

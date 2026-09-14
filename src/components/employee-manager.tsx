@@ -507,7 +507,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 >
                   <option value="Tenaga Pendidik (Guru)">Tenaga Pendidik (Guru)</option>
-                  <option value="Tenaga Kependidikan (TU)">Tenaga Kependidikan (TU)</option>
+                  <option value="Tenaga Kependidikan (Staff)">Tenaga Kependidikan (Staff)</option>
                   <option value="Kebersihan (Cleaning Service)">Kebersihan (Cleaning Service)</option>
                   <option value="Keamanan (Security)">Keamanan (Security)</option>
                   <option value="Pengelola Asrama / Piket">Pengelola Asrama / Piket</option>

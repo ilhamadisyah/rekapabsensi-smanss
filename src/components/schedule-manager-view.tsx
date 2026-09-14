@@ -224,7 +224,7 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
   const filteredEmployees = useMemo(() => {
     return employees.filter((emp) => {
       if (selectedDept === 'Guru' && !emp.department.includes('Guru')) return false;
-      if (selectedDept === 'TU' && !emp.department.includes('TU')) return false;
+      if (selectedDept === 'TU' && !emp.department.includes('TU') && !emp.department.toLowerCase().includes('staff') && !emp.department.toLowerCase().includes('staf') && !emp.department.toLowerCase().includes('kependidikan')) return false;
       if (
         selectedDept !== 'ALL' &&
         selectedDept !== 'Guru' &&
@@ -694,7 +694,7 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                     {[
                       { id: 'ALL', label: 'Semua' },
                       { id: 'Guru', label: 'Guru' },
-                      { id: 'TU', label: 'Tata Usaha' },
+                      { id: 'TU', label: 'Staff' },
                     ].map((d) => (
                       <button
                         key={d.id}

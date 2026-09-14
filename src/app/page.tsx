@@ -398,7 +398,7 @@ export default function HomePage() {
                             : 'bg-blue-100 text-blue-800'
                         }`}
                       >
-                        {userRole === 'superadmin' ? 'Super Administrator' : 'Admin Presensi TU'}
+                        {userRole === 'superadmin' ? 'Super Administrator' : 'Admin Presensi Staff'}
                       </span>
                     </div>
                   </div>
