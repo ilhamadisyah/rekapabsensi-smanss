@@ -117,9 +117,15 @@ export const UploadModal: React.FC<UploadModalProps> = ({
       }
 
       if (data.has_missing_nik) {
+        const rawList = data.missing_nik_records || [];
+        const mappedRecords = rawList.map((r: any) => ({
+          machine_id: String(r.machine_id || r.machineId || '').trim(),
+          employee_name: String(r.employee_name || r.name || '').trim(),
+          punch_count: Number(r.punch_count || r.punchCount || 0),
+        }));
         setMissingNikData({
-          count: data.missing_nik_count || (data.missing_nik_records?.length || 0),
-          records: data.missing_nik_records || [],
+          count: data.missing_nik_count || mappedRecords.length,
+          records: mappedRecords,
         });
       } else {
         setTimeout(() => {
@@ -254,30 +260,40 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
           {/* Missing NIK Warning Notification */}
           {missingNikData && (
-            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs space-y-2 animate-in fade-in">
-              <div className="flex items-start gap-2 font-bold text-amber-950">
-                <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  Pemberitahuan: Terdapat {missingNikData.count} data pegawai yang belum memiliki NIK!
-                </div>
+            <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-300/90 text-amber-950 text-xs space-y-2.5 animate-in fade-in shadow-2xs">
+              <div className="flex items-center gap-2 font-bold text-amber-950 text-xs">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Pemberitahuan: Terdapat {missingNikData.count} data pegawai yang belum memiliki NIK!</span>
               </div>
               <p className="text-[11px] text-amber-800 leading-relaxed">
                 Log absensi pegawai berikut tetap diproses menggunakan ID Mesin sementara. Silakan lengkapi NIK mereka di menu <strong>Master Pegawai</strong> agar pengenalan presensi berbasis NIK berjalan optimal.
               </p>
               {missingNikData.records.length > 0 && (
-                <div className="max-h-32 overflow-y-auto rounded-lg border border-amber-200 bg-white/80 p-2 space-y-1">
-                  {missingNikData.records.slice(0, 20).map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-[11px] text-slate-700 py-0.5 border-b border-amber-100/60 last:border-0">
-                      <span className="font-medium truncate max-w-[240px]">
-                        {item.employee_name || 'Tanpa Nama'}
-                      </span>
-                      <span className="font-mono font-bold text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">
-                        ID Mesin: {item.machine_id}
-                      </span>
-                    </div>
-                  ))}
+                <div className="max-h-36 overflow-y-auto rounded-xl border border-amber-200/90 bg-white/95 p-2 shadow-inner divide-y divide-amber-100/60">
+                  {missingNikData.records.slice(0, 20).map((item, idx) => {
+                    const cleanName =
+                      item.employee_name &&
+                      item.employee_name !== 'Tanpa Nama' &&
+                      !item.employee_name.startsWith('Pegawai ID')
+                        ? item.employee_name
+                        : `Pegawai (ID Mesin: ${item.machine_id})`;
+
+                    return (
+                      <div key={idx} className="flex items-center justify-between text-xs text-slate-700 py-1.5 px-2 gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                          <span className="font-semibold text-slate-800 truncate">
+                            {cleanName}
+                          </span>
+                        </div>
+                        <span className="shrink-0 font-mono font-bold text-[10.5px] bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-md whitespace-nowrap">
+                          ID Mesin: {item.machine_id}
+                        </span>
+                      </div>
+                    );
+                  })}
                   {missingNikData.records.length > 20 && (
-                    <div className="text-[10px] text-amber-700 text-center pt-1 italic">
+                    <div className="text-[10px] text-amber-700 text-center pt-1.5 font-medium italic">
                       ... dan {missingNikData.records.length - 20} pegawai lainnya
                     </div>
                   )}
@@ -305,7 +321,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
           )}
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
             {missingNikData ? (
               <button
                 type="button"
@@ -313,8 +329,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                   onUploadSuccess(detectedPeriod);
                   onClose();
                 }}
-                className="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                className="w-full sm:w-auto px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.99] rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
+                <CheckCircle2 className="w-4 h-4" />
                 <span>Selesai &amp; Lihat Rekap Presensi</span>
               </button>
             ) : (

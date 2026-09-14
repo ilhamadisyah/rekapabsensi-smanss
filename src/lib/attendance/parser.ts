@@ -683,19 +683,23 @@ export function parseAttendanceFile(
     const enableCrossDayPairing = options?.enableCrossDayPairing ?? true;
 
     for (const [empKey, group] of punchesByEmployee.entries()) {
-      if (group.isMissingNik) {
-        missingNikRecords.push({
-          machineId: group.machineId,
-          name: group.name || `Pegawai ID ${group.machineId}`,
-          punchCount: group.punches.length,
-        });
-      }
-
       const punches = group.punches;
       punches.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
       const rawName = punches[0]?.name || group.name || '';
-      const realName = getEmployeeNameByMachineId(group.machineId, rawName);
+      const existingEmployee = existingByMachineId.get(group.machineId);
+      const realName =
+        existingEmployee?.full_name ||
+        getEmployeeNameByMachineId(group.machineId, rawName);
+
+      if (group.isMissingNik) {
+        missingNikRecords.push({
+          machineId: group.machineId,
+          name: realName || (group.machineId ? `Pegawai ID ${group.machineId}` : 'Tanpa Nama'),
+          punchCount: group.punches.length,
+        });
+      }
+
       employeeNames[empKey] = realName;
       employeeMeta[empKey] = {
         nik: group.nik,
