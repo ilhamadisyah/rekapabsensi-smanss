@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, X, FileSpreadsheet, CheckCircle2, AlertCircle, Sparkles, Calendar, ShieldCheck, AlertTriangle, UserCheck } from 'lucide-react';
+import { Upload, X, FileSpreadsheet, CheckCircle2, AlertCircle, Sparkles, Calendar, AlertTriangle, UserCheck } from 'lucide-react';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -236,14 +236,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                 </span>
                 <span className="bg-white/80 px-2 py-0.5 rounded-md border border-emerald-200">
                   <strong>{detectedPeriod.totalRawPunches} Ketukan Tap</strong>
-                </span>
-              </div>
-
-              {/* Policy note */}
-              <div className="flex items-start gap-1.5 text-[11px] text-emerald-800 bg-emerald-100/60 p-2 rounded-lg border border-emerald-200/80">
-                <ShieldCheck className="w-4 h-4 text-emerald-700 flex-shrink-0 mt-0.5" />
-                <span>
-                  <strong>Perlindungan Data:</strong> Jika data duplikat ditemukan, data presensi yang sudah diverifikasi sebelumnya (data lama) akan tetap dipertahankan.
                 </span>
               </div>
             </div>
