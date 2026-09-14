@@ -407,55 +407,60 @@ export function evaluateAttendanceStatus(
   const checkOutWindowMinutes = typeof scheduleContext?.checkOutWindowMinutes === 'number' ? scheduleContext.checkOutWindowMinutes : 240;
 
   // An overnight shift is explicitly marked isOvernight OR startTime > endTime (e.g. 20:00 > 06:00)
+  // An overnight shift is explicitly marked isOvernight OR startTime > endTime (e.g. 20:00 > 06:00)
   const isOvernight = Boolean(scheduleContext?.isOvernight || (startTime > endTime));
 
   // Handle overnight shift support (e.g. 20:00 - 06:00)
   if (isOvernight) {
-    // 1. Mandatory Cross-Day Requirement:
-    // Both taps on the same calendar day CANNOT be an overnight shift!
+    // Both taps on the same calendar day CANNOT be an overnight shift
     if (scheduleContext?.isCrossDaySession === false) {
       return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
     }
 
-    // 2. Window Check-In (Malam/Sore):
-    // Earliest check-in is (startTime - checkInWindowMinutes). E.g. 20:00 - 120m = 18:00:00
-    // Latest check-in for on-time is (startTime + gracePeriod). E.g. 20:00 + 0 = 20:00:00
-    const earliestCheckIn = addMinutesToTime(startTime, -checkInWindowMinutes);
     const checkInLimit = addMinutesToTime(startTime, gracePeriod);
-
-    // 3. Window Check-Out (Pagi/Subuh pada Hari Berikutnya):
-    // Earliest check-out is endTime. E.g. 06:00:00
-    // Latest check-out is (endTime + checkOutWindowMinutes). E.g. 06:00 + 240m = 10:00:00
     const checkOutLimit = endTime;
-    const latestCheckOut = addMinutesToTime(endTime, checkOutWindowMinutes);
 
-    // Verify firstIn is in the evening window (NOT a daytime punch like 06:22 or 12:00)
-    const isCheckInValid = firstIn >= earliestCheckIn && firstIn <= checkInLimit;
+    const isOnTimeIn = firstIn <= checkInLimit;
+    const isFullOut = lastOut >= checkOutLimit;
 
-    // Verify lastOut is in the morning subuh window (NOT afternoon/evening like 17:45)
-    const isCheckOutValid = lastOut >= checkOutLimit && lastOut <= latestCheckOut;
-
-    if (isCheckInValid && isCheckOutValid) {
+    if (isOnTimeIn && isFullOut) {
       return { systemStatus: 'HADIR', finalStatus: 'HADIR' };
     }
-
-    return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
+    if (!isOnTimeIn && isFullOut) {
+      return { systemStatus: 'HADIR', finalStatus: 'HIP' };
+    }
+    if (isOnTimeIn && !isFullOut) {
+      return { systemStatus: 'HADIR', finalStatus: 'HIS' };
+    }
+    return { systemStatus: 'HADIR', finalStatus: 'HIP' };
   }
 
-  // Regular daytime shift (e.g. 07:30 - 16:00)
-  const earliestCheckIn = addMinutesToTime(startTime, -checkInWindowMinutes);
+  // Regular daytime shift (e.g. 07:30 - 16:00 or 08:00 - 14:30)
   const checkInLimit = addMinutesToTime(startTime, gracePeriod);
   const checkOutLimit = endTime;
-  const latestCheckOut = addMinutesToTime(endTime, checkOutWindowMinutes);
 
-  const isCheckInValid = firstIn >= earliestCheckIn && firstIn <= checkInLimit;
-  const isCheckOutValid = lastOut >= checkOutLimit && lastOut <= latestCheckOut;
+  // Pegawai dianggap tepat waktu jika datang sebelum / tepat batas check-in limit
+  const isOnTimeIn = firstIn <= checkInLimit;
+  // Pegawai dianggap memenuhi jam kerja jika pulang pada atau setelah jam selesai shift
+  const isFullDayOut = lastOut >= checkOutLimit;
 
-  if (isCheckInValid && isCheckOutValid) {
+  // Kasus 1: Datang tepat waktu & pulang sesuai / lembur setelah jam kerja selesai -> HADIR PENUH
+  if (isOnTimeIn && isFullDayOut) {
     return { systemStatus: 'HADIR', finalStatus: 'HADIR' };
   }
 
-  return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
+  // Kasus 2: Datang terlambat, tetapi pulang sesuai / melebihi jam kerja selesai -> HIP (Hak Izin Pagi / Terlambat)
+  if (!isOnTimeIn && isFullDayOut) {
+    return { systemStatus: 'HADIR', finalStatus: 'HIP' };
+  }
+
+  // Kasus 3: Datang tepat waktu, tetapi pulang lebih cepat sebelum jam kerja selesai -> HIS (Hak Izin Siang / Pulang Cepat)
+  if (isOnTimeIn && !isFullDayOut) {
+    return { systemStatus: 'HADIR', finalStatus: 'HIS' };
+  }
+
+  // Kasus 4: Datang terlambat & pulang lebih cepat (namun tetap ada 2 rekaman tap kehadiran fisik di sekolah)
+  return { systemStatus: 'HADIR', finalStatus: 'HIP' };
 }
 
 export interface ParseAttendanceOptions {

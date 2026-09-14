@@ -42,10 +42,16 @@ export async function POST(request: NextRequest) {
     const holidayMap = new Map(holidays.map((h) => [h.date, h]));
     const scheduleMap = new Map(schedules.map((s) => [`${s.employee_id}___${s.date}`, s]));
 
-    // Existing attendance map: employee_id___date -> record
+    // Existing attendance map: keyed by all possible identifiers of an employee
     const attendanceMap = new Map<string, DailyAttendance>();
     existingAttendance.forEach((rec) => {
       attendanceMap.set(`${rec.employee_id}___${rec.attendance_date}`, rec);
+      const emp = employees.find((e) => e.id === rec.employee_id || e.nik === rec.employee_id || e.machine_id === rec.employee_id);
+      if (emp) {
+        if (emp.nik) attendanceMap.set(`${emp.nik}___${rec.attendance_date}`, rec);
+        if (emp.machine_id) attendanceMap.set(`${emp.machine_id}___${rec.attendance_date}`, rec);
+        if (emp.id) attendanceMap.set(`${emp.id}___${rec.attendance_date}`, rec);
+      }
     });
 
     // Determine days that have biometric logs
@@ -68,15 +74,19 @@ export async function POST(request: NextRequest) {
     let countVerified = 0;
 
     for (const emp of employees) {
+      const primaryEmpId = emp.nik || emp.id || emp.machine_id;
+
       for (let day = 1; day <= daysInMonth; day++) {
         const dateObj = new Date(year, month - 1, day);
         const dayOfWeek = dateObj.getDay();
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
         const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const key = `${emp.machine_id}___${dateStr}`;
 
         const isRecordedDay = recordedDays.includes(day);
-        const sched = scheduleMap.get(key);
+        const sched =
+          (emp.nik ? scheduleMap.get(`${emp.nik}___${dateStr}`) : undefined) ||
+          scheduleMap.get(`${emp.machine_id}___${dateStr}`) ||
+          (emp.id ? scheduleMap.get(`${emp.id}___${dateStr}`) : undefined);
         const hol = holidayMap.get(dateStr);
         const shift = sched ? shiftMap.get(sched.shift_id) : null;
 
@@ -92,7 +102,10 @@ export async function POST(request: NextRequest) {
         const checkOutWindowMinutes = shift?.check_out_window_minutes ?? defaultShift.check_out_window_minutes ?? 240;
         const isOvernight = Boolean(shift?.is_overnight ?? defaultShift.is_overnight ?? (startTime > endTime));
 
-        const existing = attendanceMap.get(key);
+        const existing =
+          (emp.nik ? attendanceMap.get(`${emp.nik}___${dateStr}`) : undefined) ||
+          attendanceMap.get(`${emp.machine_id}___${dateStr}`) ||
+          (emp.id ? attendanceMap.get(`${emp.id}___${dateStr}`) : undefined);
 
         if (existing) {
           // Check if manually verified by admin (DL, S, I, C, IL, PM, AL, OTL, HIP, HIS, or human-verified)
@@ -197,9 +210,9 @@ export async function POST(request: NextRequest) {
           if ((isHoliday || isWeekendLibur) && !hasAssignedDuty) {
             // Designated Holiday or Weekend -> LIBUR
             recordsToSync.push({
-              id: `att-${emp.machine_id}-${dateStr}`,
+              id: `att-${primaryEmpId}-${dateStr}`,
               upload_id: 'sync_system',
-              employee_id: emp.machine_id,
+              employee_id: primaryEmpId,
               employee_name: emp.full_name,
               attendance_date: dateStr,
               first_in: null,
@@ -215,9 +228,9 @@ export async function POST(request: NextRequest) {
           } else if (isExplicitOffShift) {
             // Scheduled OFF shift -> OFF
             recordsToSync.push({
-              id: `att-${emp.machine_id}-${dateStr}`,
+              id: `att-${primaryEmpId}-${dateStr}`,
               upload_id: 'sync_system',
-              employee_id: emp.machine_id,
+              employee_id: primaryEmpId,
               employee_name: emp.full_name,
               attendance_date: dateStr,
               first_in: null,
@@ -233,9 +246,9 @@ export async function POST(request: NextRequest) {
           } else if (isRecordedDay) {
             // Work required on recorded machine log date, but employee was absent -> Alpha (A)
             recordsToSync.push({
-              id: `att-${emp.machine_id}-${dateStr}`,
+              id: `att-${primaryEmpId}-${dateStr}`,
               upload_id: 'sync_system',
-              employee_id: emp.machine_id,
+              employee_id: primaryEmpId,
               employee_name: emp.full_name,
               attendance_date: dateStr,
               first_in: null,

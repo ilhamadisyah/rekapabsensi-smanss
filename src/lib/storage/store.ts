@@ -361,7 +361,15 @@ const localDb = {
 
     for (const newRec of records) {
       const key = `${newRec.employee_id}___${newRec.attendance_date}`;
-      const existingIdx = existingMap.get(key);
+      const emp = data.employees.find(
+        (e) => e.id === newRec.employee_id || e.nik === newRec.employee_id || e.machine_id === newRec.employee_id
+      );
+
+      const existingIdx =
+        existingMap.get(key) ??
+        (emp?.nik ? existingMap.get(`${emp.nik}___${newRec.attendance_date}`) : undefined) ??
+        (emp?.machine_id ? existingMap.get(`${emp.machine_id}___${newRec.attendance_date}`) : undefined) ??
+        (emp?.id ? existingMap.get(`${emp.id}___${newRec.attendance_date}`) : undefined);
 
       const resolvedName =
         newRec.employee_name ||

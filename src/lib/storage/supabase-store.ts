@@ -285,10 +285,19 @@ export const supabaseStore = {
     let updatedCount = 0;
     let newCount = 0;
     const recordsToUpsert: DailyAttendance[] = [];
+    const obsoletePlaceholderIdsToDelete: string[] = [];
 
     for (const newRec of records) {
-      const key = `${newRec.employee_id}___${newRec.attendance_date}`;
-      const existingRec = existingMap.get(key);
+      const emp = existingEmployees.find(
+        (e) => e.id === newRec.employee_id || e.nik === newRec.employee_id || e.machine_id === newRec.employee_id
+      );
+
+      const existingRec =
+        existingMap.get(`${newRec.employee_id}___${newRec.attendance_date}`) ||
+        (emp?.nik ? existingMap.get(`${emp.nik}___${newRec.attendance_date}`) : undefined) ||
+        (emp?.machine_id ? existingMap.get(`${emp.machine_id}___${newRec.attendance_date}`) : undefined) ||
+        (emp?.id ? existingMap.get(`${emp.id}___${newRec.attendance_date}`) : undefined);
+
       const resolvedName =
         newRec.employee_name ||
         employeeNames?.[newRec.employee_id] ||
@@ -304,6 +313,11 @@ export const supabaseStore = {
           existingRec.notes === 'Libur Rutin (Akhir Pekan)' ||
           existingRec.notes === 'Hari Libur Resmi' ||
           existingRec.notes === 'Libur Shift (Bebas Tugas)';
+
+        // If existing record was under a different employee ID (e.g. machine_id placeholder vs real NIK)
+        if (existingRec.employee_id !== newRec.employee_id && isSystemPlaceholder) {
+          obsoletePlaceholderIdsToDelete.push(existingRec.id);
+        }
 
         const isHumanVerified =
           !isSystemPlaceholder &&
@@ -335,7 +349,7 @@ export const supabaseStore = {
           recordsToUpsert.push({
             ...newRec,
             employee_name: resolvedName,
-            id: existingRec.id || newRec.id,
+            id: existingRec.id && existingRec.employee_id === newRec.employee_id ? existingRec.id : newRec.id,
           });
           updatedCount++;
         }
@@ -345,6 +359,14 @@ export const supabaseStore = {
           employee_name: resolvedName,
         });
         newCount++;
+      }
+    }
+
+    // Delete obsolete placeholder rows that belonged to same employee & date
+    if (obsoletePlaceholderIdsToDelete.length > 0) {
+      for (let i = 0; i < obsoletePlaceholderIdsToDelete.length; i += 100) {
+        const idChunk = obsoletePlaceholderIdsToDelete.slice(i, i + 100);
+        await client.from('daily_attendance').delete().in('id', idChunk);
       }
     }
 

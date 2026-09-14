@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
       if (emp.id) attendanceMap[emp.id] = dayRecord;
     }
 
-    // Populate existing records
+    // Populate existing records with tap priority protection
     for (const rec of attendanceRecords) {
       const day = parseInt(rec.attendance_date.split('-')[2], 10);
       let dayRecord = attendanceMap[rec.employee_id];
@@ -124,7 +124,30 @@ export async function GET(request: NextRequest) {
         dayRecord = {};
         attendanceMap[rec.employee_id] = dayRecord;
       }
-      dayRecord[day] = { ...rec };
+
+      const current = dayRecord[day];
+      if (current) {
+        const currentHasTap = (current.tap_count || 0) > 0 || current.first_in !== null;
+        const incomingHasTap = (rec.tap_count || 0) > 0 || rec.first_in !== null;
+        const currentIsVerified = current.is_verified && current.verified_by && current.verified_by !== 'system';
+        const incomingIsVerified = rec.is_verified && rec.verified_by && rec.verified_by !== 'system';
+
+        if (incomingIsVerified) {
+          dayRecord[day] = { ...rec };
+        } else if (currentIsVerified) {
+          // Keep human verification
+        } else if (incomingHasTap && !currentHasTap) {
+          dayRecord[day] = { ...rec };
+        } else if (!incomingHasTap && currentHasTap) {
+          // Real tap record exists - NEVER overwrite with 0-tap placeholder!
+        } else {
+          if ((rec.tap_count || 0) >= (current.tap_count || 0)) {
+            dayRecord[day] = { ...rec };
+          }
+        }
+      } else {
+        dayRecord[day] = { ...rec };
+      }
     }
 
     // Evaluate attendance dynamically against database schedules & shifts
