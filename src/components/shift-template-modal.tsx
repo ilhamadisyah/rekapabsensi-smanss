@@ -516,19 +516,14 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                     </label>
                   </div>
 
-                  {/* KARTU 2: BATAS MAKSIMAL ABSENSI (PROTEKSI KEAMANAN CROSS-DAY) */}
+                  {/* KARTU 2: BATAS MAKSIMAL ABSENSI */}
                   <div className="bg-gradient-to-br from-slate-50/90 to-blue-50/40 border border-slate-200/90 rounded-2xl p-4 space-y-3 shadow-2xs">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
-                          <Shield className="w-3.5 h-3.5" />
-                        </div>
-                        <span className="text-xs font-bold text-slate-900">
-                          Batas Maksimal Absensi (Proteksi Keamanan Cross-Day)
-                        </span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+                        <Shield className="w-3.5 h-3.5" />
                       </div>
-                      <span className="text-[10px] text-blue-700 bg-blue-100/70 border border-blue-200/60 px-2.5 py-0.5 rounded-full font-bold">
-                        Anti-Absen Di Luar Jam
+                      <span className="text-xs font-bold text-slate-900">
+                        Batas Maksimal Absensi
                       </span>
                     </div>
 
