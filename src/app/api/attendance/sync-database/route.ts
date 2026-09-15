@@ -98,9 +98,9 @@ export async function POST(request: NextRequest) {
         const startTime = sched?.custom_start_time || shift?.start_time || defaultShift.start_time;
         const endTime = sched?.custom_end_time || shift?.end_time || defaultShift.end_time;
         const gracePeriod = shift?.grace_period_minutes ?? defaultShift.grace_period_minutes;
-        const checkInWindowMinutes = shift?.check_in_window_minutes ?? defaultShift.check_in_window_minutes ?? 120;
-        const checkOutWindowMinutes = shift?.check_out_window_minutes ?? defaultShift.check_out_window_minutes ?? 240;
         const isOvernight = Boolean(shift?.is_overnight ?? defaultShift.is_overnight ?? (startTime > endTime));
+        const checkInWindowMinutes = shift?.check_in_window_minutes ?? (isOvernight ? 300 : 120);
+        const checkOutWindowMinutes = shift?.check_out_window_minutes ?? 240;
 
         const existing =
           (emp.nik ? attendanceMap.get(`${emp.nik}___${dateStr}`) : undefined) ||
@@ -142,22 +142,43 @@ export async function POST(request: NextRequest) {
           let effectiveLastOut = existing.last_out;
           let effectiveTapCount = existing.tap_count;
           let isCrossDaySession = Boolean(existing.is_cross_day);
+          let sessionNotes = existing.notes;
 
           if (isOvernight) {
             const earliestEveningIn = addMinutesToTime(startTime, -checkInWindowMinutes);
             const latestMorningOut = addMinutesToTime(endTime, checkOutWindowMinutes);
 
-            if (effectiveFirstIn && effectiveFirstIn >= earliestEveningIn && (!effectiveLastOut || effectiveLastOut >= '15:00:00' || effectiveTapCount < 2)) {
+            if (effectiveFirstIn && effectiveFirstIn >= earliestEveningIn && (!effectiveLastOut || effectiveLastOut >= earliestEveningIn || effectiveTapCount < 2)) {
               // Look up next day's record for morning checkout
               const dNext = new Date(dateStr + 'T00:00:00');
               dNext.setDate(dNext.getDate() + 1);
               const nextDateStr = `${dNext.getFullYear()}-${String(dNext.getMonth() + 1).padStart(2, '0')}-${String(dNext.getDate()).padStart(2, '0')}`;
               const nextKey = `${emp.machine_id}___${nextDateStr}`;
               const nextRec = attendanceMap.get(nextKey);
-              if (nextRec && nextRec.first_in && nextRec.first_in >= endTime && nextRec.first_in <= latestMorningOut) {
-                effectiveLastOut = nextRec.first_in;
-                effectiveTapCount = Math.max(effectiveTapCount || 1, 2);
-                isCrossDaySession = true;
+              if (nextRec && nextRec.first_in && nextRec.first_in <= latestMorningOut) {
+                const dStart = new Date(`${dateStr}T${effectiveFirstIn}`);
+                const dEnd = new Date(`${nextDateStr}T${nextRec.first_in}`);
+                const diffHours = (dEnd.getTime() - dStart.getTime()) / (1000 * 60 * 60);
+
+                if (diffHours >= 3 && diffHours <= 23) {
+                  effectiveLastOut = nextRec.first_in;
+                  effectiveTapCount = Math.max(effectiveTapCount || 1, 2);
+                  isCrossDaySession = true;
+
+                  // Consume morning checkout punch from next day's record
+                  if (nextRec.last_out) {
+                    nextRec.first_in = nextRec.last_out;
+                    nextRec.last_out = null;
+                    nextRec.tap_count = Math.max(1, (nextRec.tap_count || 2) - 1);
+                  } else {
+                    nextRec.first_in = null;
+                    nextRec.last_out = null;
+                    nextRec.tap_count = 0;
+                  }
+                  nextRec.is_cross_day = false;
+                } else if (diffHours > 23) {
+                  sessionNotes = 'Rentang tap melebihi batas maksimal 23 jam';
+                }
               }
             }
           }
@@ -201,6 +222,7 @@ export async function POST(request: NextRequest) {
             tap_count: effectiveTapCount,
             system_status: systemStatus,
             final_status: finalStatus,
+            notes: sessionNotes || existing.notes,
             is_cross_day: isCrossDaySession,
             is_verified: false,
             updated_at: new Date().toISOString(),

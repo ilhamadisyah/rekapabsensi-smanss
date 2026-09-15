@@ -788,27 +788,31 @@ export function parseAttendanceFile(
           (group.machineId ? options?.scheduleMap?.get(`${group.machineId}___${dateStr}`) : undefined);
 
         // Check if this punch is candidate for beginning an overnight shift:
-        // Must be scheduled as overnight AND punch must be in the evening/night window (not daytime)!
-        const checkInWindowMin = sched?.checkInWindowMinutes ?? 120;
-        const schedStart = sched?.startTime || '20:00:00';
+        // Dynamic time windows following shift template settings (no hardcoding):
+        const isExplicitOvernight = Boolean(sched?.isOvernight || (sched?.startTime && sched?.endTime && sched.startTime > sched.endTime));
+        const checkInWindowMin = typeof sched?.checkInWindowMinutes === 'number' && sched.checkInWindowMinutes > 0
+          ? sched.checkInWindowMinutes
+          : (isExplicitOvernight ? 300 : 120);
+        const schedStart = sched?.startTime || (isExplicitOvernight ? '20:00:00' : '07:30:00');
+        const schedEnd = sched?.endTime || (isExplicitOvernight ? '06:00:00' : '16:00:00');
         const earliestEveningIn = addMinutesToTime(schedStart, -checkInWindowMin);
         const isEveningPunch = punch.timeStr >= earliestEveningIn;
-        const isExplicitOvernight = Boolean(sched?.isOvernight || schedStart > (sched?.endTime || '06:00:00'));
         const isOvernightCandidate = Boolean(enableCrossDayPairing && isExplicitOvernight && isEveningPunch);
 
         let isOvernightSession = false;
+        let sessionNotes: string | undefined = undefined;
         const sessionPunches: RawPunchRecord[] = [punch];
         consumedIndices.add(i);
 
         if (isOvernightCandidate) {
-          // Collect other evening punches on the same starting date
+          // Collect other evening punches on the same starting date after earliestEveningIn
           for (let j = i + 1; j < punches.length; j++) {
             if (consumedIndices.has(j)) continue;
             const p2 = punches[j];
-            if (p2.dateStr === dateStr && p2.timeStr >= '15:00:00') {
+            if (p2.dateStr === dateStr && p2.timeStr >= earliestEveningIn) {
               sessionPunches.push(p2);
               consumedIndices.add(j);
-            } else {
+            } else if (p2.dateStr > dateStr) {
               break;
             }
           }
@@ -819,18 +823,24 @@ export function parseAttendanceFile(
           const nextDateStr = formatDate(dNext);
 
           // Find morning checkout punches on next day within configured checkout window
-          const checkOutWindowMin = sched?.checkOutWindowMinutes ?? 240;
-          const schedEnd = sched?.endTime || '06:00:00';
+          const checkOutWindowMin = typeof sched?.checkOutWindowMinutes === 'number' && sched.checkOutWindowMinutes > 0
+            ? sched.checkOutWindowMinutes
+            : 240;
           const latestMorningOut = addMinutesToTime(schedEnd, checkOutWindowMin);
 
           const nextDayMorningPunches: { index: number; punch: RawPunchRecord }[] = [];
+          let exceeded23HoursPunch: RawPunchRecord | null = null;
+
           for (let j = i + 1; j < punches.length; j++) {
             if (consumedIndices.has(j)) continue;
             const pNext = punches[j];
-            if (pNext.dateStr === nextDateStr && pNext.timeStr >= schedEnd && pNext.timeStr <= latestMorningOut) {
+            if (pNext.dateStr === nextDateStr && pNext.timeStr <= latestMorningOut) {
               const diffHours = (pNext.timestamp.getTime() - punch.timestamp.getTime()) / (1000 * 60 * 60);
-              if (diffHours >= 4 && diffHours <= 16) {
+              // Batas maksimal durasi lintas hari: maksimal 23 jam
+              if (diffHours >= 3 && diffHours <= 23) {
                 nextDayMorningPunches.push({ index: j, punch: pNext });
+              } else if (diffHours > 23) {
+                exceeded23HoursPunch = pNext;
               }
             } else if (pNext.dateStr > nextDateStr) {
               break;
@@ -842,6 +852,8 @@ export function parseAttendanceFile(
             sessionPunches.push(bestMorningOut.punch);
             consumedIndices.add(bestMorningOut.index);
             isOvernightSession = true;
+          } else if (exceeded23HoursPunch) {
+            sessionNotes = 'Rentang tap melebihi batas maksimal 23 jam';
           }
         } else {
           // Standard daytime pairing: collect punches on the same calendar date
@@ -880,13 +892,16 @@ export function parseAttendanceFile(
             }
           : undefined;
 
-        const { systemStatus, finalStatus } = evaluateAttendanceStatus(
+        const evaluated = evaluateAttendanceStatus(
           firstIn,
           lastOut,
           tapCount,
           isWeekend,
           scheduleContext
         );
+
+        const systemStatus = evaluated.systemStatus;
+        const finalStatus = evaluated.finalStatus;
 
         if (finalStatus === 'HADIR') {
           totalPresent++;
@@ -905,6 +920,7 @@ export function parseAttendanceFile(
           tap_count: tapCount,
           system_status: systemStatus,
           final_status: finalStatus,
+          notes: sessionNotes,
           is_cross_day: isOvernightSession,
           is_verified: false,
           updated_at: new Date().toISOString(),

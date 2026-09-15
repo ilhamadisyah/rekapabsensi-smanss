@@ -572,7 +572,29 @@ export const supabaseStore = {
       console.error('[Supabase] Error getShiftTemplates:', error);
       return [];
     }
-    return data || [];
+
+    const mapped = (data || []).map((t: any) => {
+      let inWin = typeof t.check_in_window_minutes === 'number' ? t.check_in_window_minutes : undefined;
+      let outWin = typeof t.check_out_window_minutes === 'number' ? t.check_out_window_minutes : undefined;
+
+      // Restore from description metadata fallback if columns were missing in schema
+      if ((inWin === undefined || outWin === undefined) && t.description) {
+        const match = t.description.match(/<!--windows:\{"in":(\d+),"out":(\d+)\}-->/);
+        if (match) {
+          if (inWin === undefined) inWin = parseInt(match[1], 10);
+          if (outWin === undefined) outWin = parseInt(match[2], 10);
+        }
+      }
+
+      return {
+        ...t,
+        description: t.description ? t.description.replace(/\s*<!--windows:\{.*?\}-->\s*/g, '').trim() : '',
+        check_in_window_minutes: inWin,
+        check_out_window_minutes: outWin,
+      };
+    });
+
+    return mapped;
   },
 
   async saveShiftTemplate(template: Partial<ShiftTemplate> & { name: string; code: string }): Promise<ShiftTemplate> {
@@ -581,6 +603,10 @@ export const supabaseStore = {
 
     const now = new Date().toISOString();
     const id = template.id || `shift-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const rawDesc = (template.description || '').replace(/\s*<!--windows:\{.*?\}-->\s*/g, '').trim();
+
+    const inWindow = typeof template.check_in_window_minutes === 'number' ? template.check_in_window_minutes : (template.is_overnight ? 300 : 120);
+    const outWindow = typeof template.check_out_window_minutes === 'number' ? template.check_out_window_minutes : 240;
 
     const fullTemplate: ShiftTemplate = {
       id,
@@ -589,12 +615,12 @@ export const supabaseStore = {
       start_time: template.start_time || '07:30:00',
       end_time: template.end_time || '16:00:00',
       grace_period_minutes: Number(template.grace_period_minutes || 0),
-      check_in_window_minutes: typeof template.check_in_window_minutes === 'number' ? template.check_in_window_minutes : 120,
-      check_out_window_minutes: typeof template.check_out_window_minutes === 'number' ? template.check_out_window_minutes : 240,
+      check_in_window_minutes: inWindow,
+      check_out_window_minutes: outWindow,
       is_overnight: Boolean(template.is_overnight),
       is_off_day: Boolean(template.is_off_day),
       color: template.color || '#2563eb',
-      description: template.description || '',
+      description: rawDesc,
       is_default: Boolean(template.is_default),
       created_at: now,
       updated_at: now,
@@ -602,8 +628,13 @@ export const supabaseStore = {
 
     let { error } = await client.from('shift_templates').upsert(fullTemplate, { onConflict: 'id' });
     if (error && (error.message.includes('check_in_window_minutes') || error.message.includes('check_out_window_minutes') || error.code === 'PGRST204')) {
-      console.warn('[Supabase] Window columns not found in shift_templates schema cache, falling back to basic columns');
-      const { check_in_window_minutes, check_out_window_minutes, ...legacyTemplate } = fullTemplate;
+      console.warn('[Supabase] Window columns not found in shift_templates schema cache, persisting window settings via metadata fallback');
+      const metaTag = `<!--windows:{"in":${inWindow},"out":${outWindow}}-->`;
+      const descWithMeta = rawDesc ? `${rawDesc} ${metaTag}` : metaTag;
+      const { check_in_window_minutes, check_out_window_minutes, ...legacyTemplate } = {
+        ...fullTemplate,
+        description: descWithMeta,
+      };
       const res = await client.from('shift_templates').upsert(legacyTemplate, { onConflict: 'id' });
       error = res.error;
     }

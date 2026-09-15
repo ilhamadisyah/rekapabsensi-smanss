@@ -187,9 +187,9 @@ export async function GET(request: NextRequest) {
         const startTime = sched?.custom_start_time || shift?.start_time || defaultShift.start_time;
         const endTime = sched?.custom_end_time || shift?.end_time || defaultShift.end_time;
         const gracePeriod = shift?.grace_period_minutes ?? defaultShift.grace_period_minutes;
-        const checkInWindowMinutes = shift?.check_in_window_minutes ?? defaultShift.check_in_window_minutes ?? 120;
-        const checkOutWindowMinutes = shift?.check_out_window_minutes ?? defaultShift.check_out_window_minutes ?? 240;
         const isOvernight = Boolean(shift?.is_overnight ?? defaultShift.is_overnight ?? (startTime > endTime));
+        const checkInWindowMinutes = shift?.check_in_window_minutes ?? (isOvernight ? 300 : 120);
+        const checkOutWindowMinutes = shift?.check_out_window_minutes ?? 240;
         const shiftCode = sched?.shift_code || shift?.code || (isHoliday ? 'LIBUR' : (d.isWeekend ? 'LIBUR' : defaultShift.code));
         const shiftName = sched?.shift_name || shift?.name || (isHoliday ? (hol?.name || 'Hari Libur Resmi') : (d.isWeekend ? 'Akhir Pekan' : defaultShift.name));
         const shiftColor = shift?.color || (isHoliday ? '#f43f5e' : (d.isWeekend ? '#94a3b8' : defaultShift.color));
@@ -217,14 +217,35 @@ export async function GET(request: NextRequest) {
               const earliestEveningIn = addMinutesToTime(startTime, -checkInWindowMinutes);
               const latestMorningOut = addMinutesToTime(endTime, checkOutWindowMinutes);
 
-              // Only pair if starting punch is legitimately in the evening window (>= earliestEveningIn)
-              // If punch was in the daytime (e.g. 06:22), it is NEVER an overnight shift!
-              if (rec.first_in && rec.first_in >= earliestEveningIn && (!rec.last_out || rec.last_out >= '15:00:00' || rec.tap_count < 2)) {
+              // Only pair if starting punch is legitimately in the check-in window (>= earliestEveningIn)
+              if (rec.first_in && rec.first_in >= earliestEveningIn && (!rec.last_out || rec.last_out >= earliestEveningIn || rec.tap_count < 2)) {
                 const nextDayRec = empDayMap[d.day + 1];
-                if (nextDayRec && nextDayRec.first_in && nextDayRec.first_in >= endTime && nextDayRec.first_in <= latestMorningOut) {
-                  rec.last_out = nextDayRec.first_in;
-                  rec.tap_count = Math.max(rec.tap_count || 1, 2);
-                  isCrossDaySession = true;
+                if (nextDayRec && nextDayRec.first_in && nextDayRec.first_in <= latestMorningOut) {
+                  const dStart = new Date(`${d.dateStr}T${rec.first_in}`);
+                  const nextDateObj = new Date(year, month - 1, d.day + 1);
+                  const nextDateStr = `${nextDateObj.getFullYear()}-${String(nextDateObj.getMonth() + 1).padStart(2, '0')}-${String(nextDateObj.getDate()).padStart(2, '0')}`;
+                  const dEnd = new Date(`${nextDateStr}T${nextDayRec.first_in}`);
+                  const diffHours = (dEnd.getTime() - dStart.getTime()) / (1000 * 60 * 60);
+
+                  if (diffHours >= 3 && diffHours <= 23) {
+                    rec.last_out = nextDayRec.first_in;
+                    rec.tap_count = Math.max(rec.tap_count || 1, 2);
+                    isCrossDaySession = true;
+
+                    // Consume next day's morning checkout punch
+                    if (nextDayRec.last_out) {
+                      nextDayRec.first_in = nextDayRec.last_out;
+                      nextDayRec.last_out = null;
+                      nextDayRec.tap_count = Math.max(1, (nextDayRec.tap_count || 2) - 1);
+                    } else {
+                      nextDayRec.first_in = null;
+                      nextDayRec.last_out = null;
+                      nextDayRec.tap_count = 0;
+                    }
+                    nextDayRec.is_cross_day = false;
+                  } else if (diffHours > 23) {
+                    rec.notes = 'Rentang tap melebihi batas maksimal 23 jam';
+                  }
                 }
               }
               rec.is_cross_day = isCrossDaySession;
