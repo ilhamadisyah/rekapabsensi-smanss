@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
           let effectiveFirstIn = existing.first_in;
           let effectiveLastOut = existing.last_out;
           let effectiveTapCount = existing.tap_count;
-          let isCrossDaySession = Boolean(existing.is_cross_day);
+          let isCrossDaySession = Boolean(existing.is_cross_day) || Boolean(isOvernight && effectiveFirstIn && effectiveLastOut && (effectiveFirstIn as string) > (effectiveLastOut as string));
           let sessionNotes = existing.notes;
 
           if (isOvernight) {

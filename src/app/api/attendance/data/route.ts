@@ -210,7 +210,7 @@ export async function GET(request: NextRequest) {
           rec.has_assigned_duty = hasAssignedDuty;
 
           if (!rec.is_verified) {
-            let isCrossDaySession = Boolean(rec.is_cross_day);
+            let isCrossDaySession = Boolean(rec.is_cross_day) || Boolean(isOvernight && rec.first_in && rec.last_out && (rec.first_in as string) > (rec.last_out as string));
             // Dynamic Cross-Day Punch Pairing for overnight shifts:
             // An overnight shift MUST pair with the next calendar day (beda hari)!
             if (isOvernight) {

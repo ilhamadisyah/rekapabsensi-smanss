@@ -491,8 +491,9 @@ export function evaluateAttendanceStatus(
 
   // Handle overnight shift support (e.g. 20:00 - 06:00)
   if (isOvernight) {
-    // Both taps on the same calendar day CANNOT be an overnight shift
-    if (scheduleContext?.isCrossDaySession === false) {
+    // Both taps on the same calendar day CANNOT be a completed overnight shift
+    const isSameDay = scheduleContext?.isCrossDaySession === false && firstIn <= lastOut;
+    if (isSameDay) {
       return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
     }
 
