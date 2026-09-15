@@ -19,6 +19,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
   const [detectedPeriod, setDetectedPeriod] = useState<any>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -31,42 +32,48 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
   if (!isOpen) return null;
 
+  const processSelectedFile = async (selected: File) => {
+    const ext = selected.name.toLowerCase();
+    if (!ext.endsWith('.xls') && !ext.endsWith('.xlsx') && !ext.endsWith('.csv')) {
+      setErrorMsg('Format file harus berupa .csv, .xls, atau .xlsx');
+      return;
+    }
+
+    setFile(selected);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    setMissingNikData(null);
+    setAutoRegisteredCount(0);
+    setDetectedPeriod(null);
+    setIsAnalyzing(true);
+
+    // Inspect file to auto-detect date, month, and year
+    try {
+      const formData = new FormData();
+      formData.append('file', selected);
+
+      const res = await fetch('/api/attendance/detect-period', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success && data.period) {
+        setDetectedPeriod(data.period);
+      } else if (!res.ok) {
+        setErrorMsg(data.error || 'Gagal mendeteksi data dari file presensi.');
+      }
+    } catch (err) {
+      console.error('Failed to auto-detect period:', err);
+      setErrorMsg('Terjadi kesalahan saat memeriksa berkas.');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const selected = e.target.files[0];
-      const ext = selected.name.toLowerCase();
-      if (!ext.endsWith('.xls') && !ext.endsWith('.xlsx')) {
-        setErrorMsg('Format file harus berupa .xls atau .xlsx');
-        return;
-      }
-
-      setFile(selected);
-      setErrorMsg(null);
-      setSuccessMsg(null);
-      setMissingNikData(null);
-      setAutoRegisteredCount(0);
-      setDetectedPeriod(null);
-      setIsAnalyzing(true);
-
-      // Inspect file to auto-detect date, month, and year
-      try {
-        const formData = new FormData();
-        formData.append('file', selected);
-
-        const res = await fetch('/api/attendance/detect-period', {
-          method: 'POST',
-          body: formData,
-        });
-
-        const data = await res.json();
-        if (res.ok && data.success && data.period) {
-          setDetectedPeriod(data.period);
-        }
-      } catch (err) {
-        console.error('Failed to auto-detect period:', err);
-      } finally {
-        setIsAnalyzing(false);
-      }
+      await processSelectedFile(e.target.files[0]);
     }
   };
 
@@ -163,11 +170,30 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
         {/* Content */}
         <div className="p-6 space-y-4">
-          {/* Drag & Drop File Zone */}
           <div
             onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDragging(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDragging(false);
+            }}
+            onDrop={async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsDragging(false);
+              if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                await processSelectedFile(e.dataTransfer.files[0]);
+              }
+            }}
             className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all ${
-              file
+              isDragging
+                ? 'border-blue-500 bg-blue-50/60 scale-[1.01]'
+                : file
                 ? 'border-emerald-500 bg-emerald-50/30'
                 : 'border-slate-300 hover:border-blue-500 hover:bg-slate-50'
             }`}
