@@ -120,28 +120,40 @@ export const DEFAULT_SHIFT_TEMPLATES: ShiftTemplate[] = [
 const DB_PATH = path.resolve(process.cwd(), 'data', 'attendance-db.json');
 
 function ensureDbFile(): DbSchema {
-  const dir = path.dirname(DB_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-
-  if (!fs.existsSync(DB_PATH)) {
-    const initialData: DbSchema = {
-      employees: [],
-      upload_history: [],
-      daily_attendance: [],
-      audit_logs: [],
-      shift_templates: [...DEFAULT_SHIFT_TEMPLATES],
-      employee_schedules: [],
-      holidays: [],
-      admin_users: [{ ...DEFAULT_SUPERADMIN_USER }],
-    };
-
-    fs.writeFileSync(DB_PATH, JSON.stringify(initialData, null, 2), 'utf-8');
-    return initialData;
-  }
+  const defaultStructure: DbSchema = {
+    employees: [],
+    upload_history: [],
+    daily_attendance: [],
+    audit_logs: [],
+    shift_templates: [...DEFAULT_SHIFT_TEMPLATES],
+    employee_schedules: [],
+    holidays: [],
+    admin_users: [{ ...DEFAULT_SUPERADMIN_USER }],
+  };
 
   try {
+    const dir = path.dirname(DB_PATH);
+    if (!fs.existsSync(dir)) {
+      try {
+        fs.mkdirSync(dir, { recursive: true });
+      } catch (err: any) {
+        if (err.code !== 'EROFS' && !err.message?.includes('read-only')) {
+          console.warn('[Store] Cannot mkdir for local DB:', err);
+        }
+      }
+    }
+
+    if (!fs.existsSync(DB_PATH)) {
+      try {
+        fs.writeFileSync(DB_PATH, JSON.stringify(defaultStructure, null, 2), 'utf-8');
+      } catch (err: any) {
+        if (err.code !== 'EROFS' && !err.message?.includes('read-only')) {
+          console.warn('[Store] Cannot write initial local DB:', err);
+        }
+      }
+      return defaultStructure;
+    }
+
     const content = fs.readFileSync(DB_PATH, 'utf-8');
     const parsed: DbSchema = JSON.parse(content);
     let dirty = false;
@@ -168,29 +180,31 @@ function ensureDbFile(): DbSchema {
     }
 
     return parsed;
-  } catch (err) {
-    console.error('Error reading DB_PATH, fallback to empty structure:', err);
-    return {
-      employees: [],
-      upload_history: [],
-      daily_attendance: [],
-      audit_logs: [],
-      shift_templates: [...DEFAULT_SHIFT_TEMPLATES],
-      employee_schedules: [],
-      holidays: [],
-      admin_users: [{ ...DEFAULT_SUPERADMIN_USER }],
-    };
+  } catch (err: any) {
+    if (err.code !== 'EROFS' && !err.message?.includes('read-only')) {
+      console.warn('Error reading DB_PATH, fallback to default structure:', err.message);
+    }
+    return defaultStructure;
   }
 }
 
 function writeDb(data: DbSchema) {
-  const dir = path.dirname(DB_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+  try {
+    const dir = path.dirname(DB_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const tempPath = `${DB_PATH}.tmp.${Date.now()}`;
+    fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf-8');
+    fs.renameSync(tempPath, DB_PATH);
+  } catch (err: any) {
+    if (err.code === 'EROFS' || err.message?.includes('read-only') || err.message?.includes('EROFS')) {
+      // Vercel serverless environment is read-only outside /tmp. Supabase handles actual persistence.
+      console.warn('[Store] Read-only filesystem detected on serverless runtime (Vercel). Local write skipped safely.');
+      return;
+    }
+    console.error('[Store] Error writing to local DB_PATH:', err);
   }
-  const tempPath = `${DB_PATH}.tmp.${Date.now()}`;
-  fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf-8');
-  fs.renameSync(tempPath, DB_PATH);
 }
 
 const localDb = {
@@ -954,38 +968,36 @@ export const db = {
   },
 
   async createEmployee(employeeData: Omit<Employee, 'id' | 'created_at'> & { id?: string }): Promise<Employee | null> {
-    let created: Employee | null = null;
     if (isSupabaseConfigured) {
       try {
-        created = await supabaseStore.createEmployee(employeeData);
+        return await supabaseStore.createEmployee(employeeData);
       } catch (e: any) {
         console.error('[Store] Supabase createEmployee error:', e);
         throw e;
       }
     }
-    const localCreated = localDb.createEmployee(employeeData);
-    return created || localCreated;
+    return localDb.createEmployee(employeeData);
   },
 
   async deleteEmployee(id: string): Promise<boolean> {
-    let success = false;
     if (isSupabaseConfigured) {
       try {
-        success = await supabaseStore.deleteEmployee(id);
+        return await supabaseStore.deleteEmployee(id);
       } catch (e) {
         console.warn('[Store] Supabase deleteEmployee error:', e);
+        return false;
       }
     }
-    const localSuccess = localDb.deleteEmployee(id);
-    return success || localSuccess;
+    return localDb.deleteEmployee(id);
   },
 
   async clearAllEmployeesAndAttendance(): Promise<{ deletedEmployees: number; deletedAttendance: number }> {
     if (isSupabaseConfigured) {
       try {
-        await supabaseStore.clearAllEmployeesAndAttendance();
+        return await supabaseStore.clearAllEmployeesAndAttendance();
       } catch (e) {
         console.warn('[Store] Supabase clearAllEmployeesAndAttendance error:', e);
+        return { deletedEmployees: 0, deletedAttendance: 0 };
       }
     }
     return localDb.clearAllEmployeesAndAttendance();
@@ -994,9 +1006,10 @@ export const db = {
   async reorderEmployees(orders: { id: string; excel_row_index: number }[]): Promise<boolean> {
     if (isSupabaseConfigured) {
       try {
-        await supabaseStore.reorderEmployees(orders);
+        return await supabaseStore.reorderEmployees(orders);
       } catch (e) {
         console.warn('[Store] Supabase reorderEmployees error:', e);
+        return false;
       }
     }
     return localDb.reorderEmployees(orders);
@@ -1212,6 +1225,7 @@ export const db = {
     if (isSupabaseConfigured) {
       try {
         await supabaseStore.updateAdminLastLogin(id);
+        return;
       } catch (e) {
         console.warn('[Store] Supabase error updating admin last login:', e);
       }
