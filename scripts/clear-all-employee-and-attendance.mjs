@@ -27,12 +27,13 @@ async function runClean() {
     fs.mkdirSync(dataDir, { recursive: true });
   }
 
-  // A. CADANGKAN BERKAS LOKAL attendance-db.json
   const localDbPath = path.join(dataDir, 'attendance-db.json');
   if (fs.existsSync(localDbPath)) {
     const localContent = fs.readFileSync(localDbPath, 'utf-8');
-    const backupLocalPath = path.join(dataDir, `backup-attendance-db-before-clear.json`);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupLocalPath = path.join(dataDir, `backup-attendance-db-${timestamp}.json`);
     fs.writeFileSync(backupLocalPath, localContent, 'utf-8');
+    fs.writeFileSync(path.join(dataDir, `backup-attendance-db-before-clear.json`), localContent, 'utf-8');
     console.log(`✓ Data lokal berhasil dicadangkan ke: ${backupLocalPath}`);
 
     try {
@@ -77,8 +78,10 @@ async function runClean() {
     }
   }
 
-  const backupSupabasePath = path.join(dataDir, `backup-supabase-before-clear.json`);
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupSupabasePath = path.join(dataDir, `backup-supabase-${timestamp}.json`);
   fs.writeFileSync(backupSupabasePath, JSON.stringify(supabaseBackup, null, 2), 'utf-8');
+  fs.writeFileSync(path.join(dataDir, `backup-supabase-before-clear.json`), JSON.stringify(supabaseBackup, null, 2), 'utf-8');
   console.log(`✓ Data Supabase berhasil dicadangkan ke: ${backupSupabasePath}\n`);
 
   // 2. Hapus data di Supabase secara berurutan

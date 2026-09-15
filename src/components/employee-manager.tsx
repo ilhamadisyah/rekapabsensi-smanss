@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Employee } from '@/lib/types';
 import {
   Search,
@@ -16,6 +16,15 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  ChevronsUp,
+  ChevronsDown,
+  ListOrdered,
+  Sparkles,
+  RotateCcw,
+  Save,
 } from 'lucide-react';
 
 function getPageNumbers(current: number, total: number): (number | '...')[] {
@@ -53,6 +62,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
   const [editNik, setEditNik] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [quickMovingId, setQuickMovingId] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Modal Tambah Pegawai
@@ -64,13 +74,29 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
   const [newRowIndex, setNewRowIndex] = useState<number>(employees.length + 1);
   const [isSubmittingNew, setIsSubmittingNew] = useState(false);
 
-  const filtered = employees.filter(
-    (e) =>
-      e.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      e.machine_id.toLowerCase().includes(search.toLowerCase()) ||
-      (e.nik && e.nik.toLowerCase().includes(search.toLowerCase())) ||
-      (e.department && e.department.toLowerCase().includes(search.toLowerCase()))
-  );
+  // Modal Atur Urutan Laporan Presensi
+  const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
+  const [reorderList, setReorderList] = useState<Employee[]>([]);
+  const [reorderSearch, setReorderSearch] = useState('');
+  const [isSavingReorder, setIsSavingReorder] = useState(false);
+  const [reorderDirty, setReorderDirty] = useState(false);
+
+  // Selalu urutkan daftar pegawai berdasarkan excel_row_index (urutan laporan resmi)
+  const sortedEmployees = useMemo(() => {
+    return [...employees].sort(
+      (a, b) => (a.excel_row_index || 999) - (b.excel_row_index || 999)
+    );
+  }, [employees]);
+
+  const filtered = useMemo(() => {
+    return sortedEmployees.filter(
+      (e) =>
+        e.full_name.toLowerCase().includes(search.toLowerCase()) ||
+        e.machine_id.toLowerCase().includes(search.toLowerCase()) ||
+        (e.nik && e.nik.toLowerCase().includes(search.toLowerCase())) ||
+        (e.department && e.department.toLowerCase().includes(search.toLowerCase()))
+    );
+  }, [sortedEmployees, search]);
 
   const totalItems = filtered.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -107,7 +133,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             machine_id: editMachineId.trim(),
             department: editDepartment.trim(),
             nik: editNik.trim(),
-            excel_row_index: Number(editRowIndex),
+            excel_row_index: Number(editRowIndex) || 1,
           },
         }),
       });
@@ -149,6 +175,48 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
       setMsg({ text: e.message || 'Kesalahan jaringan', type: 'error' });
     } finally {
       setIsDeleting(null);
+    }
+  };
+
+  // Tombol Pindah Naik / Turun Cepat di tabel utama
+  const handleQuickMove = async (empId: string, direction: 'up' | 'down') => {
+    const list = [...sortedEmployees];
+    const currentIndex = list.findIndex((e) => e.id === empId);
+    if (currentIndex === -1) return;
+
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= list.length) return;
+
+    setQuickMovingId(empId);
+
+    // Swap elemen
+    const temp = list[currentIndex];
+    list[currentIndex] = list[targetIndex];
+    list[targetIndex] = temp;
+
+    // Normalisasi urutan 1..N
+    const orders = list.map((e, idx) => ({
+      id: e.id,
+      excel_row_index: idx + 1,
+    }));
+
+    try {
+      const res = await fetch('/api/employees/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orders }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        onEmployeeUpdated();
+      } else {
+        alert(data.error || 'Gagal memindahkan urutan pegawai.');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Terjadi kesalahan jaringan.');
+    } finally {
+      setQuickMovingId(null);
     }
   };
 
@@ -205,6 +273,104 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
     }
   };
 
+  // --- Fitur Modal Atur Urutan Laporan Presensi ---
+  const handleOpenReorderModal = () => {
+    const list = [...employees].sort(
+      (a, b) => (a.excel_row_index || 999) - (b.excel_row_index || 999)
+    );
+    setReorderList(list);
+    setReorderSearch('');
+    setReorderDirty(false);
+    setIsReorderModalOpen(true);
+  };
+
+  const handleMoveReorderItem = (fromIdx: number, toIdx: number) => {
+    if (toIdx < 0 || toIdx >= reorderList.length) return;
+    const updated = [...reorderList];
+    const [moved] = updated.splice(fromIdx, 1);
+    updated.splice(toIdx, 0, moved);
+    setReorderList(updated);
+    setReorderDirty(true);
+  };
+
+  const handlePresetAZ = () => {
+    const sorted = [...reorderList].sort((a, b) =>
+      a.full_name.localeCompare(b.full_name, 'id', { sensitivity: 'base' })
+    );
+    setReorderList(sorted);
+    setReorderDirty(true);
+  };
+
+  const handlePresetDepartment = () => {
+    const gurus = reorderList
+      .filter((e) => e.department && e.department.includes('Guru'))
+      .sort((a, b) => a.full_name.localeCompare(b.full_name, 'id', { sensitivity: 'base' }));
+    const staffs = reorderList
+      .filter((e) => !e.department || !e.department.includes('Guru'))
+      .sort((a, b) => a.full_name.localeCompare(b.full_name, 'id', { sensitivity: 'base' }));
+    setReorderList([...gurus, ...staffs]);
+    setReorderDirty(true);
+  };
+
+  const handlePresetNik = () => {
+    const sorted = [...reorderList].sort((a, b) =>
+      (a.nik || a.id || '').localeCompare(b.nik || b.id || '', 'id', { numeric: true })
+    );
+    setReorderList(sorted);
+    setReorderDirty(true);
+  };
+
+  const handleResetToCurrent = () => {
+    const list = [...employees].sort(
+      (a, b) => (a.excel_row_index || 999) - (b.excel_row_index || 999)
+    );
+    setReorderList(list);
+    setReorderDirty(false);
+  };
+
+  const handleSaveReorder = async () => {
+    setIsSavingReorder(true);
+    try {
+      const orders = reorderList.map((emp, index) => ({
+        id: emp.id,
+        excel_row_index: index + 1,
+      }));
+
+      const res = await fetch('/api/employees/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orders }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMsg({
+          text: `Urutan kustom untuk ${orders.length} pegawai berhasil disimpan! Laporan presensi akan mengikuti urutan ini.`,
+          type: 'success',
+        });
+        setIsReorderModalOpen(false);
+        setReorderDirty(false);
+        onEmployeeUpdated();
+      } else {
+        alert(data.error || 'Gagal menyimpan urutan pegawai.');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Kesalahan jaringan saat menyimpan urutan.');
+    } finally {
+      setIsSavingReorder(false);
+    }
+  };
+
+  const filteredReorderList = useMemo(() => {
+    if (!reorderSearch.trim()) return reorderList;
+    return reorderList.filter(
+      (e) =>
+        e.full_name.toLowerCase().includes(reorderSearch.toLowerCase()) ||
+        (e.nik && e.nik.toLowerCase().includes(reorderSearch.toLowerCase())) ||
+        (e.department && e.department.toLowerCase().includes(reorderSearch.toLowerCase()))
+    );
+  }, [reorderList, reorderSearch]);
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden flex flex-col p-4 sm:p-6 space-y-4">
       {/* Header Bar */}
@@ -212,15 +378,15 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
         <div>
           <h3 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
             <Shield className="w-5 h-5 text-blue-600" />
-            Master Data Pegawai &amp; Pemetaan Mesin Biometrik
+            Master Data Pegawai &amp; Urutan Laporan Presensi
           </h3>
           <p className="text-xs text-slate-500 mt-1">
-            Total {employees.length} Pegawai terdaftar di database.
+            Total <span className="font-semibold text-slate-700">{employees.length}</span> Pegawai terdaftar. Urutan di bawah ini menentukan posisi baris nama pada Laporan Presensi Excel.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-48 sm:w-64">
+          <div className="relative w-44 sm:w-56">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
@@ -234,9 +400,20 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             />
           </div>
 
+          {employees.length > 1 && (
+            <button
+              onClick={handleOpenReorderModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+              title="Atur susunan dan urutan nomor baris pegawai untuk laporan presensi"
+            >
+              <ListOrdered className="w-4 h-4 text-indigo-600" />
+              <span>Atur Urutan Laporan</span>
+            </button>
+          )}
+
           <button
             onClick={handleOpenAddModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
           >
             <UserPlus className="w-4 h-4" />
             <span>Tambah Pegawai</span>
@@ -306,27 +483,62 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             <table className="w-full border-collapse text-left text-xs">
               <thead className="bg-slate-100/90 sticky top-0 border-b border-slate-200 z-10">
                 <tr>
-                  <th className="p-3 font-bold text-slate-700 w-12 text-center">No</th>
-                  <th className="p-3 font-bold text-slate-700">Nama</th>
-                  <th className="p-3 font-bold text-slate-700 w-52">NIK</th>
-                  <th className="p-3 font-bold text-slate-700 w-44">Unit / Jabatan</th>
-                  <th className="p-3 font-bold text-slate-700 text-center w-28">Aksi</th>
+                  <th
+                    className="p-3 font-bold text-slate-700 w-24 text-center"
+                    title="Nomor urut baris resmi pada Laporan Rekap Presensi Excel"
+                  >
+                    <span className="flex items-center justify-center gap-1">
+                      <span>No. Lap</span>
+                      <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                    </span>
+                  </th>
+                  <th className="p-3 font-bold text-slate-700">Nama Pegawai</th>
+                  <th className="p-3 font-bold text-slate-700 w-44">NIK / NIP</th>
+                  <th className="p-3 font-bold text-slate-700 w-36">Unit / Jabatan</th>
+                  <th className="p-3 font-bold text-slate-700 text-center w-28">Pindah Baris</th>
+                  <th className="p-3 font-bold text-slate-700 text-center w-24">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {paginatedEmployees.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-6 text-center text-slate-400 text-xs italic">
+                    <td colSpan={6} className="p-6 text-center text-slate-400 text-xs italic">
                       Tidak ditemukan pegawai dengan kata kunci &quot;{search}&quot;.
                     </td>
                   </tr>
                 ) : (
-                  paginatedEmployees.map((emp, idx) => {
+                  paginatedEmployees.map((emp) => {
                     const isEditing = editingId === emp.id;
+                    const fullIndex = sortedEmployees.findIndex((e) => e.id === emp.id);
+                    const isFirst = fullIndex === 0;
+                    const isLast = fullIndex === sortedEmployees.length - 1;
+                    const isMoving = quickMovingId === emp.id;
 
                     return (
                       <tr key={emp.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="p-3 text-center text-slate-400 font-semibold">{startIndex + idx + 1}</td>
+                        {/* Kolom No. Urut Laporan */}
+                        <td className="p-3 text-center">
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              min={1}
+                              max={999}
+                              value={editRowIndex}
+                              onChange={(e) => setEditRowIndex(Number(e.target.value))}
+                              title="Ubah nomor baris laporan"
+                              className="w-16 px-1.5 py-1 text-center text-xs font-bold font-mono border border-blue-400 rounded-lg text-blue-700 bg-white"
+                            />
+                          ) : (
+                            <span
+                              className="inline-flex items-center justify-center min-w-[32px] px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200/80 text-indigo-700 font-mono font-bold text-xs"
+                              title={`Urutan baris ke-${emp.excel_row_index} pada Laporan Presensi Excel`}
+                            >
+                              #{emp.excel_row_index}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Kolom Nama */}
                         <td className="p-3">
                           {isEditing ? (
                             <input
@@ -340,6 +552,8 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                             <div className="font-bold text-slate-900 text-[13px]">{emp.full_name}</div>
                           )}
                         </td>
+
+                        {/* Kolom NIK */}
                         <td className="p-3">
                           {isEditing ? (
                             <input
@@ -355,6 +569,8 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                             </span>
                           )}
                         </td>
+
+                        {/* Kolom Unit / Jabatan */}
                         <td className="p-3 text-slate-600">
                           {isEditing ? (
                             <select
@@ -377,6 +593,30 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                             </span>
                           )}
                         </td>
+
+                        {/* Kolom Pindah Urutan Cepat (Naik / Turun) */}
+                        <td className="p-3 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => handleQuickMove(emp.id, 'up')}
+                              disabled={isFirst || isMoving}
+                              className="p-1 rounded-md border border-slate-200 bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                              title="Pindahkan naik 1 posisi"
+                            >
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleQuickMove(emp.id, 'down')}
+                              disabled={isLast || isMoving}
+                              className="p-1 rounded-md border border-slate-200 bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                              title="Pindahkan turun 1 posisi"
+                            >
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* Kolom Aksi */}
                         <td className="p-3 text-center">
                           {isEditing ? (
                             <div className="flex items-center justify-center gap-1">
@@ -401,7 +641,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                               <button
                                 onClick={() => startEdit(emp)}
                                 className="p-1.5 hover:bg-blue-50 text-slate-500 hover:text-blue-600 rounded-lg transition-colors cursor-pointer"
-                                title="Ubah Pegawai"
+                                title="Ubah Pegawai &amp; No. Baris"
                               >
                                 <Edit2 className="w-3.5 h-3.5" />
                               </button>
@@ -476,7 +716,6 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
 
-                  {/* Page Number Buttons with smart ellipsis */}
                   {getPageNumbers(validCurrentPage, totalPages).map((p, pIdx) =>
                     p === '...' ? (
                       <span key={`dots-${pIdx}`} className="px-1.5 py-1 text-slate-400 select-none">
@@ -517,6 +756,217 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL ATUR URUTAN PEGAWAI UNTUK LAPORAN PRESENSI         */}
+      {/* ======================================================== */}
+      {isReorderModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-slate-200 flex items-start justify-between gap-3 bg-slate-50/80">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                  <ListOrdered className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    Atur Urutan Pegawai untuk Laporan Presensi
+                    {reorderDirty && (
+                      <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-full border border-amber-300">
+                        Belum Disimpan
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Urutan ini menentukan posisi baris (No. 1, 2, 3...) pada berkas Excel rekap presensi dan tampilan matriks.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsReorderModalOpen(false)}
+                className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Quick Sorting Presets Toolbar */}
+            <div className="p-3 sm:p-4 bg-slate-100/70 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2.5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-1 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  Preset Cepat:
+                </span>
+                <button
+                  type="button"
+                  onClick={handlePresetAZ}
+                  className="px-2.5 py-1 bg-white hover:bg-indigo-50 text-indigo-700 border border-slate-200 hover:border-indigo-300 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
+                  title="Urutkan seluruh pegawai berdasarkan Abjad Nama (A-Z)"
+                >
+                  🔤 Urutkan A-Z (Nama)
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePresetDepartment}
+                  className="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-700 border border-slate-200 hover:border-emerald-300 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
+                  title="Kelompokkan: Semua Guru di urutan awal (A-Z), lalu seluruh Staff (A-Z)"
+                >
+                  🏫 Guru Dulu, Lalu Staff
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePresetNik}
+                  className="px-2.5 py-1 bg-white hover:bg-blue-50 text-blue-700 border border-slate-200 hover:border-blue-300 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
+                  title="Urutkan berdasarkan Nomor Induk Karyawan/Pegawai"
+                >
+                  🔢 Urutkan NIK
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetToCurrent}
+                  className="px-2.5 py-1 bg-white hover:bg-slate-200 text-slate-600 border border-slate-200 rounded-lg text-xs font-semibold shadow-2xs transition-colors flex items-center gap-1"
+                  title="Kembalikan urutan seperti sebelum diedit"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Reset
+                </button>
+              </div>
+
+              {/* Search Filter in Modal */}
+              <div className="relative w-48 sm:w-56">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" />
+                <input
+                  type="text"
+                  value={reorderSearch}
+                  onChange={(e) => setReorderSearch(e.target.value)}
+                  placeholder="Cari pegawai di daftar..."
+                  className="w-full pl-8 pr-2.5 py-1 text-xs rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+            </div>
+
+            {/* List of Employees for Reordering */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-1.5 max-h-[480px]">
+              {filteredReorderList.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 text-xs italic">
+                  Tidak ada pegawai yang sesuai dengan pencarian &quot;{reorderSearch}&quot;.
+                </div>
+              ) : (
+                filteredReorderList.map((emp) => {
+                  const trueIndex = reorderList.findIndex((e) => e.id === emp.id);
+                  const isFirst = trueIndex === 0;
+                  const isLast = trueIndex === reorderList.length - 1;
+
+                  return (
+                    <div
+                      key={emp.id}
+                      className={`flex items-center justify-between gap-2 p-2 sm:p-2.5 rounded-xl border transition-all ${
+                        reorderDirty
+                          ? 'bg-indigo-50/30 border-indigo-200/70 hover:bg-indigo-50/60'
+                          : 'bg-white border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        {/* Sequence Badge */}
+                        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-600 text-white font-mono font-bold text-xs shadow-2xs shrink-0">
+                          #{trueIndex + 1}
+                        </div>
+
+                        {/* Employee Details */}
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-900 text-xs sm:text-sm truncate">
+                            {emp.full_name}
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                            <span className="font-mono">{emp.nik || emp.id}</span>
+                            <span>•</span>
+                            <span
+                              className={`px-1.5 py-0.2 rounded font-semibold ${
+                                emp.department && emp.department.includes('Guru')
+                                  ? 'text-indigo-700 bg-indigo-50'
+                                  : 'text-emerald-700 bg-emerald-50'
+                              }`}
+                            >
+                              {emp.department && emp.department.includes('Guru') ? 'Guru' : 'Staff'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Movement Control Buttons */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleMoveReorderItem(trueIndex, 0)}
+                          disabled={isFirst}
+                          className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                          title="Pindah ke Paling Atas"
+                        >
+                          <ChevronsUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveReorderItem(trueIndex, trueIndex - 1)}
+                          disabled={isFirst}
+                          className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                          title="Pindah Naik (1 posisi)"
+                        >
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveReorderItem(trueIndex, trueIndex + 1)}
+                          disabled={isLast}
+                          className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                          title="Pindah Turun (1 posisi)"
+                        >
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleMoveReorderItem(trueIndex, reorderList.length - 1)}
+                          disabled={isLast}
+                          className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                          title="Pindah ke Paling Bawah"
+                        >
+                          <ChevronsDown className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 sm:p-4 border-t border-slate-200 bg-slate-50/80 flex items-center justify-between gap-2">
+              <div className="text-xs text-slate-500">
+                Total <span className="font-bold text-slate-800">{reorderList.length}</span> pegawai dalam susunan.
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsReorderModalOpen(false)}
+                  className="px-3.5 py-1.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveReorder}
+                  disabled={isSavingReorder}
+                  className="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{isSavingReorder ? 'Menyimpan...' : 'Simpan Urutan Laporan'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -620,14 +1070,14 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold"
+                  className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingNew}
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-xs transition-colors flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
                   {isSubmittingNew ? 'Menyimpan...' : 'Daftarkan Pegawai'}
                 </button>

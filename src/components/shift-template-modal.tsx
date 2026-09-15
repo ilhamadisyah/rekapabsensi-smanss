@@ -546,161 +546,171 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                       Mencegah salah deteksi presensi agar tap mesin di luar rentang jam operasional (misalnya tap siang hari saat pegawai bertugas shift malam) tidak disalahartikan sebagai absensi sah.
                     </p>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
                       {/* Jendela Buka Tap Masuk */}
-                      <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-2xs space-y-2.5">
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-bold text-slate-700">Batas Maksimal Absen Masuk</span>
-                          <span className="text-blue-600 font-bold text-[10px] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                      <div className="flex flex-col justify-between bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs space-y-3">
+                        {/* Header */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                            <span className="font-bold text-xs text-slate-800 truncate">
+                              Batas Absen Masuk
+                            </span>
+                          </div>
+                          <span className="shrink-0 text-[10.5px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/70 font-mono whitespace-nowrap">
                             {(formCheckInWindow / 60).toFixed(1)} jam sebelum
                           </span>
                         </div>
 
-                        <div className="relative">
+                        {/* Input Durasi */}
+                        <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50/70 focus-within:bg-white focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 shadow-2xs transition-all overflow-hidden">
                           <input
                             type="number"
                             min={0}
                             max={1440}
-                            step={1}
+                            step={5}
                             value={formCheckInWindow}
                             onChange={(e) => {
                               const val = e.target.value;
                               setFormCheckInWindow(val === '' ? 0 : Number(val));
                             }}
-                            className="w-full pl-3 pr-12 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                            className="w-full px-3 py-2 bg-transparent text-sm font-bold font-mono text-slate-900 focus:outline-none"
                           />
-                          <span className="absolute right-3 top-2 text-[10px] text-slate-400 font-medium">
+                          <span className="pr-3.5 text-xs font-semibold text-slate-400 select-none">
                             menit
                           </span>
                         </div>
 
-                        {/* Quick Presets for Check-In */}
-                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        {/* Quick Presets for Check-In (Symmetrical & Clean) */}
+                        <div className="grid grid-cols-2 gap-1.5">
                           <button
                             type="button"
                             onClick={() => setFormCheckInWindow(60)}
-                            className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all border ${
+                            className={`px-2 py-1.5 text-[11px] font-semibold rounded-lg transition-all text-center border cursor-pointer ${
                               formCheckInWindow === 60
-                                ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                                : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-2xs font-bold'
+                                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
                             }`}
                           >
-                            60m
+                            60m <span className="text-[10px] opacity-75">(1 jam)</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => setFormCheckInWindow(120)}
-                            className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all border ${
+                            className={`px-2 py-1.5 text-[11px] font-semibold rounded-lg transition-all text-center border cursor-pointer ${
                               formCheckInWindow === 120
-                                ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                                : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-2xs font-bold'
+                                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
                             }`}
                           >
-                            120m
+                            120m <span className="text-[10px] opacity-75">(2 jam)</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => setFormCheckInWindow(getMinutesFromMidnight(formStartTime))}
-                            className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all border ${
+                            className={`col-span-2 px-2 py-1.5 text-[11px] font-semibold rounded-lg transition-all text-center border cursor-pointer ${
                               formCheckInWindow === getMinutesFromMidnight(formStartTime)
-                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
-                                : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200'
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-2xs font-bold'
+                                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
                             }`}
                             title="Buka tap sejak pergantian hari (00:00 WIB)"
                           >
-                            Awal Hari 00:00 ({getMinutesFromMidnight(formStartTime)}m)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setFormCheckInWindow(getMinutesFromMidnight(formStartTime) + 1)}
-                            className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all border ${
-                              formCheckInWindow === getMinutesFromMidnight(formStartTime) + 1
-                                ? 'bg-purple-600 text-white border-purple-600 shadow-2xs'
-                                : 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200'
-                            }`}
-                            title="Buka tap sejak batas hari sebelumnya (23:59 WIB)"
-                          >
-                            Batas 23:59 (-1h)
+                            Awal Hari 00:00 <span className="text-[10px] opacity-75">({getMinutesFromMidnight(formStartTime)}m)</span>
                           </button>
                         </div>
 
-                        <div className="text-[10.5px] text-slate-600 flex items-center gap-1.5 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-100">
-                          <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                          <span className="truncate">
-                            Tap masuk dibuka: <strong className="text-slate-800 font-bold">{formatTimeOffset(formStartTime, -formCheckInWindow)}</strong>
+                        {/* Info Pill Jam Buka (Tanpa Terpotong) */}
+                        <div className="flex items-center justify-between gap-1.5 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200/80">
+                          <div className="flex items-center gap-1.5 min-w-0 text-slate-500">
+                            <Clock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                            <span className="text-[11px] font-medium whitespace-nowrap">Dibuka mulai:</span>
+                          </div>
+                          <span className="font-mono font-bold text-xs text-blue-700 bg-white px-2 py-0.5 rounded-md border border-blue-100 shadow-2xs whitespace-nowrap">
+                            {formatTimeOffset(formStartTime, -formCheckInWindow)}
                           </span>
                         </div>
                       </div>
 
                       {/* Batas Akhir Tap Pulang */}
-                      <div className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-2xs space-y-2.5">
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-bold text-slate-700">Batas Maksimal Absen Pulang</span>
-                          <span className="text-blue-600 font-bold text-[10px] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                      <div className="flex flex-col justify-between bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs space-y-3">
+                        {/* Header */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
+                            <span className="font-bold text-xs text-slate-800 truncate">
+                              Batas Absen Pulang
+                            </span>
+                          </div>
+                          <span className="shrink-0 text-[10.5px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200/70 font-mono whitespace-nowrap">
                             {(formCheckOutWindow / 60).toFixed(1)} jam setelah
                           </span>
                         </div>
 
-                        <div className="relative">
+                        {/* Input Durasi */}
+                        <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50/70 focus-within:bg-white focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 shadow-2xs transition-all overflow-hidden">
                           <input
                             type="number"
                             min={0}
                             max={1440}
-                            step={1}
+                            step={5}
                             value={formCheckOutWindow}
                             onChange={(e) => {
                               const val = e.target.value;
                               setFormCheckOutWindow(val === '' ? 0 : Number(val));
                             }}
-                            className="w-full pl-3 pr-12 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                            className="w-full px-3 py-2 bg-transparent text-sm font-bold font-mono text-slate-900 focus:outline-none"
                           />
-                          <span className="absolute right-3 top-2 text-[10px] text-slate-400 font-medium">
+                          <span className="pr-3.5 text-xs font-semibold text-slate-400 select-none">
                             menit
                           </span>
                         </div>
 
-                        {/* Quick Presets for Check-Out */}
-                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        {/* Quick Presets for Check-Out (Symmetrical & Clean) */}
+                        <div className="grid grid-cols-2 gap-1.5">
                           <button
                             type="button"
                             onClick={() => setFormCheckOutWindow(120)}
-                            className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all border ${
+                            className={`px-2 py-1.5 text-[11px] font-semibold rounded-lg transition-all text-center border cursor-pointer ${
                               formCheckOutWindow === 120
-                                ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                                : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs font-bold'
+                                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
                             }`}
                           >
-                            120m
+                            120m <span className="text-[10px] opacity-75">(2 jam)</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => setFormCheckOutWindow(240)}
-                            className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all border ${
+                            className={`px-2 py-1.5 text-[11px] font-semibold rounded-lg transition-all text-center border cursor-pointer ${
                               formCheckOutWindow === 240
-                                ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                                : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs font-bold'
+                                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
                             }`}
                           >
-                            240m
+                            240m <span className="text-[10px] opacity-75">(4 jam)</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => setFormCheckOutWindow(getMinutesToEndOfDay(formEndTime))}
-                            className={`px-2 py-0.5 text-[10px] font-semibold rounded-md transition-all border ${
+                            className={`col-span-2 px-2 py-1.5 text-[11px] font-semibold rounded-lg transition-all text-center border cursor-pointer ${
                               formCheckOutWindow === getMinutesToEndOfDay(formEndTime)
-                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs font-bold'
+                                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
                             }`}
                             title="Perpanjang batas tap pulang hingga batas ganti hari (23:59 WIB)"
                           >
-                            Sampai 23:59 ({getMinutesToEndOfDay(formEndTime)}m)
+                            Sampai 23:59 <span className="text-[10px] opacity-75">({getMinutesToEndOfDay(formEndTime)}m)</span>
                           </button>
                         </div>
 
-                        <div className="text-[10.5px] text-slate-600 flex items-center gap-1.5 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-100">
-                          <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                          <span className="truncate">
-                            Tap pulang ditutup: <strong className="text-slate-800 font-bold">{formatTimeOffset(formEndTime, formCheckOutWindow, formIsOvernight)}</strong>
+                        {/* Info Pill Jam Tutup (Tanpa Terpotong) */}
+                        <div className="flex items-center justify-between gap-1.5 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200/80">
+                          <div className="flex items-center gap-1.5 min-w-0 text-slate-500">
+                            <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span className="text-[11px] font-medium whitespace-nowrap">Ditutup pukul:</span>
+                          </div>
+                          <span className="font-mono font-bold text-xs text-emerald-700 bg-white px-2 py-0.5 rounded-md border border-emerald-100 shadow-2xs whitespace-nowrap">
+                            {formatTimeOffset(formEndTime, formCheckOutWindow, formIsOvernight)}
                           </span>
                         </div>
                       </div>

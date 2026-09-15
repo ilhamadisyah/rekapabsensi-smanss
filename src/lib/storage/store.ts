@@ -261,6 +261,26 @@ const localDb = {
     return { deletedEmployees: empCount, deletedAttendance: attCount };
   },
 
+  reorderEmployees(orders: { id: string; excel_row_index: number }[]): boolean {
+    const data = ensureDbFile();
+    if (!orders || orders.length === 0) return false;
+    const orderMap = new Map(orders.map((o) => [o.id, Math.max(1, Number(o.excel_row_index) || 1)]));
+
+    for (const emp of data.employees) {
+      if (orderMap.has(emp.id)) {
+        emp.excel_row_index = orderMap.get(emp.id)!;
+      } else if (emp.nik && orderMap.has(emp.nik)) {
+        emp.excel_row_index = orderMap.get(emp.nik)!;
+      } else if (emp.machine_id && orderMap.has(emp.machine_id)) {
+        emp.excel_row_index = orderMap.get(emp.machine_id)!;
+      }
+    }
+
+    data.employees.sort((a, b) => (a.excel_row_index || 999) - (b.excel_row_index || 999));
+    writeDb(data);
+    return true;
+  },
+
   updateEmployee(id: string, updates: Partial<Employee>): Employee | null {
     const data = ensureDbFile();
     const idx = data.employees.findIndex((e) => e.id === id || e.nik === id || e.machine_id === id);
@@ -969,6 +989,17 @@ export const db = {
       }
     }
     return localDb.clearAllEmployeesAndAttendance();
+  },
+
+  async reorderEmployees(orders: { id: string; excel_row_index: number }[]): Promise<boolean> {
+    if (isSupabaseConfigured) {
+      try {
+        await supabaseStore.reorderEmployees(orders);
+      } catch (e) {
+        console.warn('[Store] Supabase reorderEmployees error:', e);
+      }
+    }
+    return localDb.reorderEmployees(orders);
   },
 
   async updateEmployee(id: string, updates: Partial<Employee>): Promise<Employee | null> {

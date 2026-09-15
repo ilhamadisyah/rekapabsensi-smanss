@@ -156,6 +156,25 @@ export const supabaseStore = {
     return { deletedEmployees: 0, deletedAttendance: 0 };
   },
 
+  async reorderEmployees(orders: { id: string; excel_row_index: number }[]): Promise<boolean> {
+    const client = getSupabaseServerClient();
+    if (!client || !orders || orders.length === 0) return false;
+
+    const batchSize = 25;
+    for (let i = 0; i < orders.length; i += batchSize) {
+      const batch = orders.slice(i, i + batchSize);
+      await Promise.all(
+        batch.map((item) =>
+          client
+            .from('employees')
+            .update({ excel_row_index: Math.max(1, Number(item.excel_row_index) || 1) })
+            .or(`id.eq.${item.id},nik.eq.${item.id}`)
+        )
+      );
+    }
+    return true;
+  },
+
   async getUploadHistory(): Promise<UploadHistory[]> {
     const client = getSupabaseServerClient();
     if (!client) return [];

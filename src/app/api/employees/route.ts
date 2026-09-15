@@ -78,7 +78,12 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, updates } = body;
+    const { id, updates, action, orders } = body;
+
+    if (action === 'reorder' && Array.isArray(orders)) {
+      await db.reorderEmployees(orders);
+      return NextResponse.json({ success: true, message: 'Urutan pegawai berhasil diperbarui.' });
+    }
 
     if (!id || !updates) {
       return NextResponse.json(
