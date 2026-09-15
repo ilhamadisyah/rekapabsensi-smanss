@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { DailyAttendance, Employee, AttendanceCode, Holiday, EmployeeSchedule, ShiftTemplate } from '../types';
 import { getEmployeeNameByMachineId } from './employee-mapping';
+import { evaluateMonthlyAttendanceMatrix } from './matrix-evaluator';
 
 // Map day index 1..30 to Excel Column letter C..AF
 export function getColumnLetterForDay(day: number): string {
@@ -426,23 +427,18 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
   // Urutkan pegawai sesuai urutan resmi master SMANSS (atau urutan excel_row_index)
   allEmployees.sort((a, b) => (a.excel_row_index || 999) - (b.excel_row_index || 999));
 
-  // 8. Buat lookup map presensi per pegawai dan per hari
-  const attendanceMap = new Map<string, DailyAttendance>();
-  const recordedDays = new Set<number>();
-
-  for (const record of attendanceRecords) {
-    const rawDate = record.attendance_date || (record as any).date;
-    if (!rawDate) continue;
-    const parts = rawDate.split('-');
-    const rYear = parseInt(parts[0], 10);
-    const rMonth = parseInt(parts[1], 10);
-    const rDay = parseInt(parts[2], 10);
-
-    if (rYear === year && rMonth === month) {
-      recordedDays.add(rDay);
-      attendanceMap.set(`${record.employee_id}__${rDay}`, record);
-    }
-  }
+  // 8. Evaluasi matriks presensi bulanan secara terpadu (Single Source of Truth)
+  const evaluation = evaluateMonthlyAttendanceMatrix({
+    month,
+    year,
+    employees: allEmployees,
+    attendanceRecords,
+    shifts: options.shifts || [],
+    schedules: options.schedules || [],
+    holidays: options.holidays || [],
+  });
+  const attendanceMap = evaluation.attendanceMap;
+  const recordedDays = new Set<number>(evaluation.recordedDays);
 
   // 9. Bersihkan baris lama di template dari baris 17 s/d 140 agar bebas dari formula korup, warna lama, & border sisa
   const lastEmployeeRow = 17 + allEmployees.length - 1;
@@ -543,12 +539,14 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
         continue;
       }
 
-      const rec =
-        (emp.nik ? attendanceMap.get(`${emp.nik}__${day}`) : undefined) ||
-        attendanceMap.get(`${emp.machine_id}__${day}`) ||
-        (emp.id ? attendanceMap.get(`${emp.id}__${day}`) : undefined);
+      const empDayMap =
+        (emp.nik && attendanceMap[emp.nik]) ||
+        (emp.machine_id && attendanceMap[emp.machine_id]) ||
+        (emp.id && attendanceMap[emp.id]) ||
+        {};
+      const rec = empDayMap[day];
       const isRecorded = recordedDays.size > 0 ? recordedDays.has(day) : false;
-      const isVerified = rec && rec.is_verified;
+      const isVerified = Boolean(rec && rec.is_verified);
 
       // Jika hari kerja tersebut belum ada log mesin dan belum diverifikasi manual -> kosongkan bersih
       if (!isRecorded && !isVerified) {

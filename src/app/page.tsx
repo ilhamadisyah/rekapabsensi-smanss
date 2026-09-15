@@ -184,17 +184,21 @@ export default function HomePage() {
   const handleSaveStatus = async (newStatus: AttendanceCode, notes: string) => {
     if (!overrideModal.employee || !overrideModal.day) return;
 
-    const empId = overrideModal.employee.machine_id;
+    const emp = overrideModal.employee;
+    const empId = emp.nik || emp.machine_id || emp.id;
     const dayNum = overrideModal.day.day;
     const dateStr = overrideModal.day.dateStr;
 
-    // 1. Optimistic Update in UI
+    // 1. Optimistic Update in UI across all identifiers of the employee
     setAttendanceMap((prev) => {
       const next = { ...prev };
-      if (!next[empId]) next[empId] = {};
-      const existing = next[empId][dayNum];
+      const keysToUpdate = [emp.nik, emp.machine_id, emp.id].filter(Boolean) as string[];
+      const existing =
+        (emp.nik ? next[emp.nik]?.[dayNum] : undefined) ||
+        (emp.machine_id ? next[emp.machine_id]?.[dayNum] : undefined) ||
+        (emp.id ? next[emp.id]?.[dayNum] : undefined);
 
-      next[empId][dayNum] = {
+      const updatedRecord = {
         id: existing?.id || `att-${empId}-${dateStr}`,
         upload_id: existing?.upload_id || 'manual',
         employee_id: empId,
@@ -209,6 +213,11 @@ export default function HomePage() {
         verified_by: userRole,
         updated_at: new Date().toISOString(),
       };
+
+      for (const k of keysToUpdate) {
+        if (!next[k]) next[k] = {};
+        next[k][dayNum] = { ...updatedRecord };
+      }
       return next;
     });
 
@@ -221,6 +230,8 @@ export default function HomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           employee_id: empId,
+          nik: emp.nik,
+          machine_id: emp.machine_id,
           date: dateStr,
           final_status: newStatus,
           notes,

@@ -488,20 +488,27 @@ const localDb = {
     const data = ensureDbFile();
     const { employee_id, date, final_status, notes, changed_by } = params;
 
+    const emp = data.employees.find(
+      (e) => e.machine_id === employee_id || e.nik === employee_id || e.id === employee_id
+    );
+    const primaryEmpId = emp?.nik || emp?.machine_id || emp?.id || employee_id;
+    const empName = emp?.full_name || getEmployeeNameByMachineId(employee_id) || `Pegawai ${employee_id}`;
+    const allMatchingIds = Array.from(
+      new Set([emp?.nik, emp?.machine_id, emp?.id, employee_id].filter(Boolean))
+    ) as string[];
+
     let recIdx = data.daily_attendance.findIndex(
-      (a) => a.employee_id === employee_id && a.attendance_date === date
+      (a) => allMatchingIds.includes(a.employee_id) && a.attendance_date === date
     );
 
     let previousStatus: AttendanceCode = 'A';
     let record: DailyAttendance;
 
-    const emp = data.employees.find((e) => e.machine_id === employee_id);
-    const empName = emp?.full_name || getEmployeeNameByMachineId(employee_id) || `Pegawai ${employee_id}`;
-
     if (recIdx !== -1) {
       previousStatus = data.daily_attendance[recIdx].final_status;
       data.daily_attendance[recIdx] = {
         ...data.daily_attendance[recIdx],
+        employee_id: primaryEmpId,
         employee_name: empName,
         final_status,
         notes: notes || data.daily_attendance[recIdx].notes,
@@ -511,11 +518,11 @@ const localDb = {
       };
       record = data.daily_attendance[recIdx];
     } else {
-      // If cell didn't have log before, create absent record with override
+      // If cell didn't have log before, create record with override
       record = {
-        id: `att-${employee_id}-${date}`,
+        id: `att-${primaryEmpId}-${date}`,
         upload_id: 'manual_override',
-        employee_id,
+        employee_id: primaryEmpId,
         employee_name: empName,
         attendance_date: date,
         first_in: null,
@@ -529,7 +536,13 @@ const localDb = {
         updated_at: new Date().toISOString(),
       };
       data.daily_attendance.push(record);
+      recIdx = data.daily_attendance.length - 1;
     }
+
+    // Clean up any remaining duplicate records for this employee on this date
+    data.daily_attendance = data.daily_attendance.filter(
+      (a, idx) => idx === recIdx || !(allMatchingIds.includes(a.employee_id) && a.attendance_date === date)
+    );
 
     const audit: AuditLog = {
       id: `audit-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,

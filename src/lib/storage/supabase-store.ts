@@ -423,30 +423,38 @@ export const supabaseStore = {
 
     const { employee_id, date, final_status, notes, changed_by } = params;
 
-    // 1. Get existing attendance record if any
-    const { data: existingData } = await client
+    // 1. Resolve employee master record
+    const { data: matchedEmps } = await client
+      .from('employees')
+      .select('*')
+      .or(`machine_id.eq.${employee_id},nik.eq.${employee_id},id.eq.${employee_id}`)
+      .limit(1);
+
+    const emp = matchedEmps && matchedEmps.length > 0 ? matchedEmps[0] : null;
+    const primaryEmpId = emp?.nik || emp?.machine_id || emp?.id || employee_id;
+    const empName = emp?.full_name || getEmployeeNameByMachineId(employee_id) || `Pegawai ${employee_id}`;
+    const allMatchingIds = Array.from(
+      new Set([emp?.nik, emp?.machine_id, emp?.id, employee_id].filter(Boolean))
+    ) as string[];
+
+    // 2. Get existing attendance record matching ANY of the employee's identifiers
+    const { data: existingRecords } = await client
       .from('daily_attendance')
       .select('*')
-      .eq('employee_id', employee_id)
-      .eq('attendance_date', date)
-      .maybeSingle();
+      .in('employee_id', allMatchingIds)
+      .eq('attendance_date', date);
+
+    const existingData = existingRecords && existingRecords.length > 0
+      ? (existingRecords.find((r) => r.is_verified) || existingRecords[0])
+      : null;
 
     const previousStatus: AttendanceCode = (existingData?.final_status as AttendanceCode) || 'A';
 
-    // 2. Resolve employee name
-    const { data: empData } = await client
-      .from('employees')
-      .select('full_name')
-      .eq('machine_id', employee_id)
-      .maybeSingle();
-
-    const empName = empData?.full_name || getEmployeeNameByMachineId(employee_id) || `Pegawai ${employee_id}`;
-
-    const recordId = existingData?.id || `att-${employee_id}-${date}`;
+    const recordId = existingData?.id || `att-${primaryEmpId}-${date}`;
     const recordToSave: DailyAttendance = {
       id: recordId,
       upload_id: existingData?.upload_id || 'manual_override',
-      employee_id,
+      employee_id: primaryEmpId,
       employee_name: empName,
       attendance_date: date,
       first_in: existingData?.first_in || null,
@@ -468,6 +476,16 @@ export const supabaseStore = {
     if (upsertErr) {
       console.error('[Supabase] Error updateAttendanceCell:', upsertErr);
       throw new Error(upsertErr.message);
+    }
+
+    // 3. Clean up any duplicate records under alternative IDs for this employee and date
+    const duplicateIds = allMatchingIds.filter((id) => id !== primaryEmpId);
+    if (duplicateIds.length > 0) {
+      await client
+        .from('daily_attendance')
+        .delete()
+        .in('employee_id', duplicateIds)
+        .eq('attendance_date', date);
     }
 
     const audit: AuditLog = {
