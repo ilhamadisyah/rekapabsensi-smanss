@@ -33,7 +33,11 @@ import {
   Download,
   RefreshCw,
   Database,
-  BookOpen
+  BookOpen,
+  Eye,
+  Pencil,
+  Save,
+  Undo2
 } from 'lucide-react';
 
 export type AttendanceFilterType = 
@@ -145,6 +149,22 @@ interface AttendanceGridProps {
   onOpenGuide?: () => void;
   defaultShift?: ShiftTemplate | null;
   shifts?: ShiftTemplate[];
+  // Mode Edit & Batch Staging Props
+  isEditMode?: boolean;
+  onToggleEditMode?: () => void;
+  pendingOverrides?: Record<
+    string,
+    {
+      employee: Employee;
+      day: AttendanceMatrixDay;
+      newStatus: AttendanceCode;
+      notes?: string;
+      originalStatus: AttendanceCode;
+    }
+  >;
+  onSaveBatch?: () => void;
+  onCancelBatch?: () => void;
+  isSavingBatch?: boolean;
 }
 
 export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
@@ -167,7 +187,14 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
   onOpenGuide,
   defaultShift,
   shifts = [],
+  isEditMode = false,
+  onToggleEditMode,
+  pendingOverrides = {},
+  onSaveBatch,
+  onCancelBatch,
+  isSavingBatch = false,
 }) => {
+  const pendingCount = Object.keys(pendingOverrides || {}).length;
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState<'ALL' | 'Guru' | 'TU'>('ALL');
   const [attendanceFilter, setAttendanceFilter] = useState<AttendanceFilterType>(
@@ -428,9 +455,46 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
               </div>
             </div>
 
-            {/* Right side: Bulk Action & Counter Info */}
+            {/* Right side: Mode Switch, Bulk Action & Counter Info */}
             <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 w-full sm:w-auto">
               <div className="flex items-center gap-2">
+                {/* View / Edit Mode Switcher */}
+                {onToggleEditMode && (
+                  <div className="inline-flex items-center p-0.5 rounded-xl bg-slate-100 border border-slate-200 shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => { if (isEditMode) onToggleEditMode(); }}
+                      className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        !isEditMode
+                          ? 'bg-white text-slate-800 shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                      title="Mode Lihat: Tinjau data presensi"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-slate-600" />
+                      <span>Mode Lihat</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { if (!isEditMode) onToggleEditMode(); }}
+                      className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        isEditMode
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                      title="Mode Edit: Ubah data presensi tanpa reload berulang kali, perubahan disimpan sementara sebagai draft sebelum disimpan ke database"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>Mode Edit</span>
+                      {pendingCount > 0 && (
+                        <span className="ml-1 px-1.5 py-0.5 text-[10px] font-black bg-amber-400 text-slate-950 rounded-full leading-none animate-pulse">
+                          {pendingCount}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                )}
+
                 {onSyncDatabase && (
                   <button
                     type="button"
@@ -594,6 +658,26 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
               )}
             </div>
           </div>
+
+          {/* Mode Edit Informational Banner */}
+          {isEditMode && (
+            <div className="px-3.5 sm:px-4 py-2 bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-transparent border-t border-amber-200/80 flex flex-wrap items-center justify-between gap-2 text-xs text-amber-950 animate-in fade-in duration-150">
+              <div className="flex items-center gap-2">
+                <span className="flex h-2.5 w-2.5 relative shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                </span>
+                <span>
+                  <strong>Mode Edit Aktif:</strong> Klik sel presensi untuk mengubah status kehadiran. Perubahan akan disimpan sementara sebagai <em>draft</em> tanpa memuat ulang halaman.
+                </span>
+              </div>
+              {pendingCount > 0 && (
+                <span className="font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-300 text-[11px] shrink-0">
+                  {pendingCount} perubahan belum disimpan
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Mobile Swipe Hint Banner (Visible only on small screens) */}
@@ -790,7 +874,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                       const isRecorded = recordedDays.length > 0 ? recordedDays.includes(d.day) : true;
                       const isManuallyVerified = rec && rec.is_verified;
                       const isOff = Boolean(rec?.is_off_day || rec?.final_status === 'OFF');
-                      const isHol = Boolean(rec?.is_holiday || d.holiday || rec?.final_status === 'LIBUR');
+                      const isHol = Boolean((rec?.is_holiday || d.holiday || rec?.final_status === 'LIBUR') && !hasAssignedDuty);
                       const empShift = shifts.find((s) => s.id === rec?.shift_id || s.code === rec?.shift_code) || defaultShift;
                       const sStart = rec?.scheduled_start?.substring(0, 5) || empShift?.start_time?.substring(0, 5) || defaultShift?.start_time?.substring(0, 5) || '08:00';
                       const sEnd = rec?.scheduled_end?.substring(0, 5) || empShift?.end_time?.substring(0, 5) || defaultShift?.end_time?.substring(0, 5) || '14:30';
@@ -798,7 +882,16 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                         ? 'Libur Shift (Bebas Tugas)'
                         : isHol
                         ? `Hari Libur (${d.holiday?.name || rec?.shift_name || 'Libur Resmi'})`
-                        : `${sStart} s/d ${sEnd} WIB`;
+                        : (isWeekend && !hasAssignedDuty)
+                        ? `Libur Akhir Pekan (${d.dayName})`
+                        : `${sStart} s/d ${sEnd} WIB${rec?.shift_name ? ` (${rec.shift_name})` : ''}`;
+
+                      // Check pending draft override for this cell
+                      const pendingItem =
+                        (emp.nik ? pendingOverrides?.[`${emp.nik}___${d.day}`] : undefined) ||
+                        (emp.machine_id ? pendingOverrides?.[`${emp.machine_id}___${d.day}`] : undefined) ||
+                        (emp.id ? pendingOverrides?.[`${emp.id}___${d.day}`] : undefined);
+                      const isPending = Boolean(pendingItem);
 
                       // 1. Weekend or Holiday WITHOUT assigned active work duty, and not tapped / verified
                       const isWeekendOrHoliday = isWeekend || isHol || rec?.final_status === 'LIBUR';
@@ -818,13 +911,21 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                               });
                             }}
                             onMouseLeave={() => setHoveredCell(null)}
-                            className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-300 bg-rose-50/90 hover:bg-rose-100/90 transition-all font-semibold select-none cursor-pointer box-border"
-                            title={`${emp.full_name} | Tgl ${d.day}: ${d.holiday?.name || (isWeekend ? `Akhir Pekan (${d.dayName})` : 'Hari Libur')} | Jam Kerja: Bebas Tugas (Klik untuk ubah status)`}
+                            className={`w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-300 bg-rose-50/90 hover:bg-rose-100/90 transition-all font-semibold select-none cursor-pointer box-border relative ${
+                              isPending ? 'ring-2 ring-inset ring-amber-500 bg-amber-50/90' : ''
+                            }`}
+                            title={`${emp.full_name} | Tgl ${d.day}: ${d.holiday?.name || (isWeekend ? `Akhir Pekan (${d.dayName})` : 'Hari Libur')} | Jam Kerja: Bebas Tugas (Klik untuk ubah status)${isPending ? ` | [DRAFT: Diubah ke ${pendingItem?.newStatus}]` : ''}`}
                           >
-                            <div className="w-full h-full flex flex-col items-center justify-center">
+                            <div className="w-full h-full flex flex-col items-center justify-center relative">
                               <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200 shadow-2xs">
                                 LIBUR
                               </span>
+                              {isPending && (
+                                <span
+                                  className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-amber-500 ring-1 ring-white shadow-xs z-10"
+                                  title="Draft: Belum disimpan ke database"
+                                />
+                              )}
                             </div>
                           </td>
                         );
@@ -846,13 +947,21 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                               });
                             }}
                             onMouseLeave={() => setHoveredCell(null)}
-                            className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-300 bg-slate-100/90 hover:bg-slate-200 transition-all font-semibold select-none cursor-pointer box-border"
-                            title={`${emp.full_name} | Tgl ${d.day}: Libur Shift / Bebas Tugas | Jam Kerja: Bebas Tugas (Klik untuk ganti shift/izin)`}
+                            className={`w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-300 bg-slate-100/90 hover:bg-slate-200 transition-all font-semibold select-none cursor-pointer box-border relative ${
+                              isPending ? 'ring-2 ring-inset ring-amber-500 bg-amber-50/90' : ''
+                            }`}
+                            title={`${emp.full_name} | Tgl ${d.day}: Libur Shift / Bebas Tugas | Jam Kerja: Bebas Tugas (Klik untuk ganti shift/izin)${isPending ? ` | [DRAFT: Diubah ke ${pendingItem?.newStatus}]` : ''}`}
                           >
-                            <div className="w-full h-full flex flex-col items-center justify-center">
+                            <div className="w-full h-full flex flex-col items-center justify-center relative">
                               <span className="px-1 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-600 border border-slate-300 shadow-2xs">
                                 OFF
                               </span>
+                              {isPending && (
+                                <span
+                                  className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-amber-500 ring-1 ring-white shadow-xs z-10"
+                                  title="Draft: Belum disimpan ke database"
+                                />
+                              )}
                             </div>
                           </td>
                         );
@@ -875,10 +984,12 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                               });
                             }}
                             onMouseLeave={() => setHoveredCell(null)}
-                            className="w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-300 bg-slate-100/70 hover:bg-slate-200/70 transition-all font-medium select-none cursor-pointer box-border relative group/cell"
-                            title={`${emp.full_name} | Tgl ${d.day}: Belum Terekap | Shift: ${rec?.shift_name || empShift?.name || defaultShift?.name || 'Jam Kerja Normal'} | Jam Kerja: ${cellWorkingHours}`}
+                            className={`w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-300 bg-slate-100/70 hover:bg-slate-200/70 transition-all font-medium select-none cursor-pointer box-border relative group/cell ${
+                              isPending ? 'ring-2 ring-inset ring-amber-500 bg-amber-50/90' : ''
+                            }`}
+                            title={`${emp.full_name} | Tgl ${d.day}: Belum Terekap | Shift: ${rec?.shift_name || empShift?.name || defaultShift?.name || 'Jam Kerja Normal'} | Jam Kerja: ${cellWorkingHours}${isPending ? ` | [DRAFT: Diubah ke ${pendingItem?.newStatus}]` : ''}`}
                           >
-                            <div className="w-full h-full flex flex-col items-center justify-center">
+                            <div className="w-full h-full flex flex-col items-center justify-center relative">
                               <span className="text-[11px] font-semibold text-slate-300 select-none">
                                 -
                               </span>
@@ -889,6 +1000,12 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                                 >
                                   {rec?.shift_code?.substring(0, 3)}
                                 </span>
+                              )}
+                              {isPending && (
+                                <span
+                                  className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-amber-500 ring-1 ring-white shadow-xs z-10"
+                                  title="Draft: Belum disimpan ke database"
+                                />
                               )}
                             </div>
                           </td>
@@ -917,15 +1034,17 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                           }}
                           onMouseLeave={() => setHoveredCell(null)}
                           className={`w-[38px] sm:w-[42px] min-w-[38px] sm:min-w-[42px] max-w-[38px] sm:max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-300 transition-all font-bold select-none cursor-pointer box-border relative ${
-                            isHadir
+                            isPending
+                              ? 'ring-2 ring-inset ring-amber-500 bg-amber-100 text-amber-950'
+                              : isHadir
                               ? 'bg-[#C6EFCE] text-[#006100] hover:brightness-95'
                               : isAlpha
                               ? 'bg-[#FFC7CE] text-[#9C0006] hover:brightness-95 animate-pulse-subtle'
                               : 'bg-[#FFEB9C] text-[#9C6500] hover:brightness-95'
                           }`}
-                          title={`${emp.full_name} | Tgl ${d.day}: ${statusInfo?.label || finalStatus} | Shift: ${rec?.shift_name || 'Jam Kerja Normal'} | Jam Kerja: ${cellWorkingHours} | Tap: ${rec?.first_in || '--:--'} s/d ${rec?.last_out || '--:--'}`}
+                          title={`${emp.full_name} | Tgl ${d.day}: ${statusInfo?.label || finalStatus} | Shift: ${rec?.shift_name || 'Jam Kerja Normal'} | Jam Kerja: ${cellWorkingHours} | Tap: ${rec?.first_in || '--:--'} s/d ${rec?.last_out || '--:--'}${isPending ? ` | [DRAFT: Diubah ke ${pendingItem?.newStatus}]` : ''}`}
                         >
-                          <div className="w-full h-full flex flex-col items-center justify-center">
+                          <div className="w-full h-full flex flex-col items-center justify-center relative">
                             {isHadir ? (
                               <Check className="w-4 h-4 stroke-[3]" />
                             ) : (
@@ -941,6 +1060,12 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                               >
                                 {rec?.shift_code?.substring(0, 3)}
                               </span>
+                            )}
+                            {isPending && (
+                              <span
+                                className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-amber-500 ring-1 ring-white shadow-xs z-10"
+                                title="Draft: Belum disimpan ke database"
+                              />
                             )}
                           </div>
                         </td>
@@ -1049,20 +1174,31 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
         (hEmp.nik && attendanceMap[hEmp.nik]?.[hDay.day]) ||
         attendanceMap[hEmp.machine_id]?.[hDay.day] ||
         (hEmp.id && attendanceMap[hEmp.id]?.[hDay.day]);
+      // Check if employee has assigned duty or scheduled shift on this day
+      const hHasDuty = Boolean(
+        hRec?.has_assigned_duty ||
+        (hRec?.is_custom_schedule && !hRec?.is_off_day && hRec?.shift_code !== 'OFF' && hRec?.shift_code !== 'LIBUR' && hRec?.final_status !== 'LIBUR')
+      );
       const isOff = hRec?.is_off_day || hRec?.final_status === 'OFF';
-      const isHol = hRec?.is_holiday || Boolean(hDay.holiday) || hRec?.final_status === 'LIBUR';
+      const isHol = (hRec?.is_holiday || Boolean(hDay.holiday) || hRec?.final_status === 'LIBUR') && !hHasDuty;
       const hEmpShift = shifts.find((s) => s.id === hRec?.shift_id || s.code === hRec?.shift_code) || defaultShift;
       const sTime = hRec?.scheduled_start ? hRec.scheduled_start.substring(0, 5) : (hEmpShift?.start_time?.substring(0, 5) || defaultShift?.start_time?.substring(0, 5) || '08:00');
       const eTime = hRec?.scheduled_end ? hRec.scheduled_end.substring(0, 5) : (hEmpShift?.end_time?.substring(0, 5) || defaultShift?.end_time?.substring(0, 5) || '14:30');
-      const isWeekendOrHol = hDay.isWeekend || isHol || hRec?.final_status === 'LIBUR';
+      const isWeekendOrHol = (hDay.isWeekend || isHol) && !hHasDuty;
       const workingHoursStr = isHol
         ? 'Hari Libur Resmi'
-        : hDay.isWeekend
+        : (hDay.isWeekend && !hHasDuty)
         ? 'Libur Akhir Pekan (Bebas Tugas)'
         : isOff
         ? 'Libur Shift'
-        : `${sTime} - ${eTime} WIB`;
+        : `${sTime} - ${eTime} WIB${hRec?.shift_name ? ` (${hRec.shift_name})` : ''}`;
       const fStatus = hRec ? hRec.final_status : (isWeekendOrHol ? 'LIBUR' : (isOff ? 'OFF' : 'A'));
+
+      // Check if this cell is currently in draft (pending)
+      const hPending =
+        (hEmp.nik && pendingOverrides?.[`${hEmp.nik}___${hDay.day}`]) ||
+        (hEmp.machine_id && pendingOverrides?.[`${hEmp.machine_id}___${hDay.day}`]) ||
+        (hEmp.id && pendingOverrides?.[`${hEmp.id}___${hDay.day}`]);
 
       // Clean, concise status badge
       const getCleanStatusBadge = (code: string) => {
@@ -1145,11 +1281,70 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                   {statusBadge.label}
                 </span>
               </div>
+
+              {hPending && (
+                <div className="mt-1.5 pt-1.5 border-t border-amber-200 text-[10px] text-amber-700 font-semibold flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                  <span>Draft: Diubah ke [{hPending.newStatus}] (Belum disimpan)</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
       );
     })()}
+
+    {/* Floating Sticky Batch Action Bar (Mode Edit) */}
+    {pendingCount > 0 && (
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 bg-slate-900/95 text-white rounded-2xl shadow-2xl border border-slate-700/80 backdrop-blur-md animate-in slide-in-from-bottom-5 duration-200">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-2.5 w-2.5 relative shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+          </span>
+          <span className="text-xs font-semibold text-slate-200 whitespace-nowrap">
+            <strong className="text-amber-400 font-bold">{pendingCount}</strong> perubahan belum disimpan
+          </span>
+        </div>
+
+        <div className="h-4 w-px bg-slate-700 mx-1 shrink-0" />
+
+        <div className="flex items-center gap-2 shrink-0">
+          {onCancelBatch && (
+            <button
+              type="button"
+              onClick={onCancelBatch}
+              disabled={isSavingBatch}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+              <span>Batal</span>
+            </button>
+          )}
+
+          {onSaveBatch && (
+            <button
+              type="button"
+              onClick={onSaveBatch}
+              disabled={isSavingBatch}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all shadow-md shadow-blue-600/30 disabled:opacity-60 cursor-pointer"
+            >
+              {isSavingBatch ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Menyimpan...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Simpan Semua ({pendingCount})</span>
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+    )}
   </div>
   );
 };

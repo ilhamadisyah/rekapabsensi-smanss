@@ -586,6 +586,24 @@ const localDb = {
     return { updatedCount: count };
   },
 
+  saveBatchAttendanceCells(params: {
+    updates: Array<{ employee_id: string; date: string; final_status: AttendanceCode; notes?: string }>;
+    changed_by: string;
+  }): { updatedCount: number } {
+    let count = 0;
+    for (const item of params.updates) {
+      this.updateAttendanceCell({
+        employee_id: item.employee_id,
+        date: item.date,
+        final_status: item.final_status,
+        notes: item.notes,
+        changed_by: params.changed_by,
+      });
+      count++;
+    }
+    return { updatedCount: count };
+  },
+
   getAuditLogs(): AuditLog[] {
     const data = ensureDbFile();
     return data.audit_logs.sort(
@@ -1076,6 +1094,14 @@ export const db = {
   }) {
     if (isSupabaseConfigured) return supabaseStore.bulkUpdateAttendance(params);
     return localDb.bulkUpdateAttendance(params);
+  },
+
+  async saveBatchAttendanceCells(params: {
+    updates: Array<{ employee_id: string; date: string; final_status: AttendanceCode; notes?: string }>;
+    changed_by: string;
+  }) {
+    if (isSupabaseConfigured) return supabaseStore.saveBatchAttendanceCells(params);
+    return localDb.saveBatchAttendanceCells(params);
   },
 
   async getAuditLogs(): Promise<AuditLog[]> {

@@ -7,8 +7,22 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { employee_ids, dates, final_status, notes, changed_by } = body;
+    const { updates, employee_ids, dates, final_status, notes, changed_by } = body;
 
+    // Case 1: Batch cell updates from matrix edit mode
+    if (Array.isArray(updates) && updates.length > 0) {
+      const result = await db.saveBatchAttendanceCells({
+        updates,
+        changed_by: changed_by || 'admin_tu',
+      });
+
+      return NextResponse.json({
+        success: true,
+        updated_count: result.updatedCount,
+      });
+    }
+
+    // Case 2: Grid bulk selection update
     if (!Array.isArray(employee_ids) || employee_ids.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Daftar pegawai wajib dipilih.' },

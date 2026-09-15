@@ -533,6 +533,24 @@ export const supabaseStore = {
     return { updatedCount: count };
   },
 
+  async saveBatchAttendanceCells(params: {
+    updates: Array<{ employee_id: string; date: string; final_status: AttendanceCode; notes?: string }>;
+    changed_by: string;
+  }): Promise<{ updatedCount: number }> {
+    let count = 0;
+    for (const item of params.updates) {
+      await this.updateAttendanceCell({
+        employee_id: item.employee_id,
+        date: item.date,
+        final_status: item.final_status,
+        notes: item.notes,
+        changed_by: params.changed_by,
+      });
+      count++;
+    }
+    return { updatedCount: count };
+  },
+
   async getAuditLogs(): Promise<AuditLog[]> {
     const client = getSupabaseServerClient();
     if (!client) return [];

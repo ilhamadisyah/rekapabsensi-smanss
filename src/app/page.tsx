@@ -81,6 +81,23 @@ export default function HomePage() {
     attendance: null,
   });
 
+  // Mode Edit & Staging Changes (Draft)
+  const [isEditMode, setIsEditMode] = useState<boolean>(false);
+  const [pendingOverrides, setPendingOverrides] = useState<
+    Record<
+      string,
+      {
+        employee: Employee;
+        day: AttendanceMatrixDay;
+        newStatus: AttendanceCode;
+        notes?: string;
+        originalStatus: AttendanceCode;
+      }
+    >
+  >({});
+  const [isSavingBatch, setIsSavingBatch] = useState<boolean>(false);
+  const originalAttendanceMapRef = useRef<Record<string, Record<number, DailyAttendance>>>({});
+
   // Notification Toast
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
@@ -150,6 +167,25 @@ export default function HomePage() {
     loadData();
   }, [loadData]);
 
+  // Simpan backup snapshot saat data terisi dan tidak sedang ada draft
+  useEffect(() => {
+    if (Object.keys(attendanceMap).length > 0 && Object.keys(pendingOverrides).length === 0) {
+      originalAttendanceMapRef.current = JSON.parse(JSON.stringify(attendanceMap));
+    }
+  }, [attendanceMap, pendingOverrides]);
+
+  // Peringatan sebelum tab ditutup/refresh jika ada perubahan draft
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (Object.keys(pendingOverrides).length > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [pendingOverrides]);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -190,13 +226,15 @@ export default function HomePage() {
     const dateStr = overrideModal.day.dateStr;
 
     // 1. Optimistic Update in UI across all identifiers of the employee
+    const existing =
+      (emp.nik ? attendanceMap[emp.nik]?.[dayNum] : undefined) ||
+      (emp.machine_id ? attendanceMap[emp.machine_id]?.[dayNum] : undefined) ||
+      (emp.id ? attendanceMap[emp.id]?.[dayNum] : undefined);
+    const originalStatus = existing?.final_status || 'A';
+
     setAttendanceMap((prev) => {
       const next = { ...prev };
       const keysToUpdate = [emp.nik, emp.machine_id, emp.id].filter(Boolean) as string[];
-      const existing =
-        (emp.nik ? next[emp.nik]?.[dayNum] : undefined) ||
-        (emp.machine_id ? next[emp.machine_id]?.[dayNum] : undefined) ||
-        (emp.id ? next[emp.id]?.[dayNum] : undefined);
 
       const updatedRecord = {
         id: existing?.id || `att-${empId}-${dateStr}`,
@@ -221,9 +259,29 @@ export default function HomePage() {
       return next;
     });
 
-    showToast(`Status pegawai ${overrideModal.employee.full_name} diubah menjadi [${newStatus}].`);
+    // JIKA MODE EDIT AKTIF -> Simpan sementara ke draft, TANPA panggil server dan TANPA reload!
+    if (isEditMode) {
+      const pendingKey = `${empId}___${dayNum}`;
+      setPendingOverrides((prev) => ({
+        ...prev,
+        [pendingKey]: {
+          employee: emp,
+          day: overrideModal.day!,
+          newStatus,
+          notes,
+          originalStatus,
+        },
+      }));
+      showToast(`[Draft Tersimpan] ${emp.full_name} Tgl ${dayNum} diubah ke [${newStatus}]. Tekan "Simpan Semua" saat selesai.`);
+      setOverrideModal((prev) => ({ ...prev, isOpen: false }));
+      return;
+    }
 
-    // 2. Persist to API
+    // JIKA MODE LIHAT BIASA (Direct Save)
+    showToast(`Status pegawai ${overrideModal.employee.full_name} diubah menjadi [${newStatus}].`);
+    setOverrideModal((prev) => ({ ...prev, isOpen: false }));
+
+    // Persist to API
     try {
       const res = await fetch('/api/attendance/update-cell', {
         method: 'PATCH',
@@ -242,12 +300,69 @@ export default function HomePage() {
       if (!res.ok) {
         throw new Error('Gagal menyimpan pembaruan ke server');
       }
-      // Refresh summary stats quietly
       loadData();
     } catch (e: any) {
       console.error(e);
       showToast('Galat: ' + (e.message || 'Gagal menyimpan status'));
       loadData(); // Revert
+    }
+  };
+
+  // Simpan semua perubahan pending overrides sekaligus ke database
+  const handleSaveBatchOverrides = async () => {
+    const pendingList = Object.values(pendingOverrides);
+    if (pendingList.length === 0) return;
+
+    setIsSavingBatch(true);
+    showToast(`Menyimpan ${pendingList.length} perubahan presensi ke database...`);
+
+    const updates = pendingList.map((item) => ({
+      employee_id: item.employee.nik || item.employee.machine_id || item.employee.id,
+      date: item.day.dateStr,
+      final_status: item.newStatus,
+      notes: item.notes,
+    }));
+
+    try {
+      const res = await fetch('/api/attendance/bulk-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          updates,
+          changed_by: userRole,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Gagal menyimpan perubahan massal');
+      }
+
+      showToast(`Sukses! ${data.updated_count || updates.length} perubahan presensi berhasil disimpan ke database.`);
+      setPendingOverrides({});
+      // Reload satu kali saja untuk menyegarkan kalkulasi matriks & statistik
+      await loadData();
+    } catch (err: any) {
+      console.error(err);
+      showToast('Galat saat menyimpan: ' + (err.message || 'Terjadi kesalahan'));
+    } finally {
+      setIsSavingBatch(false);
+    }
+  };
+
+  // Batalkan seluruh pending overrides dan kembalikan ke data asli
+  const handleCancelBatchOverrides = () => {
+    const count = Object.keys(pendingOverrides).length;
+    if (count === 0) return;
+
+    if (confirm(`Apakah Anda yakin ingin membatalkan ${count} perubahan yang belum disimpan?`)) {
+      if (Object.keys(originalAttendanceMapRef.current).length > 0) {
+        setAttendanceMap(JSON.parse(JSON.stringify(originalAttendanceMapRef.current)));
+      } else {
+        loadData();
+      }
+      setPendingOverrides({});
+      showToast('Seluruh perubahan draft berhasil dibatalkan.');
     }
   };
 
@@ -557,6 +672,20 @@ export default function HomePage() {
                 onOpenGuide={() => setIsGuideModalOpen(true)}
                 defaultShift={defaultShift}
                 shifts={shifts}
+                isEditMode={isEditMode}
+                onToggleEditMode={() => {
+                  if (isEditMode && Object.keys(pendingOverrides).length > 0) {
+                    if (!confirm(`Ada ${Object.keys(pendingOverrides).length} perubahan yang belum disimpan. Yakin ingin keluar dari Mode Edit tanpa menyimpan?`)) {
+                      return;
+                    }
+                    handleCancelBatchOverrides();
+                  }
+                  setIsEditMode(!isEditMode);
+                }}
+                pendingOverrides={pendingOverrides}
+                onSaveBatch={handleSaveBatchOverrides}
+                onCancelBatch={handleCancelBatchOverrides}
+                isSavingBatch={isSavingBatch}
               />
             )}
           </div>
