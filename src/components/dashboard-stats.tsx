@@ -67,7 +67,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.98] shadow-md hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-200 cursor-pointer border border-blue-500/20"
             >
               <Clock className="w-4 h-4 shrink-0" />
-              <span>Unggah Log Mesin (.xls)</span>
+              <span>Unggah Log Mesin (.csv)</span>
             </button>
           )}
         </div>
