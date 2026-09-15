@@ -822,11 +822,21 @@ export function parseAttendanceFile(
           dNext.setDate(dNext.getDate() + 1);
           const nextDateStr = formatDate(dNext);
 
-          // Find morning checkout punches on next day within configured checkout window
-          const checkOutWindowMin = typeof sched?.checkOutWindowMinutes === 'number' && sched.checkOutWindowMinutes > 0
-            ? sched.checkOutWindowMinutes
-            : 240;
-          const latestMorningOut = addMinutesToTime(schedEnd, checkOutWindowMin);
+          // Check schedule of next day to determine natural boundary:
+          // If next day has an afternoon/evening shift, the boundary is when next day's check-in window opens
+          const nextSched =
+            (group.nik ? options?.scheduleMap?.get(`${group.nik}___${nextDateStr}`) : undefined) ||
+            options?.scheduleMap?.get(`${empKey}___${nextDateStr}`) ||
+            (existingEmployee?.id ? options?.scheduleMap?.get(`${existingEmployee.id}___${nextDateStr}`) : undefined) ||
+            (group.machineId ? options?.scheduleMap?.get(`${group.machineId}___${nextDateStr}`) : undefined);
+
+          let nextDayCheckoutCutoff = '23:59:59';
+          if (nextSched && nextSched.startTime && (nextSched.isOvernight || nextSched.startTime >= '14:00:00')) {
+            const nextInWin = typeof nextSched.checkInWindowMinutes === 'number' && nextSched.checkInWindowMinutes > 0
+              ? nextSched.checkInWindowMinutes
+              : (nextSched.isOvernight ? 300 : 120);
+            nextDayCheckoutCutoff = addMinutesToTime(nextSched.startTime, -nextInWin);
+          }
 
           const nextDayMorningPunches: { index: number; punch: RawPunchRecord }[] = [];
           let exceeded23HoursPunch: RawPunchRecord | null = null;
@@ -834,7 +844,7 @@ export function parseAttendanceFile(
           for (let j = i + 1; j < punches.length; j++) {
             if (consumedIndices.has(j)) continue;
             const pNext = punches[j];
-            if (pNext.dateStr === nextDateStr && pNext.timeStr <= latestMorningOut) {
+            if (pNext.dateStr === nextDateStr && pNext.timeStr < nextDayCheckoutCutoff) {
               const diffHours = (pNext.timestamp.getTime() - punch.timestamp.getTime()) / (1000 * 60 * 60);
               // Batas maksimal durasi lintas hari: maksimal 23 jam
               if (diffHours >= 3 && diffHours <= 23) {
@@ -848,9 +858,11 @@ export function parseAttendanceFile(
           }
 
           if (nextDayMorningPunches.length > 0) {
+            for (const item of nextDayMorningPunches) {
+              consumedIndices.add(item.index);
+            }
             const bestMorningOut = nextDayMorningPunches[nextDayMorningPunches.length - 1];
             sessionPunches.push(bestMorningOut.punch);
-            consumedIndices.add(bestMorningOut.index);
             isOvernightSession = true;
           } else if (exceeded23HoursPunch) {
             sessionNotes = 'Rentang tap melebihi batas maksimal 23 jam';

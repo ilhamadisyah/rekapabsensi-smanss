@@ -215,15 +215,32 @@ export async function GET(request: NextRequest) {
             // An overnight shift MUST pair with the next calendar day (beda hari)!
             if (isOvernight) {
               const earliestEveningIn = addMinutesToTime(startTime, -checkInWindowMinutes);
-              const latestMorningOut = addMinutesToTime(endTime, checkOutWindowMinutes);
 
               // Only pair if starting punch is legitimately in the check-in window (>= earliestEveningIn)
               if (rec.first_in && rec.first_in >= earliestEveningIn && (!rec.last_out || rec.last_out >= earliestEveningIn || rec.tap_count < 2)) {
                 const nextDayRec = empDayMap[d.day + 1];
-                if (nextDayRec && nextDayRec.first_in && nextDayRec.first_in <= latestMorningOut) {
+                const nextDateObj = new Date(year, month - 1, d.day + 1);
+                const nextDateStr = `${nextDateObj.getFullYear()}-${String(nextDateObj.getMonth() + 1).padStart(2, '0')}-${String(nextDateObj.getDate()).padStart(2, '0')}`;
+
+                // Check schedule of next day to determine natural boundary:
+                // If next day has an afternoon/evening shift, boundary is when next day's check-in window opens
+                const nextSched =
+                  (emp.nik ? scheduleMap.get(`${emp.nik}___${nextDateStr}`) : undefined) ||
+                  scheduleMap.get(`${emp.machine_id}___${nextDateStr}`) ||
+                  (emp.id ? scheduleMap.get(`${emp.id}___${nextDateStr}`) : undefined);
+                const nextShift = nextSched ? shiftMap.get(nextSched.shift_id) : null;
+                const nextShiftStart = nextSched?.custom_start_time || nextShift?.start_time;
+
+                let nextDayCheckoutCutoff = '23:59:59';
+                if (nextSched && nextShiftStart && (nextShift?.is_overnight || nextShiftStart >= '14:00:00')) {
+                  const nextInWin = typeof nextShift?.check_in_window_minutes === 'number' && nextShift.check_in_window_minutes > 0
+                    ? nextShift.check_in_window_minutes
+                    : (nextShift?.is_overnight ? 300 : 120);
+                  nextDayCheckoutCutoff = addMinutesToTime(nextShiftStart, -nextInWin);
+                }
+
+                if (nextDayRec && nextDayRec.first_in && nextDayRec.first_in < nextDayCheckoutCutoff) {
                   const dStart = new Date(`${d.dateStr}T${rec.first_in}`);
-                  const nextDateObj = new Date(year, month - 1, d.day + 1);
-                  const nextDateStr = `${nextDateObj.getFullYear()}-${String(nextDateObj.getMonth() + 1).padStart(2, '0')}-${String(nextDateObj.getDate()).padStart(2, '0')}`;
                   const dEnd = new Date(`${nextDateStr}T${nextDayRec.first_in}`);
                   const diffHours = (dEnd.getTime() - dStart.getTime()) / (1000 * 60 * 60);
 

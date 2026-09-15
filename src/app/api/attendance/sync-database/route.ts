@@ -146,16 +146,35 @@ export async function POST(request: NextRequest) {
 
           if (isOvernight) {
             const earliestEveningIn = addMinutesToTime(startTime, -checkInWindowMinutes);
-            const latestMorningOut = addMinutesToTime(endTime, checkOutWindowMinutes);
 
             if (effectiveFirstIn && effectiveFirstIn >= earliestEveningIn && (!effectiveLastOut || effectiveLastOut >= earliestEveningIn || effectiveTapCount < 2)) {
               // Look up next day's record for morning checkout
               const dNext = new Date(dateStr + 'T00:00:00');
               dNext.setDate(dNext.getDate() + 1);
               const nextDateStr = `${dNext.getFullYear()}-${String(dNext.getMonth() + 1).padStart(2, '0')}-${String(dNext.getDate()).padStart(2, '0')}`;
-              const nextKey = `${emp.machine_id}___${nextDateStr}`;
-              const nextRec = attendanceMap.get(nextKey);
-              if (nextRec && nextRec.first_in && nextRec.first_in <= latestMorningOut) {
+              const nextRec =
+                (emp.nik ? attendanceMap.get(`${emp.nik}___${nextDateStr}`) : undefined) ||
+                (emp.machine_id ? attendanceMap.get(`${emp.machine_id}___${nextDateStr}`) : undefined) ||
+                (emp.id ? attendanceMap.get(`${emp.id}___${nextDateStr}`) : undefined);
+
+              // Check schedule of next day to determine natural boundary:
+              // If next day has an afternoon/evening shift, boundary is when next day's check-in window opens
+              const nextSched =
+                (emp.nik ? scheduleMap.get(`${emp.nik}___${nextDateStr}`) : undefined) ||
+                scheduleMap.get(`${emp.machine_id}___${nextDateStr}`) ||
+                (emp.id ? scheduleMap.get(`${emp.id}___${nextDateStr}`) : undefined);
+              const nextShift = nextSched ? shiftMap.get(nextSched.shift_id) : null;
+              const nextShiftStart = nextSched?.custom_start_time || nextShift?.start_time;
+
+              let nextDayCheckoutCutoff = '23:59:59';
+              if (nextSched && nextShiftStart && (nextShift?.is_overnight || nextShiftStart >= '14:00:00')) {
+                const nextInWin = typeof nextShift?.check_in_window_minutes === 'number' && nextShift.check_in_window_minutes > 0
+                  ? nextShift.check_in_window_minutes
+                  : (nextShift?.is_overnight ? 300 : 120);
+                nextDayCheckoutCutoff = addMinutesToTime(nextShiftStart, -nextInWin);
+              }
+
+              if (nextRec && nextRec.first_in && nextRec.first_in < nextDayCheckoutCutoff) {
                 const dStart = new Date(`${dateStr}T${effectiveFirstIn}`);
                 const dEnd = new Date(`${nextDateStr}T${nextRec.first_in}`);
                 const diffHours = (dEnd.getTime() - dStart.getTime()) / (1000 * 60 * 60);
