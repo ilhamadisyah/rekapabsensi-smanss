@@ -154,8 +154,8 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-slate-800">Kolom C s/d AF</td>
-                    <td className="p-3 font-bold text-slate-900">LE (Late &amp; Early)</td>
-                    <td className="p-3 text-slate-600">Late Arrival &amp; Early Departure: Terlambat datang dan pulang lebih awal pada hari yang sama.</td>
+                    <td className="p-3 font-bold text-slate-900">LE (Late / Early)</td>
+                    <td className="p-3 text-slate-600">Late Arrival or Early Departure: Terlambat datang atau pulang lebih awal (salah satunya saja atau keduanya).</td>
                     <td className="p-3 text-amber-700 font-semibold">Denda 1 poin (-1 poin pada Nilai X). Hari kerja (HK) tetap dihitung hadir karena pegawai masuk bekerja.</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">

@@ -88,7 +88,7 @@ const STATUS_DISPLAY_CONFIG: Record<AttendanceCode, {
     badgeBorder: 'border-amber-300',
   },
   LE: {
-    title: 'Late & Early (Telat Masuk & Pulang Cepat: -1 Poin)',
+    title: 'Late / Early (Telat Masuk atau Pulang Cepat: -1 Poin)',
     badgeBg: 'bg-amber-100',
     badgeText: 'text-amber-900',
     badgeBorder: 'border-amber-300',

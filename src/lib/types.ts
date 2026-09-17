@@ -99,11 +99,11 @@ export const ATTENDANCE_STATUS_MAP: Record<AttendanceCode, AttendanceStatusInfo>
   },
   LE: {
     code: 'LE',
-    label: 'LATE & EARLY (Late Arrival & Early Departure)',
+    label: 'LATE / EARLY (Late Arrival or Early Departure)',
     category: 'absent_verified',
     excelCode: 'LE',
     targetCol: '-',
-    description: 'Terlambat Masuk & Pulang Lebih Awal (-1 Poin)',
+    description: 'Terlambat Masuk atau Pulang Lebih Awal (-1 Poin)',
     penaltyPoints: 1,
     bgHex: '#FEF3C7',
     textHex: '#92400E',
