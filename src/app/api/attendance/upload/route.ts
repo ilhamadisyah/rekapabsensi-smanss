@@ -15,7 +15,14 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json(
-        { success: false, error: 'Berkas .csv, .xls atau .xlsx wajib diunggah.' },
+        { success: false, error: 'Berkas .csv wajib diunggah.' },
+        { status: 400 }
+      );
+    }
+
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      return NextResponse.json(
+        { success: false, error: 'Format berkas tidak didukung. Hanya berkas .csv yang diizinkan untuk diunggah.' },
         { status: 400 }
       );
     }

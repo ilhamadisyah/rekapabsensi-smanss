@@ -34,8 +34,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
   const processSelectedFile = async (selected: File) => {
     const ext = selected.name.toLowerCase();
-    if (!ext.endsWith('.xls') && !ext.endsWith('.xlsx') && !ext.endsWith('.csv')) {
-      setErrorMsg('Format file harus berupa .csv, .xls, atau .xlsx');
+    if (!ext.endsWith('.csv')) {
+      setErrorMsg('Format berkas harus berupa .csv (berkas .xls / .xlsx tidak didukung).');
       return;
     }
 
@@ -79,7 +79,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
   const handleSubmit = async () => {
     if (!file) {
-      setErrorMsg('Pilih berkas mesin absensi (.csv, .xls, atau .xlsx) terlebih dahulu.');
+      setErrorMsg('Pilih berkas mesin absensi (.csv) terlebih dahulu.');
+      return;
+    }
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setErrorMsg('Hanya berkas format .csv yang diizinkan untuk diunggah.');
       return;
     }
 
@@ -176,7 +180,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept=".csv,.xls,.xlsx"
+            accept=".csv,text/csv"
             onChange={handleFileChange}
             className="hidden"
           />
@@ -241,7 +245,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                     Pilih atau Tarik Berkas ke Sini
                   </div>
                   <div className="text-[11px] text-slate-400 mt-0.5">
-                    Mendukung format .csv, .xls &amp; .xlsx mesin absensi (Maks. 15 MB)
+                    Hanya mendukung berkas format .csv mesin absensi (Maks. 15 MB)
                   </div>
                 </div>
               </div>

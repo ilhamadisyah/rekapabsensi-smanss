@@ -128,19 +128,43 @@ export const supabaseStore = {
     const client = getSupabaseServerClient();
     if (!client) return false;
 
-    // Delete schedules for this employee first
-    await client.from('employee_schedules').delete().or(`employee_id.eq.${id}`);
+    try {
+      // Find employee to resolve all associated identifiers (id, nik, machine_id)
+      const { data: emp } = await client
+        .from('employees')
+        .select('id, nik, machine_id')
+        .or(`id.eq.${id},nik.eq.${id},machine_id.eq.${id}`)
+        .maybeSingle();
 
-    const { error } = await client
-      .from('employees')
-      .delete()
-      .or(`id.eq.${id},nik.eq.${id},machine_id.eq.${id}`);
+      const idsToDelete = new Set<string>([id]);
+      if (emp) {
+        if (emp.id) idsToDelete.add(emp.id);
+        if (emp.nik) idsToDelete.add(emp.nik);
+        if (emp.machine_id) idsToDelete.add(emp.machine_id);
+      }
+      const idArray = Array.from(idsToDelete);
 
-    if (error) {
-      console.error('[Supabase] Error deleteEmployee:', error);
+      // 1. Delete schedules for this employee
+      await client.from('employee_schedules').delete().in('employee_id', idArray);
+
+      // 2. Delete daily attendance records for this employee to prevent orphan resurrection
+      await client.from('daily_attendance').delete().in('employee_id', idArray);
+
+      // 3. Delete employee record
+      const { error } = await client
+        .from('employees')
+        .delete()
+        .or(`id.eq.${id},nik.eq.${id},machine_id.eq.${id}`);
+
+      if (error) {
+        console.error('[Supabase] Error deleteEmployee:', error);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('[Supabase] Exception deleteEmployee:', err);
       return false;
     }
-    return true;
   },
 
   async clearAllEmployeesAndAttendance(): Promise<{ deletedEmployees: number; deletedAttendance: number }> {

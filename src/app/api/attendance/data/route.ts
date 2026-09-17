@@ -28,27 +28,41 @@ export async function GET(request: NextRequest) {
       holidays,
     });
 
-    return NextResponse.json({
-      success: true,
-      month,
-      year,
-      summary: evaluated.summary,
-      detectedPeriod: evaluated.detectedPeriod,
-      recordedDays: evaluated.recordedDays,
-      days: evaluated.days,
-      employees: evaluated.employees,
-      attendanceMap: evaluated.attendanceMap,
-      shifts,
-      defaultShift: evaluated.defaultShift,
-      schedules,
-      holidays,
-      uploadHistory: await db.getUploadHistory(),
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        month,
+        year,
+        summary: evaluated.summary,
+        detectedPeriod: evaluated.detectedPeriod,
+        recordedDays: evaluated.recordedDays,
+        days: evaluated.days,
+        employees: evaluated.employees,
+        attendanceMap: evaluated.attendanceMap,
+        shifts,
+        defaultShift: evaluated.defaultShift,
+        schedules,
+        holidays,
+        uploadHistory: await db.getUploadHistory(),
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
+        },
+      }
+    );
   } catch (error: any) {
     console.error('Error fetching attendance data:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Gagal memuat data presensi' },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        },
+      }
     );
   }
 }

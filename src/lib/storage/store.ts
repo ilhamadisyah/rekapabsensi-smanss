@@ -252,11 +252,25 @@ const localDb = {
 
   deleteEmployee(id: string): boolean {
     const data = ensureDbFile();
+    const targetEmp = data.employees.find((e) => e.id === id || e.nik === id || e.machine_id === id);
+    const idsToDelete = new Set<string>([id]);
+    if (targetEmp) {
+      if (targetEmp.id) idsToDelete.add(targetEmp.id);
+      if (targetEmp.nik) idsToDelete.add(targetEmp.nik);
+      if (targetEmp.machine_id) idsToDelete.add(targetEmp.machine_id);
+    }
+
     const initialLen = data.employees.length;
-    data.employees = data.employees.filter((e) => e.id !== id && e.nik !== id && e.machine_id !== id);
+    data.employees = data.employees.filter(
+      (e) => !idsToDelete.has(e.id) && (!e.nik || !idsToDelete.has(e.nik)) && (!e.machine_id || !idsToDelete.has(e.machine_id))
+    );
     if (data.employees.length === initialLen) return false;
+
     data.employee_schedules = (data.employee_schedules || []).filter(
-      (s) => s.employee_id !== id
+      (s) => !idsToDelete.has(s.employee_id)
+    );
+    data.daily_attendance = (data.daily_attendance || []).filter(
+      (a) => !idsToDelete.has(a.employee_id)
     );
     writeDb(data);
     return true;

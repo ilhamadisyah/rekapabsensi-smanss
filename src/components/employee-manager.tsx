@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Employee } from '@/lib/types';
 import {
   Search,
@@ -42,7 +42,7 @@ function getPageNumbers(current: number, total: number): (number | '...')[] {
 
 interface EmployeeManagerProps {
   employees: Employee[];
-  onEmployeeUpdated: () => void;
+  onEmployeeUpdated: () => void | Promise<void>;
   userRole: string;
 }
 
@@ -51,6 +51,12 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
   onEmployeeUpdated,
   userRole,
 }) => {
+  const [localEmployees, setLocalEmployees] = useState<Employee[]>(employees);
+
+  useEffect(() => {
+    setLocalEmployees(employees);
+  }, [employees]);
+
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -83,10 +89,10 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
   // Selalu urutkan daftar pegawai berdasarkan excel_row_index (urutan laporan resmi)
   const sortedEmployees = useMemo(() => {
-    return [...employees].sort(
+    return [...localEmployees].sort(
       (a, b) => (a.excel_row_index || 999) - (b.excel_row_index || 999)
     );
-  }, [employees]);
+  }, [localEmployees]);
 
   const filtered = useMemo(() => {
     return sortedEmployees.filter(
@@ -142,7 +148,12 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
       if (res.ok && data.success) {
         setMsg({ text: 'Berhasil memperbarui data pegawai!', type: 'success' });
         setEditingId(null);
-        onEmployeeUpdated();
+        if (data.employee) {
+          setLocalEmployees((prev) =>
+            prev.map((e) => (e.id === empId ? { ...e, ...data.employee } : e))
+          );
+        }
+        await onEmployeeUpdated();
       } else {
         setMsg({ text: data.error || 'Gagal menyimpan perubahan', type: 'error' });
       }
@@ -163,11 +174,23 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
     try {
       const res = await fetch(`/api/employees?id=${encodeURIComponent(emp.id)}`, {
         method: 'DELETE',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
       });
       const data = await res.json();
       if (res.ok && data.success) {
         setMsg({ text: `Pegawai ${emp.full_name} berhasil dihapus.`, type: 'success' });
-        onEmployeeUpdated();
+        // Hapus langsung dari tampilan secara instan
+        setLocalEmployees((prev) =>
+          prev.filter(
+            (e) =>
+              e.id !== emp.id &&
+              (!emp.nik || e.nik !== emp.nik) &&
+              (!emp.machine_id || e.machine_id !== emp.machine_id)
+          )
+        );
+        await onEmployeeUpdated();
       } else {
         setMsg({ text: data.error || 'Gagal menghapus pegawai', type: 'error' });
       }
@@ -200,6 +223,13 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
       excel_row_index: idx + 1,
     }));
 
+    setLocalEmployees(
+      list.map((e, idx) => ({
+        ...e,
+        excel_row_index: idx + 1,
+      }))
+    );
+
     try {
       const res = await fetch('/api/employees/reorder', {
         method: 'POST',
@@ -209,7 +239,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
       const data = await res.json();
       if (res.ok && data.success) {
-        onEmployeeUpdated();
+        await onEmployeeUpdated();
       } else {
         alert(data.error || 'Gagal memindahkan urutan pegawai.');
       }
@@ -225,7 +255,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
     setNewMachineId('');
     setNewNik('');
     setNewDepartment('Guru');
-    setNewRowIndex(employees.length + 1);
+    setNewRowIndex(localEmployees.length + 1);
     setMsg(null);
     setIsAddModalOpen(true);
   };
@@ -253,7 +283,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
           machine_id: cleanMachineId,
           nik: newNik.trim(),
           department: newDepartment.trim(),
-          excel_row_index: Number(newRowIndex) || (employees.length + 1),
+          excel_row_index: Number(newRowIndex) || (localEmployees.length + 1),
           is_active: true,
         }),
       });
@@ -262,7 +292,10 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
       if (res.ok && data.success) {
         setMsg({ text: `Berhasil mendaftarkan pegawai baru: ${newFullName}`, type: 'success' });
         setIsAddModalOpen(false);
-        onEmployeeUpdated();
+        if (data.employee) {
+          setLocalEmployees((prev) => [...prev, data.employee]);
+        }
+        await onEmployeeUpdated();
       } else {
         alert(data.error || 'Gagal menambahkan pegawai.');
       }
@@ -275,7 +308,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
   // --- Fitur Modal Atur Urutan Laporan Presensi ---
   const handleOpenReorderModal = () => {
-    const list = [...employees].sort(
+    const list = [...localEmployees].sort(
       (a, b) => (a.excel_row_index || 999) - (b.excel_row_index || 999)
     );
     setReorderList(list);
@@ -321,7 +354,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
   };
 
   const handleResetToCurrent = () => {
-    const list = [...employees].sort(
+    const list = [...localEmployees].sort(
       (a, b) => (a.excel_row_index || 999) - (b.excel_row_index || 999)
     );
     setReorderList(list);
@@ -348,9 +381,10 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
           text: `Urutan kustom untuk ${orders.length} pegawai berhasil disimpan! Laporan presensi akan mengikuti urutan ini.`,
           type: 'success',
         });
+        setLocalEmployees(reorderList.map((e, idx) => ({ ...e, excel_row_index: idx + 1 })));
         setIsReorderModalOpen(false);
         setReorderDirty(false);
-        onEmployeeUpdated();
+        await onEmployeeUpdated();
       } else {
         alert(data.error || 'Gagal menyimpan urutan pegawai.');
       }
@@ -381,7 +415,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             Master Data Pegawai &amp; Urutan Laporan Presensi
           </h3>
           <p className="text-xs text-slate-500 mt-1">
-            Total <span className="font-semibold text-slate-700">{employees.length}</span> Pegawai terdaftar. Urutan di bawah ini menentukan posisi baris nama pada Laporan Presensi Excel.
+            Total <span className="font-semibold text-slate-700">{localEmployees.length}</span> Pegawai terdaftar. Urutan di bawah ini menentukan posisi baris nama pada Laporan Presensi Excel.
           </p>
         </div>
 
@@ -400,7 +434,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             />
           </div>
 
-          {employees.length > 1 && (
+          {localEmployees.length > 1 && (
             <button
               onClick={handleOpenReorderModal}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold shadow-2xs transition-colors cursor-pointer"
@@ -437,7 +471,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
       )}
 
       {/* Empty State vs Table */}
-      {employees.length === 0 ? (
+      {localEmployees.length === 0 ? (
         <div className="py-12 px-4 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 space-y-4">
           <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto">
             <Users className="w-7 h-7" />
@@ -472,7 +506,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                 Cara 2: Unggah Berkas Presensi
               </div>
               <p className="text-[11px] text-slate-600 leading-relaxed">
-                Unggah berkas log presensi mesin biometrik (.xls/.xlsx). Sistem akan secara otomatis mendeteksi dan mendaftarkan seluruh ID pegawai baru ke database.
+                Unggah berkas log presensi mesin biometrik (.csv). Sistem akan secara otomatis mendeteksi dan mendaftarkan seluruh ID pegawai baru ke database.
               </p>
             </div>
           </div>
@@ -670,9 +704,9 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
               <div className="flex items-center gap-2">
                 <span>
                   Menampilkan <span className="font-bold text-slate-800">{totalItems === 0 ? 0 : startIndex + 1}</span>–<span className="font-bold text-slate-800">{endIndex}</span> dari <span className="font-bold text-slate-800">{totalItems}</span> pegawai
-                  {search && employees.length !== totalItems && (
+                  {search && localEmployees.length !== totalItems && (
                     <span className="text-slate-400 text-[11px] ml-1">
-                      (difilter dari {employees.length} total)
+                      (difilter dari {localEmployees.length} total)
                     </span>
                   )}
                 </span>

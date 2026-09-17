@@ -144,7 +144,13 @@ export default function HomePage() {
     const m = overrideMonth !== undefined ? overrideMonth : selectedMonth;
     const y = overrideYear !== undefined ? overrideYear : selectedYear;
     try {
-      const res = await fetch(`/api/attendance/data?month=${m}&year=${y}`);
+      const res = await fetch(`/api/attendance/data?month=${m}&year=${y}&_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          Pragma: 'no-cache',
+        },
+      });
       const data = await res.json();
       if (res.ok && data.success) {
         setEmployees(data.employees || []);
@@ -197,7 +203,7 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'matrix') {
+    if (activeTab === 'matrix' || activeTab === 'employees') {
       loadData();
     }
   }, [activeTab, loadData]);

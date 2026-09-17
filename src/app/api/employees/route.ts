@@ -6,11 +6,25 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const employees = await db.getEmployees();
-    return NextResponse.json({ success: true, employees });
+    return NextResponse.json(
+      { success: true, employees },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
+        },
+      }
+    );
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message || 'Gagal memuat master pegawai.' },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        },
+      }
     );
   }
 }
@@ -139,11 +153,23 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true, message: 'Pegawai berhasil dihapus.' });
+    return NextResponse.json(
+      { success: true, message: 'Pegawai berhasil dihapus.' },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        },
+      }
+    );
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message || 'Gagal menghapus pegawai.' },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+        },
+      }
     );
   }
 }
