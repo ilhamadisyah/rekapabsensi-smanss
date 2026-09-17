@@ -783,117 +783,170 @@ export function parseAttendanceFile(
         name: realName,
       };
 
-      const consumedIndices = new Set<number>();
+      const getSchedForDate = (dateStr: string) => {
+        return (
+          (group.nik ? options?.scheduleMap?.get(`${group.nik}___${dateStr}`) : undefined) ||
+          options?.scheduleMap?.get(`${empKey}___${dateStr}`) ||
+          (existingEmployee?.id ? options?.scheduleMap?.get(`${existingEmployee.id}___${dateStr}`) : undefined) ||
+          (group.machineId ? options?.scheduleMap?.get(`${group.machineId}___${dateStr}`) : undefined)
+        );
+      };
 
+      const isSchedOvernight = (sc: any) => {
+        return Boolean(sc?.isOvernight || (sc?.startTime && sc?.endTime && sc.startTime > sc.endTime));
+      };
+
+      const consumedIndices = new Set<number>();
+      const sessionsByDate = new Map<string, {
+        sessionPunches: RawPunchRecord[];
+        isOvernightSession: boolean;
+        notes?: string;
+        sched: any;
+      }>();
+
+      // Collect all dates that exist for this employee (from raw punches and assigned schedules)
+      const allEmployeeDates = Array.from(new Set([
+        ...punches.map((p) => p.dateStr),
+        ...Array.from(options?.scheduleMap?.keys() || [])
+          .filter((k) => k.startsWith(`${group.nik}___`) || k.startsWith(`${empKey}___`) || (existingEmployee?.id && k.startsWith(`${existingEmployee.id}___`)))
+          .map((k) => k.split('___')[1])
+      ])).sort();
+
+      // PHASE 1: Priority Overnight Shift Cross-Day Pairing
+      // Matches afternoon/evening check-in on Day N with morning check-out on Day N+1 with proximity scoring
+      if (enableCrossDayPairing) {
+        for (const dateStr of allEmployeeDates) {
+          const sched = getSchedForDate(dateStr);
+          const isExplicitOvernight = isSchedOvernight(sched);
+
+          if (!isExplicitOvernight) continue;
+
+          const schedStart = sched?.startTime || '20:00:00';
+          const schedEnd = sched?.endTime || '06:00:00';
+          const checkInWindowMin = typeof sched?.checkInWindowMinutes === 'number' && sched.checkInWindowMinutes > 0
+            ? sched.checkInWindowMinutes
+            : 300;
+          const earliestEveningIn = addMinutesToTime(schedStart, -checkInWindowMin);
+
+          // Find candidate check-in punches on this date in check-in window (>= earliestEveningIn)
+          const inCandidates: { p: RawPunchRecord; idx: number }[] = [];
+          punches.forEach((p, idx) => {
+            if (!consumedIndices.has(idx) && p.dateStr === dateStr && p.timeStr >= earliestEveningIn) {
+              inCandidates.push({ p, idx });
+            }
+          });
+
+          if (inCandidates.length === 0) continue;
+
+          // Proximity match: select punch closest to scheduled start time
+          inCandidates.sort((a, b) => Math.abs(timeToMinutes(a.p.timeStr) - timeToMinutes(schedStart)) - Math.abs(timeToMinutes(b.p.timeStr) - timeToMinutes(schedStart)));
+          const bestCheckIn = inCandidates[0];
+
+          // Target next calendar day for checkout
+          const dNext = new Date(dateStr + 'T00:00:00');
+          dNext.setDate(dNext.getDate() + 1);
+          const nextDateStr = `${dNext.getFullYear()}-${String(dNext.getMonth() + 1).padStart(2, '0')}-${String(dNext.getDate()).padStart(2, '0')}`;
+          const nextSched = getSchedForDate(nextDateStr);
+
+          // Natural boundary on next day morning:
+          // If next day has an afternoon/overnight shift, boundary is before next shift starts (at least 13:00)
+          let nextDayCheckoutCutoff = '13:00:00';
+          if (nextSched && nextSched.startTime && !nextSched.isOffDay) {
+            if (isSchedOvernight(nextSched) || nextSched.startTime >= '14:00:00') {
+              const buffer = addMinutesToTime(nextSched.startTime, -120);
+              nextDayCheckoutCutoff = buffer > '13:00:00' ? buffer : '13:00:00';
+            } else if (nextSched.startTime < '12:00:00' && nextSched.startTime > '05:00:00') {
+              nextDayCheckoutCutoff = nextSched.startTime;
+            }
+          }
+
+          const outCandidates: { p: RawPunchRecord; idx: number; diffH: number }[] = [];
+          let exceeded23HoursPunch: RawPunchRecord | null = null;
+
+          punches.forEach((p, idx) => {
+            if (!consumedIndices.has(idx) && p.dateStr === nextDateStr && p.timeStr <= nextDayCheckoutCutoff) {
+              const diffH = (p.timestamp.getTime() - bestCheckIn.p.timestamp.getTime()) / (1000 * 60 * 60);
+              // Valid cross-day duration: between 3 and 23 hours
+              if (diffH >= 3 && diffH <= 23) {
+                outCandidates.push({ p, idx, diffH });
+              } else if (diffH > 23) {
+                exceeded23HoursPunch = p;
+              }
+            }
+          });
+
+          const sessionPunches = [bestCheckIn.p];
+          consumedIndices.add(bestCheckIn.idx);
+          let sessionNotes: string | undefined = undefined;
+
+          if (outCandidates.length > 0) {
+            // Proximity match: select punch closest to scheduled end time
+            outCandidates.sort((a, b) => Math.abs(timeToMinutes(a.p.timeStr) - timeToMinutes(schedEnd)) - Math.abs(timeToMinutes(b.p.timeStr) - timeToMinutes(schedEnd)));
+            const bestCheckOut = outCandidates[0];
+            sessionPunches.push(bestCheckOut.p);
+            consumedIndices.add(bestCheckOut.idx);
+          } else if (exceeded23HoursPunch) {
+            sessionNotes = 'Rentang tap melebihi batas maksimal 23 jam';
+          }
+
+          sessionsByDate.set(dateStr, {
+            sessionPunches,
+            isOvernightSession: true,
+            notes: sessionNotes,
+            sched,
+          });
+        }
+      }
+
+      // PHASE 2: Handling Remaining Punches (Carry-over morning taps & regular daytime shifts)
       for (let i = 0; i < punches.length; i++) {
         if (consumedIndices.has(i)) continue;
 
         const punch = punches[i];
         const dateStr = punch.dateStr;
-        const sched =
-          (group.nik ? options?.scheduleMap?.get(`${group.nik}___${dateStr}`) : undefined) ||
-          options?.scheduleMap?.get(`${empKey}___${dateStr}`) ||
-          (existingEmployee?.id ? options?.scheduleMap?.get(`${existingEmployee.id}___${dateStr}`) : undefined) ||
-          (group.machineId ? options?.scheduleMap?.get(`${group.machineId}___${dateStr}`) : undefined);
 
-        // Check if this punch is candidate for beginning an overnight shift:
-        // Dynamic time windows following shift template settings (no hardcoding):
-        const isExplicitOvernight = Boolean(sched?.isOvernight || (sched?.startTime && sched?.endTime && sched.startTime > sched.endTime));
-        const checkInWindowMin = typeof sched?.checkInWindowMinutes === 'number' && sched.checkInWindowMinutes > 0
-          ? sched.checkInWindowMinutes
-          : (isExplicitOvernight ? 300 : 120);
-        const schedStart = sched?.startTime || (isExplicitOvernight ? '20:00:00' : '07:30:00');
-        const schedEnd = sched?.endTime || (isExplicitOvernight ? '06:00:00' : '16:00:00');
-        const earliestEveningIn = addMinutesToTime(schedStart, -checkInWindowMin);
-        const isEveningPunch = punch.timeStr >= earliestEveningIn;
-        const isOvernightCandidate = Boolean(enableCrossDayPairing && isExplicitOvernight && isEveningPunch);
-
-        let isOvernightSession = false;
-        let sessionNotes: string | undefined = undefined;
-        const sessionPunches: RawPunchRecord[] = [punch];
-        consumedIndices.add(i);
-
-        if (isOvernightCandidate) {
-          // Collect other evening punches on the same starting date after earliestEveningIn
-          for (let j = i + 1; j < punches.length; j++) {
-            if (consumedIndices.has(j)) continue;
-            const p2 = punches[j];
-            if (p2.dateStr === dateStr && p2.timeStr >= earliestEveningIn) {
-              sessionPunches.push(p2);
-              consumedIndices.add(j);
-            } else if (p2.dateStr > dateStr) {
-              break;
-            }
-          }
-
-          // Next calendar day for cross-day checkout
-          const dNext = new Date(dateStr + 'T00:00:00');
-          dNext.setDate(dNext.getDate() + 1);
-          const nextDateStr = formatDate(dNext);
-
-          // Check schedule of next day to determine natural boundary:
-          // If next day has an afternoon/evening shift, the boundary is when next day's check-in window opens
-          const nextSched =
-            (group.nik ? options?.scheduleMap?.get(`${group.nik}___${nextDateStr}`) : undefined) ||
-            options?.scheduleMap?.get(`${empKey}___${nextDateStr}`) ||
-            (existingEmployee?.id ? options?.scheduleMap?.get(`${existingEmployee.id}___${nextDateStr}`) : undefined) ||
-            (group.machineId ? options?.scheduleMap?.get(`${group.machineId}___${nextDateStr}`) : undefined);
-
-          let nextDayCheckoutCutoff = '23:59:59';
-          if (nextSched && nextSched.startTime && (nextSched.isOvernight || nextSched.startTime >= '14:00:00')) {
-            const nextInWin = typeof nextSched.checkInWindowMinutes === 'number' && nextSched.checkInWindowMinutes > 0
-              ? nextSched.checkInWindowMinutes
-              : (nextSched.isOvernight ? 300 : 120);
-            nextDayCheckoutCutoff = addMinutesToTime(nextSched.startTime, -nextInWin);
-          }
-
-          const nextDayMorningPunches: { index: number; punch: RawPunchRecord }[] = [];
-          let exceeded23HoursPunch: RawPunchRecord | null = null;
-
-          for (let j = i + 1; j < punches.length; j++) {
-            if (consumedIndices.has(j)) continue;
-            const pNext = punches[j];
-            if (pNext.dateStr === nextDateStr && pNext.timeStr < nextDayCheckoutCutoff) {
-              const diffHours = (pNext.timestamp.getTime() - punch.timestamp.getTime()) / (1000 * 60 * 60);
-              // Batas maksimal durasi lintas hari: maksimal 23 jam
-              if (diffHours >= 3 && diffHours <= 23) {
-                nextDayMorningPunches.push({ index: j, punch: pNext });
-              } else if (diffHours > 23) {
-                exceeded23HoursPunch = pNext;
-              }
-            } else if (pNext.dateStr > nextDateStr) {
-              break;
-            }
-          }
-
-          if (nextDayMorningPunches.length > 0) {
-            for (const item of nextDayMorningPunches) {
-              consumedIndices.add(item.index);
-            }
-            const bestMorningOut = nextDayMorningPunches[nextDayMorningPunches.length - 1];
-            sessionPunches.push(bestMorningOut.punch);
-            isOvernightSession = true;
-          } else if (exceeded23HoursPunch) {
-            sessionNotes = 'Rentang tap melebihi batas maksimal 23 jam';
-          }
-        } else {
-          // Standard daytime pairing: collect punches on the same calendar date
-          for (let j = i + 1; j < punches.length; j++) {
-            if (consumedIndices.has(j)) continue;
-            const p2 = punches[j];
-            if (p2.dateStr === dateStr) {
-              sessionPunches.push(p2);
-              consumedIndices.add(j);
-            } else {
-              break;
-            }
+        // Case A: This date already has an overnight session created in Phase 1
+        if (sessionsByDate.has(dateStr)) {
+          const existingSession = sessionsByDate.get(dateStr)!;
+          // If this punch is a morning tap (< 13:00), it is recognized as carry-over checkout from previous period (e.g. Day 1 tap out from 31st of previous month)
+          if (punch.timeStr < '13:00:00') {
+            consumedIndices.add(i);
+            const carryNote = `Tap keluar limpahan shift akhir bulan sebelumnya (${punch.timeStr.substring(0, 5)})`;
+            existingSession.notes = existingSession.notes ? `${existingSession.notes}; ${carryNote}` : carryNote;
+            continue;
           }
         }
 
-        sessionPunches.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+        // Case B: Regular daytime shift or remaining punches on a non-overnight date
+        const dayPunches: RawPunchRecord[] = [];
+        for (let j = i; j < punches.length; j++) {
+          if (consumedIndices.has(j)) continue;
+          if (punches[j].dateStr === dateStr) {
+            dayPunches.push(punches[j]);
+            consumedIndices.add(j);
+          }
+        }
+
+        sessionsByDate.set(dateStr, {
+          sessionPunches: dayPunches,
+          isOvernightSession: false,
+          sched: getSchedForDate(dateStr),
+        });
+      }
+
+      // PHASE 3: Evaluate and generate DailyAttendance records
+      const sortedSessionDates = Array.from(sessionsByDate.keys()).sort();
+
+      for (const dateStr of sortedSessionDates) {
+        const session = sessionsByDate.get(dateStr)!;
+        const sessionPunches = session.sessionPunches.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
         const tapCount = sessionPunches.length;
-        const firstIn = sessionPunches[0].timeStr;
+        const firstIn = sessionPunches[0]?.timeStr || null;
         const lastOut = sessionPunches.length > 1 ? sessionPunches[sessionPunches.length - 1].timeStr : null;
+
+        const sched = session.sched;
+        const isOvernightSession = session.isOvernightSession;
+        const sessionNotes = session.notes;
 
         // Check weekend
         const pDate = new Date(dateStr + 'T00:00:00');

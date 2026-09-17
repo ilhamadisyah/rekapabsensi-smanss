@@ -147,18 +147,35 @@ export async function POST(request: NextRequest) {
           if (isOvernight) {
             const earliestEveningIn = addMinutesToTime(startTime, -checkInWindowMinutes);
 
-            if (effectiveFirstIn && effectiveFirstIn >= earliestEveningIn && (!effectiveLastOut || effectiveLastOut >= earliestEveningIn || effectiveTapCount < 2)) {
-              // Look up next day's record for morning checkout
-              const dNext = new Date(dateStr + 'T00:00:00');
-              dNext.setDate(dNext.getDate() + 1);
-              const nextDateStr = `${dNext.getFullYear()}-${String(dNext.getMonth() + 1).padStart(2, '0')}-${String(dNext.getDate()).padStart(2, '0')}`;
-              const nextRec =
-                (emp.nik ? attendanceMap.get(`${emp.nik}___${nextDateStr}`) : undefined) ||
-                (emp.machine_id ? attendanceMap.get(`${emp.machine_id}___${nextDateStr}`) : undefined) ||
-                (emp.id ? attendanceMap.get(`${emp.id}___${nextDateStr}`) : undefined);
+            // Special repair case: if first_in is morning (< 13:00) and last_out is evening (>= earliestEveningIn),
+            // this record previously swallowed previous period's checkout into first_in, and the true shift check-in into last_out!
+            if (
+              effectiveFirstIn &&
+              effectiveLastOut &&
+              effectiveFirstIn < '13:00:00' &&
+              effectiveLastOut >= earliestEveningIn
+            ) {
+              const prevCarry = effectiveFirstIn;
+              effectiveFirstIn = effectiveLastOut;
+              effectiveLastOut = null;
+              effectiveTapCount = 1;
+              sessionNotes = (sessionNotes ? `${sessionNotes}; ` : '') + `Tap keluar limpahan shift akhir bulan sebelumnya (${prevCarry.substring(0, 5)})`;
+            }
 
+            // Look up next day's record for morning checkout
+            const dNext = new Date(dateStr + 'T00:00:00');
+            dNext.setDate(dNext.getDate() + 1);
+            const nextDateStr = `${dNext.getFullYear()}-${String(dNext.getMonth() + 1).padStart(2, '0')}-${String(dNext.getDate()).padStart(2, '0')}`;
+            const nextRec =
+              (emp.nik ? attendanceMap.get(`${emp.nik}___${nextDateStr}`) : undefined) ||
+              (emp.machine_id ? attendanceMap.get(`${emp.machine_id}___${nextDateStr}`) : undefined) ||
+              (emp.id ? attendanceMap.get(`${emp.id}___${nextDateStr}`) : undefined);
+
+            const needsNextDayCheckout = !effectiveLastOut || effectiveLastOut >= earliestEveningIn || effectiveTapCount < 2;
+            const alreadyMatchedNextDay = Boolean(effectiveLastOut && nextRec && nextRec.first_in && nextRec.first_in === effectiveLastOut);
+
+            if (effectiveFirstIn && effectiveFirstIn >= earliestEveningIn && (needsNextDayCheckout || alreadyMatchedNextDay)) {
               // Check schedule of next day to determine natural boundary:
-              // If next day has an afternoon/evening shift, boundary is when next day's check-in window opens
               const nextSched =
                 (emp.nik ? scheduleMap.get(`${emp.nik}___${nextDateStr}`) : undefined) ||
                 scheduleMap.get(`${emp.machine_id}___${nextDateStr}`) ||
@@ -166,20 +183,22 @@ export async function POST(request: NextRequest) {
               const nextShift = nextSched ? shiftMap.get(nextSched.shift_id) : null;
               const nextShiftStart = nextSched?.custom_start_time || nextShift?.start_time;
 
-              let nextDayCheckoutCutoff = '23:59:59';
-              if (nextSched && nextShiftStart && (nextShift?.is_overnight || nextShiftStart >= '14:00:00')) {
-                const nextInWin = typeof nextShift?.check_in_window_minutes === 'number' && nextShift.check_in_window_minutes > 0
-                  ? nextShift.check_in_window_minutes
-                  : (nextShift?.is_overnight ? 300 : 120);
-                nextDayCheckoutCutoff = addMinutesToTime(nextShiftStart, -nextInWin);
+              let nextDayCheckoutCutoff = '13:00:00';
+              if (nextSched && nextShiftStart && !nextShift?.is_off_day && nextShift?.code !== 'OFF') {
+                if (nextShift?.is_overnight || nextShiftStart >= '14:00:00') {
+                  const buffer = addMinutesToTime(nextShiftStart, -120);
+                  nextDayCheckoutCutoff = buffer > '13:00:00' ? buffer : '13:00:00';
+                } else if (nextShiftStart < '12:00:00' && nextShiftStart > '05:00:00') {
+                  nextDayCheckoutCutoff = nextShiftStart;
+                }
               }
 
-              if (nextRec && nextRec.first_in && nextRec.first_in < nextDayCheckoutCutoff) {
+              if (nextRec && nextRec.first_in && (alreadyMatchedNextDay || nextRec.first_in <= nextDayCheckoutCutoff)) {
                 const dStart = new Date(`${dateStr}T${effectiveFirstIn}`);
                 const dEnd = new Date(`${nextDateStr}T${nextRec.first_in}`);
                 const diffHours = (dEnd.getTime() - dStart.getTime()) / (1000 * 60 * 60);
 
-                if (diffHours >= 3 && diffHours <= 23) {
+                if (alreadyMatchedNextDay || (diffHours >= 3 && diffHours <= 23)) {
                   effectiveLastOut = nextRec.first_in;
                   effectiveTapCount = Math.max(effectiveTapCount || 1, 2);
                   isCrossDaySession = true;

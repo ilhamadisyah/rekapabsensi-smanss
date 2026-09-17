@@ -277,12 +277,30 @@ export function evaluateMonthlyAttendanceMatrix(params: MatrixEvaluatorParams): 
           if (isOvernight) {
             const earliestEveningIn = addMinutesToTime(startTime, -checkInWindowMinutes);
 
-            // Only pair if starting punch is legitimately in the check-in window (>= earliestEveningIn)
-            if (rec.first_in && rec.first_in >= earliestEveningIn && (!rec.last_out || rec.last_out >= earliestEveningIn || rec.tap_count < 2)) {
-              const nextDayRec = empDayMap[d.day + 1];
-              const nextDateObj = new Date(year, month - 1, d.day + 1);
-              const nextDateStr = `${nextDateObj.getFullYear()}-${String(nextDateObj.getMonth() + 1).padStart(2, '0')}-${String(nextDateObj.getDate()).padStart(2, '0')}`;
+            // Special repair case: if first_in is morning (< 13:00) and last_out is evening (>= earliestEveningIn),
+            // this record previously swallowed previous period's checkout into first_in, and the true shift check-in into last_out!
+            if (
+              rec.first_in &&
+              rec.last_out &&
+              rec.first_in < '13:00:00' &&
+              rec.last_out >= earliestEveningIn
+            ) {
+              const prevCarry = rec.first_in;
+              rec.first_in = rec.last_out;
+              rec.last_out = null;
+              rec.tap_count = 1;
+              rec.notes = (rec.notes ? `${rec.notes}; ` : '') + `Tap keluar limpahan shift akhir bulan sebelumnya (${prevCarry.substring(0, 5)})`;
+            }
 
+            const nextDayRec = empDayMap[d.day + 1];
+            const nextDateObj = new Date(year, month - 1, d.day + 1);
+            const nextDateStr = `${nextDateObj.getFullYear()}-${String(nextDateObj.getMonth() + 1).padStart(2, '0')}-${String(nextDateObj.getDate()).padStart(2, '0')}`;
+
+            const needsNextDayCheckout = !rec.last_out || rec.last_out >= earliestEveningIn || rec.tap_count < 2;
+            const alreadyMatchedNextDay = Boolean(rec.last_out && nextDayRec && nextDayRec.first_in && nextDayRec.first_in === rec.last_out);
+
+            // Only pair if starting punch is legitimately in the check-in window (>= earliestEveningIn)
+            if (rec.first_in && rec.first_in >= earliestEveningIn && (needsNextDayCheckout || alreadyMatchedNextDay)) {
               // Check schedule of next day to determine natural boundary:
               const nextSched =
                 (emp.nik ? scheduleMap.get(`${emp.nik}___${nextDateStr}`) : undefined) ||
@@ -291,20 +309,22 @@ export function evaluateMonthlyAttendanceMatrix(params: MatrixEvaluatorParams): 
               const nextShift = nextSched ? shiftMap.get(nextSched.shift_id) : null;
               const nextShiftStart = nextSched?.custom_start_time || nextShift?.start_time;
 
-              let nextDayCheckoutCutoff = '23:59:59';
-              if (nextSched && nextShiftStart && (nextShift?.is_overnight || nextShiftStart >= '14:00:00')) {
-                const nextInWin = typeof nextShift?.check_in_window_minutes === 'number' && nextShift.check_in_window_minutes > 0
-                  ? nextShift.check_in_window_minutes
-                  : (nextShift?.is_overnight ? 300 : 120);
-                nextDayCheckoutCutoff = addMinutesToTime(nextShiftStart, -nextInWin);
+              let nextDayCheckoutCutoff = '13:00:00';
+              if (nextSched && nextShiftStart && !nextShift?.is_off_day && nextShift?.code !== 'OFF') {
+                if (nextShift?.is_overnight || nextShiftStart >= '14:00:00') {
+                  const buffer = addMinutesToTime(nextShiftStart, -120);
+                  nextDayCheckoutCutoff = buffer > '13:00:00' ? buffer : '13:00:00';
+                } else if (nextShiftStart < '12:00:00' && nextShiftStart > '05:00:00') {
+                  nextDayCheckoutCutoff = nextShiftStart;
+                }
               }
 
-              if (nextDayRec && nextDayRec.first_in && nextDayRec.first_in < nextDayCheckoutCutoff) {
+              if (nextDayRec && nextDayRec.first_in && (alreadyMatchedNextDay || nextDayRec.first_in <= nextDayCheckoutCutoff)) {
                 const dStart = new Date(`${d.dateStr}T${rec.first_in}`);
                 const dEnd = new Date(`${nextDateStr}T${nextDayRec.first_in}`);
                 const diffHours = (dEnd.getTime() - dStart.getTime()) / (1000 * 60 * 60);
 
-                if (diffHours >= 3 && diffHours <= 23) {
+                if (alreadyMatchedNextDay || (diffHours >= 3 && diffHours <= 23)) {
                   rec.last_out = nextDayRec.first_in;
                   rec.tap_count = Math.max(rec.tap_count || 1, 2);
                   isCrossDaySession = true;
