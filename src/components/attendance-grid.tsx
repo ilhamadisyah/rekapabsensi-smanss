@@ -91,7 +91,7 @@ const FILTER_OPTIONS: {
     id: 'HAS_PERMISSION',
     label: 'Izin / Sakit / Dinas',
     shortLabel: 'Izin/Sakit/Dinas',
-    description: 'Pegawai dengan dispensasi atau izin resmi',
+    description: 'Pegawai dengan izin resmi, sakit, cuti, atau dinas luar',
     icon: FileText,
     colorClass: 'text-indigo-600',
   },
@@ -99,7 +99,7 @@ const FILTER_OPTIONS: {
     id: 'HAS_LATE_EARLY',
     label: 'Terlambat / Pulang Cepat',
     shortLabel: 'Telat/Pulang Awal',
-    description: 'Pegawai dengan Hak Izin Pagi atau Siang (HIP/HIS)',
+    description: 'Pegawai dengan catatan telat datang atau pulang awal (LE, HIP, HIS)',
     icon: Clock,
     colorClass: 'text-orange-600',
   },
@@ -271,12 +271,13 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
         } else if (rec.final_status === 'HADIR') {
           hadirCount++;
         } else if (rec.final_status !== 'OFF' && rec.final_status !== 'LIBUR') {
-          permissionCount++;
           if (rec.final_status === 'HIP') lateCount++;
           if (rec.final_status === 'HIS') earlyCount++;
           if (rec.final_status === 'LE') {
             lateCount++;
             earlyCount++;
+          } else {
+            permissionCount++;
           }
           if (rec.final_status === 'DL') dutyCount++;
           if (rec.final_status === 'I' || rec.final_status === 'IL') sickCount++;
@@ -286,12 +287,13 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
           if (rec.final_status === 'HADIR') {
             hadirCount++;
           } else if (rec.final_status !== 'A' && rec.final_status !== 'OFF' && rec.final_status !== 'LIBUR') {
-            permissionCount++;
             if (rec.final_status === 'HIP') lateCount++;
             if (rec.final_status === 'HIS') earlyCount++;
             if (rec.final_status === 'LE') {
               lateCount++;
               earlyCount++;
+            } else {
+              permissionCount++;
             }
             if (rec.final_status === 'DL') dutyCount++;
             if (rec.final_status === 'I' || rec.final_status === 'IL') sickCount++;
@@ -338,7 +340,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
         case 'NEEDS_VERIFICATION':
           return stats.alphaCount > 0;
         case 'PERFECT':
-          return stats.alphaCount === 0 && stats.hadirCount > 0 && stats.permissionCount === 0;
+          return stats.alphaCount === 0 && stats.hadirCount > 0 && stats.permissionCount === 0 && stats.lateCount === 0 && stats.earlyCount === 0;
         case 'HAS_PERMISSION':
           return stats.permissionCount > 0;
         case 'HAS_LATE_EARLY':
@@ -834,7 +836,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                       alphaCount++;
                     } else if (rec.final_status === 'HADIR') {
                       hadirCount++;
-                    } else {
+                    } else if (rec.final_status !== 'OFF' && rec.final_status !== 'LIBUR' && rec.final_status !== 'LE') {
                       verifiedCount++;
                     }
                   } else {
@@ -842,7 +844,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                     if (rec && rec.is_verified) {
                       if (rec.final_status === 'HADIR') {
                         hadirCount++;
-                      } else if (rec.final_status !== 'A') {
+                      } else if (rec.final_status !== 'A' && rec.final_status !== 'OFF' && rec.final_status !== 'LIBUR' && rec.final_status !== 'LE') {
                         verifiedCount++;
                       }
                     }
