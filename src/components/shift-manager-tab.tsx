@@ -453,7 +453,7 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                 </div>
               )}
 
-              <form id="shift-form" onSubmit={handleSave} className="space-y-4">
+              <form id="shift-form" onSubmit={handleSave} noValidate className="space-y-4">
                 {/* Nama & Kode Singkatan */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
@@ -578,6 +578,7 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                             type="number"
                             min={0}
                             max={60}
+                            step="any"
                             value={gracePeriod}
                             onChange={(e) => setGracePeriod(Number(e.target.value))}
                             className="w-full pl-3 pr-12 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
@@ -690,7 +691,7 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                               type="number"
                               min={0}
                               max={1440}
-                              step={1}
+                              step="any"
                               value={checkInWindow}
                               onChange={(e) => {
                                 const val = e.target.value;
@@ -774,7 +775,7 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                               type="number"
                               min={0}
                               max={1440}
-                              step={1}
+                              step="any"
                               value={checkOutWindow}
                               onChange={(e) => {
                                 const val = e.target.value;

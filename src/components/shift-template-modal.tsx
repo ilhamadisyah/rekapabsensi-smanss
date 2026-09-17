@@ -318,7 +318,7 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
 
           {/* Form Add / Edit */}
           {(isCreating || editingTemplate) && (
-            <form onSubmit={handleSave} className="p-4 bg-blue-50/40 border border-blue-200 rounded-xl space-y-4 text-xs animate-in fade-in">
+            <form onSubmit={handleSave} noValidate className="p-4 bg-blue-50/40 border border-blue-200 rounded-xl space-y-4 text-xs animate-in fade-in">
               <div className="flex items-center justify-between pb-2 border-b border-blue-100">
                 <span className="font-bold text-slate-900 flex items-center gap-1.5 text-xs">
                   <Sparkles className="w-3.5 h-3.5 text-blue-600" />
@@ -456,6 +456,7 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                           type="number"
                           min={0}
                           max={60}
+                          step="any"
                           value={formGracePeriod}
                           onChange={(e) => setFormGracePeriod(Number(e.target.value))}
                           className="w-full pl-3 pr-12 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-sans font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
@@ -568,7 +569,7 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                             type="number"
                             min={0}
                             max={1440}
-                            step={1}
+                            step="any"
                             value={formCheckInWindow}
                             onChange={(e) => {
                               const val = e.target.value;
@@ -652,7 +653,7 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                             type="number"
                             min={0}
                             max={1440}
-                            step={1}
+                            step="any"
                             value={formCheckOutWindow}
                             onChange={(e) => {
                               const val = e.target.value;
