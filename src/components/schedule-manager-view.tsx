@@ -60,9 +60,9 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
 
   // Sync if props change
   useEffect(() => {
-    if (initialMonth) setCurrMonth(initialMonth);
-    if (initialYear) setCurrYear(initialYear);
-  }, [initialMonth, initialYear]);
+    if (initialMonth && initialMonth !== currMonth) setCurrMonth(initialMonth);
+    if (initialYear && initialYear !== currYear) setCurrYear(initialYear);
+  }, [initialMonth, initialYear, currMonth, currYear]);
 
   // Click outside to close month dropdown
   useEffect(() => {
@@ -76,6 +76,7 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
   }, []);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [isReevaluating, setIsReevaluating] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [isCopying, setIsCopying] = useState<boolean>(false);
@@ -84,6 +85,17 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
   const [shifts, setShifts] = useState<ShiftTemplate[]>([]);
   const [schedules, setSchedules] = useState<EmployeeSchedule[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+
+  // Stable references for props and state to prevent re-triggering effects
+  const showToastRef = useRef(showToast);
+  useEffect(() => {
+    showToastRef.current = showToast;
+  }, [showToast]);
+
+  const employeesRef = useRef(employees);
+  useEffect(() => {
+    employeesRef.current = employees;
+  }, [employees]);
 
   // Search & Department Filter
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -114,8 +126,14 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
   const [popoverNotes, setPopoverNotes] = useState('');
 
   // Load Schedule, Shifts, Holidays & Employees data
-  const loadScheduleData = useCallback(async (overrideMonth?: number, overrideYear?: number) => {
-    setIsLoading(true);
+  const loadScheduleData = useCallback(async (overrideMonth?: number, overrideYear?: number, silent?: boolean) => {
+    const isSilent = silent !== undefined ? silent : employeesRef.current.length > 0;
+    if (isSilent) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+
     const m = overrideMonth !== undefined ? overrideMonth : currMonth;
     const y = overrideYear !== undefined ? overrideYear : currYear;
     try {
@@ -127,27 +145,27 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
         setSchedules(data.schedules || []);
         setHolidays(data.holidays || []);
       } else {
-        showToast(data.error || 'Gagal memuat data jadwal.', 'error');
+        showToastRef.current?.(data.error || 'Gagal memuat data jadwal.', 'error');
       }
     } catch (err: any) {
       console.error('Error loading schedules:', err);
-      showToast('Gagal terhubung ke server.', 'error');
+      showToastRef.current?.('Gagal terhubung ke server.', 'error');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  }, [currMonth, currYear, showToast]);
+  }, [currMonth, currYear]);
 
   const handleMonthSelect = (mNum: number, yNum: number) => {
     setCurrMonth(mNum);
     setCurrYear(yNum);
     setIsMonthDropdownOpen(false);
     onMonthChange?.(mNum, yNum);
-    loadScheduleData(mNum, yNum);
   };
 
   useEffect(() => {
-    loadScheduleData();
-  }, [loadScheduleData]);
+    loadScheduleData(currMonth, currYear);
+  }, [currMonth, currYear, loadScheduleData]);
 
   // Map of shifts by ID
   const shiftMap = useMemo(() => {
@@ -301,16 +319,51 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
   // Quick Assign Shift (Template or Custom)
   const handleQuickAssign = async (shiftId: string | null) => {
     if (!isEditMode) {
-      showToast('Mode Lihat: Perubahan jadwal ditolak.', 'error');
+      showToastRef.current?.('Mode Lihat: Perubahan jadwal ditolak.', 'error');
       return;
     }
     if (!activeCell) return;
-    const { employee, dateStr } = activeCell;
+    const { employee, dateStr, day: cellDay } = activeCell;
 
     const targetEmpId = employee.nik || employee.id || employee.machine_id;
 
+    // Capture previous schedules for rollback if request fails
+    const prevSchedules = [...schedules];
+
+    // Optimistic UI update: update state instantly (0ms latency)
     if (shiftId === null) {
-      setActiveCell(null);
+      setSchedules((prev) => prev.filter((s) => !(s.employee_id === targetEmpId && s.date === dateStr)));
+    } else {
+      setSchedules((prev) => {
+        const filtered = prev.filter((s) => !(s.employee_id === targetEmpId && s.date === dateStr));
+        const newSchedule: EmployeeSchedule = {
+          id: `temp-${Date.now()}`,
+          employee_id: targetEmpId,
+          date: dateStr,
+          shift_id: shiftId,
+          custom_start_time:
+            popoverMode === 'custom'
+              ? popoverCustomStart.length === 5
+                ? `${popoverCustomStart}:00`
+                : popoverCustomStart
+              : undefined,
+          custom_end_time:
+            popoverMode === 'custom'
+              ? popoverCustomEnd.length === 5
+                ? `${popoverCustomEnd}:00`
+                : popoverCustomEnd
+              : undefined,
+          notes: popoverNotes.trim() || undefined,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        return [...filtered, newSchedule];
+      });
+    }
+
+    setActiveCell(null);
+
+    if (shiftId === null) {
       try {
         const res = await fetch(
           `/api/schedules?employee_id=${targetEmpId}&date=${dateStr}`,
@@ -318,12 +371,16 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
         );
         const data = await res.json();
         if (res.ok && data.success) {
-          showToast(`Jadwal ${employee.full_name} (${dateStr}) dikembalikan ke default.`);
-          loadScheduleData();
+          showToastRef.current?.(`Jadwal ${employee.full_name} (${dateStr}) dikembalikan ke default.`);
+          loadScheduleData(currMonth, currYear, true);
           onScheduleUpdated?.();
+        } else {
+          setSchedules(prevSchedules);
+          showToastRef.current?.(data.error || 'Gagal mereset jadwal.', 'error');
         }
       } catch (err) {
-        showToast('Gagal mereset jadwal.', 'error');
+        setSchedules(prevSchedules);
+        showToastRef.current?.('Gagal mereset jadwal.', 'error');
       }
       return;
     }
@@ -343,7 +400,6 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
           popoverCustomEnd.length === 5 ? `${popoverCustomEnd}:00` : popoverCustomEnd;
       }
 
-      setActiveCell(null);
       const res = await fetch('/api/schedules', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -352,14 +408,16 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
 
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast(`Jadwal ${employee.full_name} tanggal ${activeCell.day} berhasil disimpan.`);
-        loadScheduleData();
+        showToastRef.current?.(`Jadwal ${employee.full_name} tanggal ${cellDay} berhasil disimpan.`);
+        loadScheduleData(currMonth, currYear, true);
         onScheduleUpdated?.();
       } else {
-        showToast(data.error || 'Gagal menyimpan jadwal.', 'error');
+        setSchedules(prevSchedules);
+        showToastRef.current?.(data.error || 'Gagal menyimpan jadwal.', 'error');
       }
     } catch (err) {
-      showToast('Gagal terhubung ke server.', 'error');
+      setSchedules(prevSchedules);
+      showToastRef.current?.('Gagal terhubung ke server.', 'error');
     }
   };
 
@@ -444,15 +502,15 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast(data.message || 'Jadwal berhasil disalin.', 'success');
+        showToastRef.current?.(data.message || 'Jadwal berhasil disalin.', 'success');
         setIsCopyModalOpen(false);
-        loadScheduleData();
+        loadScheduleData(currMonth, currYear, true);
         onScheduleUpdated?.();
       } else {
-        showToast(data.error || 'Gagal menyalin jadwal.', 'error');
+        showToastRef.current?.(data.error || 'Gagal menyalin jadwal.', 'error');
       }
     } catch (err: any) {
-      showToast('Gagal menghubungi server.', 'error');
+      showToastRef.current?.('Gagal menghubungi server.', 'error');
     } finally {
       setIsCopying(false);
     }
@@ -618,7 +676,6 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                           const newY = currYear - 1;
                           setCurrYear(newY);
                           onMonthChange?.(currMonth, newY);
-                          loadScheduleData(currMonth, newY);
                         }}
                         className="p-1 hover:bg-slate-100 rounded text-slate-600 cursor-pointer"
                         title="Tahun Sebelumnya"
@@ -632,7 +689,6 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                           const newY = currYear + 1;
                           setCurrYear(newY);
                           onMonthChange?.(currMonth, newY);
-                          loadScheduleData(currMonth, newY);
                         }}
                         className="p-1 hover:bg-slate-100 rounded text-slate-600 cursor-pointer"
                         title="Tahun Berikutnya"
@@ -821,8 +877,16 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                     </button>
                   </div>
 
-                  <div className="text-[11px] sm:text-xs text-slate-500 font-medium whitespace-nowrap hidden sm:block">
-                    Menampilkan <span className="font-bold text-slate-900">{filteredEmployees.length}</span> dari {employees.length} pegawai
+                  <div className="flex items-center gap-2 text-[11px] sm:text-xs text-slate-500 font-medium whitespace-nowrap">
+                    {isRefreshing && (
+                      <span className="flex items-center gap-1 text-blue-600 font-semibold animate-pulse">
+                        <RefreshCw className="w-3 h-3 animate-spin" />
+                        <span className="hidden sm:inline">Sinkronisasi...</span>
+                      </span>
+                    )}
+                    <span className="hidden sm:inline">
+                      Menampilkan <span className="font-bold text-slate-900">{filteredEmployees.length}</span> dari {employees.length} pegawai
+                    </span>
                   </div>
                 </div>
               </div>
@@ -881,7 +945,7 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                 </thead>
 
                 <tbody className="divide-y divide-slate-100">
-                  {isLoading ? (
+                  {isLoading && employees.length === 0 ? (
                     <tr>
                       <td colSpan={monthDays.length + 2} className="p-12 text-center text-slate-400">
                         <div className="flex items-center justify-center gap-2">
@@ -1129,7 +1193,7 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
       {activeSubTab === 'shifts' && (
         <ShiftManagerTab
           templates={shifts}
-          onTemplatesUpdated={loadScheduleData}
+          onTemplatesUpdated={() => loadScheduleData(currMonth, currYear, true)}
           showToast={showToast}
         />
       )}
@@ -1140,7 +1204,7 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
           holidays={holidays}
           selectedMonth={currMonth}
           selectedYear={currYear}
-          onHolidayUpdated={loadScheduleData}
+          onHolidayUpdated={() => loadScheduleData(currMonth, currYear, true)}
           showToast={showToast}
         />
       )}
@@ -1368,7 +1432,7 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
         selectedMonth={currMonth}
         selectedYear={currYear}
         onScheduleUpdated={() => {
-          loadScheduleData();
+          loadScheduleData(currMonth, currYear, true);
           onScheduleUpdated?.();
         }}
         showToast={showToast}
@@ -1384,7 +1448,7 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
         currentMonth={currMonth}
         currentYear={currYear}
         onSaved={() => {
-          loadScheduleData();
+          loadScheduleData(currMonth, currYear, true);
           onScheduleUpdated?.();
         }}
       />

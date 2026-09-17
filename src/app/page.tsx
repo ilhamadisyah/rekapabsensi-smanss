@@ -100,11 +100,13 @@ export default function HomePage() {
 
   // Notification Toast
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const showToast = (msg: string) => {
+  const showToast = useCallback((msg: string) => {
     setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 4000);
-  };
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToastMsg(null), 4000);
+  }, []);
 
   // Muat data sesi user saat ini
   useEffect(() => {
@@ -698,7 +700,7 @@ export default function HomePage() {
               loadData(m, y);
             }}
             onScheduleUpdated={() => loadData(selectedMonth, selectedYear)}
-            showToast={(msg) => showToast(msg)}
+            showToast={showToast}
           />
         )}
 
