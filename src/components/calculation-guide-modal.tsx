@@ -12,6 +12,20 @@ import {
   Printer,
   Share2,
   Check,
+  Award,
+  AlertTriangle,
+  Clock,
+  FileText,
+  HelpCircle,
+  TrendingUp,
+  ShieldCheck,
+  Info,
+  ChevronRight,
+  Sparkles,
+  ArrowRight,
+  Calendar,
+  UserCheck,
+  AlertCircle,
 } from 'lucide-react';
 
 interface CalculationGuideModalProps {
@@ -31,16 +45,25 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
   // State untuk Simulasi Hitung Nilai
   const [calcWorkingDays, setCalcWorkingDays] = useState<number>(21);
   const [calcAlpha, setCalcAlpha] = useState<number>(1);
-  const [calcLE, setCalcLE] = useState<number>(0);
+  const [calcLE, setCalcLE] = useState<number>(1);
   const [calcHIP, setCalcHIP] = useState<number>(1);
   const [calcHIS, setCalcHIS] = useState<number>(0);
   const [calcI, setCalcI] = useState<number>(0);
+  const [calcIL, setCalcIL] = useState<number>(0);
+  const [calcDL, setCalcDL] = useState<number>(0);
 
   // Perhitungan Hasil Simulasi:
-  // HK: Hanya berkurang oleh Sakit Tanpa Surat (I) dan Alpa (A). LE, HIP, dan HIS tetap dihitung hadir bekerja.
+  // HK: Hanya berkurang oleh Sakit Tanpa Surat (I) dan Alpa (A). LE, HIP, HIS, IL, DL tetap dihitung hadir bekerja.
   const calcHK = Math.max(0, calcWorkingDays - calcI - calcAlpha);
-  // Nilai X: (HK * 2) - LE(1) - I(1) - A(3). HIP dan HIS bebas denda (0 poin pengurang).
-  const calcX = Math.max(0, calcHK * 2 - calcLE * 1 - calcI * 1 - calcAlpha * 3);
+  // Poin dasar dari hari kerja yang dihadiri (setiap hari bernilai 2 poin)
+  const calcBasePoints = calcHK * 2;
+  // Rincian denda poin:
+  const calcDeductionLE = calcLE * 1;
+  const calcDeductionI = calcI * 1;
+  const calcDeductionAlpha = calcAlpha * 3;
+  const calcTotalDeduction = calcDeductionLE + calcDeductionI + calcDeductionAlpha;
+  // Nilai X: Base Points dikurangi Total Denda (minimal 0). HIP, HIS, IL, DL bebas denda (0 poin pengurang).
+  const calcX = Math.max(0, calcBasePoints - calcTotalDeduction);
   const calcY = calcWorkingDays * 2;
   const calcPct = calcY > 0 ? Math.min(100, Math.max(0, Math.round((calcX / calcY) * 10000) / 100)) : 0;
 
@@ -133,7 +156,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
 
                   {/* Bagian 3: Ringkasan Hari Kerja & Izin */}
                   <tr className="hover:bg-slate-50/80 transition-colors">
-                    <td rowSpan={10} className="p-3 font-bold text-amber-700 align-top bg-amber-50/20 border-r border-slate-100">
+                    <td rowSpan={11} className="p-3 font-bold text-amber-700 align-top bg-amber-50/20 border-r border-slate-100">
                       Bagian 3: Ringkasan Jumlah Hari &amp; Izin
                     </td>
                     <td className="p-3 font-bold text-slate-800">Kolom AG</td>
@@ -379,86 +402,468 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                 </tbody>
               </table>
             </div>
+
+            {/* Kotak Informasi Khusus: Ketentuan Lengkap LE vs HIP vs HIS */}
+            <div className="bg-gradient-to-br from-amber-50/90 via-white to-orange-50/70 border border-amber-200/80 rounded-xl p-4 sm:p-5 shadow-xs space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500 text-white font-bold text-xs shadow-xs">
+                  LE
+                </span>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm">
+                    Pedoman Khusus Keterlambatan &amp; Pulang Cepat: Aturan LE vs HIP vs HIS
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    Penjelasan mendalam mengenai aturan denda, syarat bebas denda, dan pengaruhnya terhadap Hari Kerja (HK)
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 text-xs">
+                <div className="bg-white/90 border border-amber-200/60 rounded-xl p-3 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-amber-800">LE (Late / Earlier)</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-700">Denda -1 Poin</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Terpicu jika tap masuk telat <strong>ATAU</strong> tap pulang lebih cepat tanpa surat izin. Cukup salah satu kondisi terjadi, pegawai dikenakan potongan <strong>-1 poin</strong> pada Nilai X. Hari Kerja (HK) <strong>tetap dihitung hadir penuh</strong> karena pegawai masuk bekerja.
+                  </p>
+                </div>
+
+                <div className="bg-white/90 border border-emerald-200/60 rounded-xl p-3 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-emerald-800">HIP (Hak Izin Pagi)</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">Bebas Denda (0 Poin)</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Digunakan jika pegawai terlambat datang pada pagi hari namun <strong>melampirkan surat permohonan izin resmi</strong> yang disetujui pimpinan. Denda dihapus (0 poin) dan hari kerja tetap hadir penuh.
+                  </p>
+                </div>
+
+                <div className="bg-white/90 border border-emerald-200/60 rounded-xl p-3 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-emerald-800">HIS (Hak Izin Siang)</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">Bebas Denda (0 Poin)</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Digunakan jika pegawai pulang mendahului jam operasional namun <strong>melampirkan surat izin dinas/keperluan resmi</strong> yang disetujui Kepala Sekolah. Bebas denda (0 poin) dan hari kerja tetap hadir penuh.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-amber-100/50 border border-amber-200 rounded-lg p-3 text-[11px] text-amber-900 flex items-start gap-2.5">
+                <span className="font-bold text-base leading-none text-amber-700 mt-0.5">&bull;</span>
+                <div className="leading-relaxed">
+                  <strong>Letak Kolom di Laporan Excel:</strong> Seluruh kejadian status <strong>LE</strong> otomatis terangkum pada <strong>Kolom AJ</strong> berjudul <code>LATE / EARLIER</code> dengan warna latar kuning khas SMANSS. Sedangkan di kolom absen harian (C s/d AF), tanggal terkait akan bertuliskan kode <code>LE</code>.
+                </div>
+              </div>
+            </div>
+
+            {/* Kotak Informasi Tambahan: Pedoman Teknis Mesin Presensi & Shift Kerja */}
+            <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50/50 border border-slate-200/90 rounded-xl p-4 sm:p-5 shadow-xs space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-xs shadow-xs">
+                  <Clock className="w-4 h-4 text-white" />
+                </span>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm">
+                    Pedoman Teknis Mesin Presensi &amp; Pengaturan Jam Kerja (Shift)
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    Mekanisme pencatatan mesin finger/face recognition, toleransi waktu, dan perlakuan khusus shift malam
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 pt-1 text-xs">
+                <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Toleransi Masuk (Grace Period)</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Setiap jenis jam kerja (reguler maupun shift) memiliki toleransi keterlambatan (contoh: 15 menit). Bila tap masuk melewati batas toleransi, sistem otomatis menetapkan status <strong>LE</strong>.
+                  </p>
+                </div>
+
+                <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                    <Clock className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Pulang Cepat (Early Departure)</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Pegawai wajib melakukan tap pulang setelah jam dinas berakhir. Melakukan tap pulang mendahului jam berakhir shift tanpa surat izin dinas akan otomatis tercatat sebagai <strong>LE</strong>.
+                  </p>
+                </div>
+
+                <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Keadilan Dobel Insiden (1 Hari)</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Jika dalam satu hari yang sama pegawai terlambat datang <strong>DAN</strong> pulang lebih cepat sekaligus, sistem <strong>tidak menjatuhkan denda ganda</strong>. Tetap dihitung 1 kali <strong>LE</strong> (-1 poin).
+                  </p>
+                </div>
+
+                <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800">
+                    <Layers className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Shift Lintas Hari (Overnight)</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Untuk petugas asrama / satpam yang bertugas shift malam melewati pergantian hari (00:00), tap out pagi berikutnya otomatis dipasangkan dengan shift malam hari sebelumnya secara cerdas dan akurat.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         );
 
       case 'formulas':
         return (
           <div className="space-y-6">
-            <div>
-              <p className="text-xs text-slate-600">
-                Penilaian kehadiran pegawai dihitung secara adil dan transparan melalui 4 langkah mudah berikut:
-              </p>
+            {/* Pengantar Konsep Dasar Penilaian */}
+            <div className="bg-gradient-to-r from-blue-50 via-indigo-50/50 to-white border border-blue-200/80 rounded-xl p-4 sm:p-5 shadow-xs">
+              <div className="flex items-start gap-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-sm shadow-xs shrink-0 mt-0.5">
+                  <Calculator className="w-4 h-4 text-white" />
+                </span>
+                <div className="space-y-1 text-xs">
+                  <h4 className="font-bold text-slate-900 text-sm">
+                    Prinsip Dasar &amp; Logika Perhitungan Nilai Presensi SMAN Sumatera Selatan
+                  </h4>
+                  <p className="text-slate-600 text-xs leading-relaxed">
+                    Sistem Rekapitulasi Presensi SMANSS dirancang berdasarkan prinsip <strong>keadilan, transparansi, dan pembobotan proporsional</strong>:
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2">
+                    <div className="bg-white/80 border border-blue-100 rounded-lg p-2.5">
+                      <span className="font-bold text-blue-900 block">Bobot Harian 2 Poin</span>
+                      <span className="text-[11px] text-slate-600">Setiap hari kerja dihadiri menghasilkan 2 poin dasar (1 poin tap masuk + 1 poin tap pulang).</span>
+                    </div>
+                    <div className="bg-white/80 border border-emerald-100 rounded-lg p-2.5">
+                      <span className="font-bold text-emerald-900 block">Fasilitas Izin Bebas Denda</span>
+                      <span className="text-[11px] text-slate-600">Izin resmi (HIP, HIS, IL, DL, PM, AL, OTL) bernilai penuh dan bebas dari sanksi denda (0 denda).</span>
+                    </div>
+                    <div className="bg-white/80 border border-rose-100 rounded-lg p-2.5">
+                      <span className="font-bold text-rose-900 block">Denda Proporsional</span>
+                      <span className="text-[11px] text-slate-600">Pelanggaran waktu (LE) denda -1 poin; Sakit tanpa surat (I) denda -1 poin; Alpa (A) sanksi tegas denda -3 poin.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 6 KARTU RUMUS MATEMATIS RESMI (GRID) */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                  <span>6 Rumus Matematis Resmi Penilaian Kehadiran</span>
+                </h4>
+                <span className="text-[11px] text-slate-500">Standar Baku Laporan Rekapitulasi</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+                {/* Rumus 1: HK */}
+                <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2 hover:shadow-xs transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900">1. Hari Kerja Nyata (HK)</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">Kolom AG</span>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-2 border border-slate-200/80 font-mono text-[11px] font-bold text-blue-700 text-center">
+                    HK = Total Hari Kerja - (I + A)
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Jumlah hari kerja pegawai nyata hadir bertugas. Hanya berkurang jika pegawai Sakit Tanpa Surat (<strong>I</strong>) atau Alpa (<strong>A</strong>). Status LE, HIP, HIS, IL, DL, dan cuti <strong>TIDAK</strong> mengurangi HK.
+                  </p>
+                </div>
+
+                {/* Rumus 2: Nilai X */}
+                <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2 hover:shadow-xs transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900">2. Nilai Bersih (Nilai X)</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-800">Kolom AR</span>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-2 border border-slate-200/80 font-mono text-[11px] font-bold text-purple-700 text-center">
+                    X = (HK &times; 2) - (LE&times;1) - (I&times;1) - (A&times;3)
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Poin kehadiran bersih yang dikumpulkan. Setiap hari kerja dihadiri berbobot 2 poin, dikurangi denda keterlambatan/pulang awal (<strong>LE: -1</strong>), denda sakit tanpa surat (<strong>I: -1</strong>), dan denda alpa (<strong>A: -3</strong>).
+                  </p>
+                </div>
+
+                {/* Rumus 3: Nilai Y */}
+                <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2 hover:shadow-xs transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900">3. Nilai Maksimal (Nilai Y)</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-800">Kolom AS</span>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-2 border border-slate-200/80 font-mono text-[11px] font-bold text-slate-700 text-center">
+                    Y = Total Hari Kerja Sebulan &times; 2
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Tolok ukur nilai target tertinggi bila pegawai hadir lengkap 100% tepat waktu sepanjang bulan. Pada bulan dengan 21 hari kerja, nilai maksimalnya adalah <strong>42 poin</strong>.
+                  </p>
+                </div>
+
+                {/* Rumus 4: Persentase % */}
+                <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2 hover:shadow-xs transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900">4. Persentase Kehadiran (%)</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">Kolom AT</span>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-2 border border-slate-200/80 font-mono text-[11px] font-bold text-emerald-700 text-center">
+                    % = (Nilai X &divide; Nilai Y) &times; 100%
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Tingkat pencapaian kehadiran riil pegawai terhadap nilai maksimal. Dibulatkan secara matematis ke 1 atau 2 tempat desimal untuk penentuan konversi nilai prestasi kedisiplinan.
+                  </p>
+                </div>
+
+                {/* Rumus 5: Score 1 */}
+                <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2 hover:shadow-xs transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900">5. Score 1 (Nilai Kehadiran)</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800">Kolom AU</span>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-2 border border-slate-200/80 font-mono text-[11px] font-bold text-amber-700 text-center">
+                    Score 1 &isin; &#123; 10, 9, 8, 7, 6, 5, 0 &#125;
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Nilai prestasi kehadiran dalam skala angka bulat resmi (1 sampai 10) berdasarkan pedoman interval persentase kehadiran sekolah (100% = 10, 90-99.9% = 9, 80-89.9% = 8, dst).
+                  </p>
+                </div>
+
+                {/* Rumus 6: Score 2 (SKP) */}
+                <div className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-2 hover:shadow-xs transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900">6. Score 2 (Kedisiplinan SKP)</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-800">Kolom AV</span>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-2 border border-slate-200/80 font-mono text-[11px] font-bold text-rose-700 text-center">
+                    Score 2 = Score 1 &times; 20% = Score 1 &divide; 5
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Nilai kedisiplinan berbobot 20% dengan skala angka 0.0 sampai 2.0 (contoh: 2.0, 1.8, 1.6, 1.4, 1.2, 1.0) untuk dimasukkan ke laporan Sasaran Kinerja Pegawai (SKP) resmi dinas.
+                  </p>
+                </div>
+              </div>
             </div>
 
             {/* Bagian 1: Tabel 4 Langkah Cara Menghitung (Bahasa Awam) */}
-            <div className="overflow-x-auto border border-slate-200 rounded-xl">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead className="bg-slate-100/80 sticky top-0 border-b border-slate-200">
-                  <tr>
-                    <th className="p-3 font-bold text-slate-700 w-28">Langkah</th>
-                    <th className="p-3 font-bold text-slate-700 w-44">Yang Dihitung &amp; Kolom</th>
-                    <th className="p-3 font-bold text-slate-700 w-80">Cara Menghitung</th>
-                    <th className="p-3 font-bold text-slate-700">Penjelasan Singkat</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  <tr className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-bold text-slate-900">Langkah 1</td>
-                    <td className="p-3 font-semibold text-slate-800">
-                      Hari Kerja Nyata (HK)<br />
-                      <span className="text-slate-500 text-[11px]">Kolom AG</span>
-                    </td>
-                    <td className="p-3 font-semibold text-blue-700 bg-slate-50/50">
-                      Hari Kerja Bulan Ini dikurangi Sakit Tanpa Surat (I) dikurangi Alpa (A)
-                    </td>
-                    <td className="p-3 text-slate-600">
-                      Hari kerja pegawai hanya berkurang jika tidak masuk tanpa keterangan (Alpa) atau sakit tanpa surat dokter.
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-bold text-slate-900">Langkah 2</td>
-                    <td className="p-3 font-semibold text-slate-800">
-                      Nilai Bersih Yang Didapat (Nilai X)<br />
-                      <span className="text-slate-500 text-[11px]">Kolom AR</span>
-                    </td>
-                    <td className="p-3 font-semibold text-blue-700 bg-slate-50/50">
-                      (Hari Kerja Nyata &times; 2 poin) dikurangi denda terlambat/pulang cepat (LE), sakit tanpa surat (I), dan alpa (A)
-                    </td>
-                    <td className="p-3 text-slate-600">
-                      Setiap hari kerja bernilai 2 poin. Terlambat datang atau pulang mendahului jam kerja tanpa izin (LE) dipotong 1 poin, sakit tanpa surat (I) dipotong 1 poin, dan alpa dipotong 3 poin. Izin Pagi (HIP) dan Izin Siang (HIS) bebas denda (0 poin / tidak memotong nilai). Hari Kerja (HK) untuk LE tetap dihitung hadir bekerja.
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-bold text-slate-900">Langkah 3</td>
-                    <td className="p-3 font-semibold text-slate-800">
-                      Nilai Maksimal &amp; Persentase (%)<br />
-                      <span className="text-slate-500 text-[11px]">Kolom AS &amp; AT</span>
-                    </td>
-                    <td className="p-3 font-semibold text-blue-700 bg-slate-50/50">
-                      Nilai Maksimal = Hari Kerja Bulan Ini &times; 2 poin<br />
-                      Persentase = (Nilai Bersih &divide; Nilai Maksimal) &times; 100%
-                    </td>
-                    <td className="p-3 text-slate-600">
-                      Membandingkan nilai yang berhasil didapat pegawai dengan nilai tertinggi jika hadir penuh 100%.
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-bold text-slate-900">Langkah 4</td>
-                    <td className="p-3 font-semibold text-slate-800">
-                      Nilai Kehadiran &amp; Nilai Kedisiplinan SKP<br />
-                      <span className="text-slate-500 text-[11px]">Kolom AU &amp; AV</span>
-                    </td>
-                    <td className="p-3 font-semibold text-blue-700 bg-slate-50/50">
-                      Score 1 = Nilai skala 1 sampai 10<br />
-                      Score 2 = Score 1 &times; 20% (Nilai maksimal 2.0)
-                    </td>
-                    <td className="p-3 text-slate-600">
-                      Score 1 adalah nilai prestasi kehadiran (skala 1–10). Score 2 adalah bobot 20% (maksimal 2.0) untuk dimasukkan ke laporan SKP pegawai.
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+            <div className="space-y-2">
+              <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
+                Alur Tahapan Perhitungan Kehadiran (Langkah 1 s/d 4)
+              </h4>
+              <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="bg-slate-100/80 sticky top-0 border-b border-slate-200">
+                    <tr>
+                      <th className="p-3 font-bold text-slate-700 w-28">Langkah</th>
+                      <th className="p-3 font-bold text-slate-700 w-48">Yang Dihitung &amp; Kolom</th>
+                      <th className="p-3 font-bold text-slate-700 w-80">Cara Menghitung</th>
+                      <th className="p-3 font-bold text-slate-700">Penjelasan Singkat</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    <tr className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-bold text-slate-900">Langkah 1</td>
+                      <td className="p-3 font-semibold text-slate-800">
+                        Hari Kerja Nyata (HK)<br />
+                        <span className="text-blue-700 font-bold text-[11px]">Kolom AG</span>
+                      </td>
+                      <td className="p-3 font-semibold text-blue-700 bg-slate-50/50">
+                        Hari Kerja Bulan Ini dikurangi Sakit Tanpa Surat (I) dikurangi Alpa (A)
+                      </td>
+                      <td className="p-3 text-slate-600">
+                        Hari kerja pegawai hanya berkurang jika tidak masuk tanpa keterangan (Alpa) atau sakit tanpa surat dokter. Izin dinas, cuti, dan terlambat (LE) tidak mengurangi HK.
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-bold text-slate-900">Langkah 2</td>
+                      <td className="p-3 font-semibold text-slate-800">
+                        Nilai Bersih Yang Didapat (Nilai X)<br />
+                        <span className="text-purple-700 font-bold text-[11px]">Kolom AR</span>
+                      </td>
+                      <td className="p-3 font-semibold text-purple-700 bg-slate-50/50">
+                        (Hari Kerja Nyata &times; 2 poin) dikurangi denda terlambat/pulang cepat (LE), sakit tanpa surat (I), dan alpa (A)
+                      </td>
+                      <td className="p-3 text-slate-600">
+                        Setiap hari kerja bernilai 2 poin. Terlambat datang atau pulang mendahului jam kerja tanpa izin (LE) dipotong 1 poin, sakit tanpa surat (I) dipotong 1 poin, dan alpa dipotong 3 poin. Izin Pagi (HIP) dan Izin Siang (HIS) bebas denda (0 poin).
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-bold text-slate-900">Langkah 3</td>
+                      <td className="p-3 font-semibold text-slate-800">
+                        Nilai Maksimal &amp; Persentase (%)<br />
+                        <span className="text-emerald-700 font-bold text-[11px]">Kolom AS &amp; AT</span>
+                      </td>
+                      <td className="p-3 font-semibold text-emerald-700 bg-slate-50/50">
+                        Nilai Maksimal = Hari Kerja Bulan Ini &times; 2 poin<br />
+                        Persentase = (Nilai Bersih &divide; Nilai Maksimal) &times; 100%
+                      </td>
+                      <td className="p-3 text-slate-600">
+                        Membandingkan nilai yang berhasil didapat pegawai dengan nilai tertinggi jika hadir penuh 100% tanpa catatan pelanggaran waktu.
+                      </td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-bold text-slate-900">Langkah 4</td>
+                      <td className="p-3 font-semibold text-slate-800">
+                        Nilai Kehadiran &amp; Nilai Kedisiplinan SKP<br />
+                        <span className="text-amber-700 font-bold text-[11px]">Kolom AU &amp; AV</span>
+                      </td>
+                      <td className="p-3 font-semibold text-amber-700 bg-slate-50/50">
+                        Score 1 = Nilai skala 1 sampai 10<br />
+                        Score 2 = Score 1 &times; 20% (Nilai maksimal 2.0)
+                      </td>
+                      <td className="p-3 text-slate-600">
+                        Score 1 adalah nilai prestasi kehadiran (skala 1–10). Score 2 adalah bobot 20% (maksimal 2.0) untuk dimasukkan langsung ke laporan SKP pegawai.
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Bagian Baru: Tabel Komparasi Komprehensif Dampak Setiap Kode Presensi Terhadap HK & Nilai X */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Tabel Komparasi Dampak Setiap Jenis Status Kehadiran Terhadap HK &amp; Nilai X</span>
+                </h4>
+                <span className="text-[11px] text-slate-500">Matriks Evaluasi Presensi</span>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="bg-slate-100/80 sticky top-0 border-b border-slate-200">
+                    <tr>
+                      <th className="p-3 font-bold text-slate-700 w-24">Kode</th>
+                      <th className="p-3 font-bold text-slate-700 w-44">Nama Keterangan</th>
+                      <th className="p-3 font-bold text-slate-700 w-24 text-center">Kolom Rekap</th>
+                      <th className="p-3 font-bold text-slate-700 w-28">Status Fisik</th>
+                      <th className="p-3 font-bold text-slate-700">Persyaratan / Bukti Sah</th>
+                      <th className="p-3 font-bold text-slate-700 w-36">Dampak ke HK</th>
+                      <th className="p-3 font-bold text-slate-700 w-36">Denda Nilai X</th>
+                      <th className="p-3 font-bold text-slate-700 w-44">Kategori Evaluasi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    <tr className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-bold text-emerald-700">HADIR</td>
+                      <td className="p-3 font-semibold text-slate-900">Hadir Lengkap Tepat Waktu</td>
+                      <td className="p-3 text-center text-slate-400">-</td>
+                      <td className="p-3 text-emerald-700 font-semibold">Hadir di Tempat</td>
+                      <td className="p-3 text-slate-600">Tap masuk dan pulang lengkap sesuai jam dinas</td>
+                      <td className="p-3 font-bold text-emerald-700">Tetap Utuh (1 Hari)</td>
+                      <td className="p-3 font-bold text-emerald-700">0 Denda (+2 Poin Penuh)</td>
+                      <td className="p-3 text-emerald-700 font-semibold">Sempurna (Target Utama)</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-bold text-amber-700">LE</td>
+                      <td className="p-3 font-semibold text-slate-900">Late / Earlier</td>
+                      <td className="p-3 text-center font-bold text-slate-700">Kolom AJ</td>
+                      <td className="p-3 text-emerald-700 font-semibold">Hadir Bekerja</td>
+                      <td className="p-3 text-slate-600">Telat masuk atau pulang awal tanpa surat izin</td>
+                      <td className="p-3 font-bold text-emerald-700">Tetap Utuh (1 Hari)</td>
+                      <td className="p-3 font-bold text-amber-700">Denda -1 Poin per Hari</td>
+                      <td className="p-3 text-amber-700 font-semibold">Pelanggaran Jam Kerja</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-bold text-emerald-700">HIP</td>
+                      <td className="p-3 font-semibold text-slate-900">Hak Izin Pagi</td>
+                      <td className="p-3 text-center font-bold text-slate-700">Kolom AH</td>
+                      <td className="p-3 text-emerald-700 font-semibold">Hadir Bekerja</td>
+                      <td className="p-3 text-slate-600">Surat permohonan izin pagi disetujui pimpinan</td>
+                      <td className="p-3 font-bold text-emerald-700">Tetap Utuh (1 Hari)</td>
+                      <td className="p-3 font-bold text-emerald-700">Bebas Denda (0 Poin)</td>
+                      <td className="p-3 text-emerald-700 font-semibold">Hak Resmi Terverifikasi</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-bold text-emerald-700">HIS</td>
+                      <td className="p-3 font-semibold text-slate-900">Hak Izin Siang</td>
+                      <td className="p-3 text-center font-bold text-slate-700">Kolom AI</td>
+                      <td className="p-3 text-emerald-700 font-semibold">Hadir Bekerja</td>
+                      <td className="p-3 text-slate-600">Surat permohonan izin pulang siang disetujui pimpinan</td>
+                      <td className="p-3 font-bold text-emerald-700">Tetap Utuh (1 Hari)</td>
+                      <td className="p-3 font-bold text-emerald-700">Bebas Denda (0 Poin)</td>
+                      <td className="p-3 text-emerald-700 font-semibold">Hak Resmi Terverifikasi</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-bold text-rose-700">I</td>
+                      <td className="p-3 font-semibold text-slate-900">Sakit Tanpa Surat Dokter</td>
+                      <td className="p-3 text-center font-bold text-slate-700">Kolom AK</td>
+                      <td className="p-3 text-rose-700 font-semibold">Tidak Masuk</td>
+                      <td className="p-3 text-slate-600">Tidak melampirkan surat keterangan dokter sah</td>
+                      <td className="p-3 font-bold text-rose-700">Berkurang (-1 Hari)</td>
+                      <td className="p-3 font-bold text-rose-700">Denda -1 Poin (Total -3)</td>
+                      <td className="p-3 text-rose-700 font-semibold">Kehilangan Poin Ganda</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-bold text-blue-700">IL</td>
+                      <td className="p-3 font-semibold text-slate-900">Sakit Dengan Surat Dokter</td>
+                      <td className="p-3 text-center font-bold text-slate-700">Kolom AL</td>
+                      <td className="p-3 text-slate-500 font-semibold">Tidak Masuk</td>
+                      <td className="p-3 text-slate-600">Surat keterangan dokter/klinik/RS resmi</td>
+                      <td className="p-3 font-bold text-emerald-700">Tetap Utuh (1 Hari)</td>
+                      <td className="p-3 font-bold text-emerald-700">Nilai Utuh (Bebas Denda)</td>
+                      <td className="p-3 text-blue-700 font-semibold">Sakit Sah Berizin</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-bold text-blue-700">PM / P</td>
+                      <td className="p-3 font-semibold text-slate-900">Izin Keperluan Khusus</td>
+                      <td className="p-3 text-center font-bold text-slate-700">Kolom AM</td>
+                      <td className="p-3 text-slate-500 font-semibold">Tidak Masuk</td>
+                      <td className="p-3 text-slate-600">Surat permohonan izin disetujui Kepala Sekolah</td>
+                      <td className="p-3 font-bold text-emerald-700">Tetap Utuh (1 Hari)</td>
+                      <td className="p-3 font-bold text-emerald-700">Nilai Utuh (Bebas Denda)</td>
+                      <td className="p-3 text-blue-700 font-semibold">Izin Dinas Sah</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-bold text-blue-700">OTL</td>
+                      <td className="p-3 font-semibold text-slate-900">Cuti Khusus / Alasan Penting</td>
+                      <td className="p-3 text-center font-bold text-slate-700">Kolom AN</td>
+                      <td className="p-3 text-slate-500 font-semibold">Tidak Masuk</td>
+                      <td className="p-3 text-slate-600">Cuti melahirkan, cuti alasan penting keluarga</td>
+                      <td className="p-3 font-bold text-emerald-700">Tetap Utuh (1 Hari)</td>
+                      <td className="p-3 font-bold text-emerald-700">Nilai Utuh (Bebas Denda)</td>
+                      <td className="p-3 text-blue-700 font-semibold">Hak Cuti Resmi Negara</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-bold text-blue-700">AL</td>
+                      <td className="p-3 font-semibold text-slate-900">Cuti Tahunan</td>
+                      <td className="p-3 text-center font-bold text-slate-700">Kolom AO</td>
+                      <td className="p-3 text-slate-500 font-semibold">Tidak Masuk</td>
+                      <td className="p-3 text-slate-600">Formulir cuti tahunan disetujui pimpinan</td>
+                      <td className="p-3 font-bold text-emerald-700">Tetap Utuh (1 Hari)</td>
+                      <td className="p-3 font-bold text-emerald-700">Nilai Utuh (Bebas Denda)</td>
+                      <td className="p-3 text-blue-700 font-semibold">Hak Cuti Tahunan Pegawai</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-bold text-blue-700">DL</td>
+                      <td className="p-3 font-semibold text-slate-900">Dinas Luar Sekolah</td>
+                      <td className="p-3 text-center font-bold text-slate-700">Kolom AP</td>
+                      <td className="p-3 text-blue-700 font-semibold">Dinas di Luar</td>
+                      <td className="p-3 text-slate-600">Surat Tugas (ST) resmi dari Kepala Sekolah</td>
+                      <td className="p-3 font-bold text-emerald-700">Tetap Utuh (1 Hari)</td>
+                      <td className="p-3 font-bold text-emerald-700">Nilai Utuh (Bebas Denda)</td>
+                      <td className="p-3 text-blue-700 font-semibold">Menjalankan Tugas Negara</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50/80 transition-colors">
+                      <td className="p-3 font-bold text-rose-700">A</td>
+                      <td className="p-3 font-semibold text-slate-900">Alpa / Tanpa Keterangan</td>
+                      <td className="p-3 text-center font-bold text-slate-700">Kolom AQ</td>
+                      <td className="p-3 text-rose-700 font-semibold">Tidak Masuk</td>
+                      <td className="p-3 text-slate-600">Tanpa surat izin dan tanpa pemberitahuan</td>
+                      <td className="p-3 font-bold text-rose-700">Berkurang (-1 Hari)</td>
+                      <td className="p-3 font-bold text-rose-700">Denda Berat -3 Poin (Total -5)</td>
+                      <td className="p-3 text-rose-700 font-semibold">Pelanggaran Disiplin Berat</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Bagian 2: Tabel Pedoman Konversi Nilai Resmi */}
@@ -550,95 +955,142 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
             {/* Bagian Input & Hasil Simulasi (Tampilan Rapi & Sederhana) */}
             <div className="space-y-4">
               {/* Bagian 1: Isian Contoh Kehadiran Pegawai */}
-              <div className="border border-slate-200 rounded-xl overflow-hidden">
-                <div className="bg-slate-100/80 px-4 py-2.5 border-b border-slate-200 font-bold text-xs text-slate-700">
-                  Isian Contoh Kehadiran Pegawai
+              <div className="border border-slate-200 rounded-xl overflow-hidden space-y-3 p-4 bg-white">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+                  <span className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                    <Calculator className="w-4 h-4 text-blue-600" />
+                    <span>Parameter Simulasi Kehadiran Pegawai</span>
+                  </span>
+                  <span className="text-[11px] text-slate-500">Ubah nilai angka di bawah untuk melihat kalkulasi langsung</span>
                 </div>
-                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 bg-white text-xs">
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
-                      Hari Kerja Bulan Ini
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="31"
-                      value={calcWorkingDays}
-                      onChange={(e) => setCalcWorkingDays(Math.max(1, parseInt(e.target.value) || 0))}
-                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    />
-                    <span className="text-[10px] text-slate-400 mt-0.5 block">Hari aktif sekolah (contoh: 21)</span>
-                  </div>
 
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
-                      Terlambat / Pulang Cepat (LE)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={calcLE}
-                      onChange={(e) => setCalcLE(Math.max(0, parseInt(e.target.value) || 0))}
-                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-amber-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    />
-                    <span className="text-[10px] text-amber-700 font-semibold mt-0.5 block">Dipotong 1 poin, HK tetap hadir</span>
-                  </div>
+                {/* Baris 1: Faktor Pengurang Nilai */}
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider block">
+                    1. Faktor Yang Mempengaruhi Pengurangan Nilai (Wajib Diperhatikan)
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                      <label className="block font-bold text-slate-800 mb-1">
+                        Hari Kerja Bulan Ini
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        value={calcWorkingDays}
+                        onChange={(e) => setCalcWorkingDays(Math.max(1, parseInt(e.target.value) || 0))}
+                        className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+                      />
+                      <span className="text-[10px] text-slate-500 mt-1 block">Hari aktif sekolah (contoh: 21 hari)</span>
+                    </div>
 
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
-                      Jumlah Alpa (A)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max={calcWorkingDays}
-                      value={calcAlpha}
-                      onChange={(e) => setCalcAlpha(Math.max(0, parseInt(e.target.value) || 0))}
-                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-rose-700 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    />
-                    <span className="text-[10px] text-rose-500 mt-0.5 block">Dipotong 3 poin &amp; kurang 1 hari kerja</span>
-                  </div>
+                    <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-3">
+                      <label className="block font-bold text-amber-900 mb-1">
+                        Terlambat / Pulang Cepat (LE)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={calcLE}
+                        onChange={(e) => setCalcLE(Math.max(0, parseInt(e.target.value) || 0))}
+                        className="w-full px-3 py-1.5 border border-amber-300 rounded-lg text-amber-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500/20 bg-white"
+                      />
+                      <span className="text-[10px] text-amber-700 font-semibold mt-1 block">Denda -1 poin; HK tetap penuh</span>
+                    </div>
 
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
-                      Hak Izin Pagi (HIP)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={calcHIP}
-                      onChange={(e) => setCalcHIP(Math.max(0, parseInt(e.target.value) || 0))}
-                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-emerald-700 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    />
-                    <span className="text-[10px] text-emerald-600 font-semibold mt-0.5 block">Bebas denda (0 poin / tidak memotong)</span>
-                  </div>
+                    <div className="bg-rose-50/60 border border-rose-200 rounded-xl p-3">
+                      <label className="block font-bold text-rose-900 mb-1">
+                        Sakit Tanpa Surat (I)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={calcI}
+                        onChange={(e) => setCalcI(Math.max(0, parseInt(e.target.value) || 0))}
+                        className="w-full px-3 py-1.5 border border-rose-300 rounded-lg text-rose-900 font-bold focus:outline-none focus:ring-2 focus:ring-rose-500/20 bg-white"
+                      />
+                      <span className="text-[10px] text-rose-700 font-semibold mt-1 block">Denda -1 poin &amp; kurang 1 HK</span>
+                    </div>
 
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
-                      Hak Izin Siang (HIS)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={calcHIS}
-                      onChange={(e) => setCalcHIS(Math.max(0, parseInt(e.target.value) || 0))}
-                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-emerald-700 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    />
-                    <span className="text-[10px] text-emerald-600 font-semibold mt-0.5 block">Bebas denda (0 poin / tidak memotong)</span>
+                    <div className="bg-red-50/70 border border-red-200 rounded-xl p-3">
+                      <label className="block font-bold text-red-900 mb-1">
+                        Jumlah Alpa / Bolos (A)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max={calcWorkingDays}
+                        value={calcAlpha}
+                        onChange={(e) => setCalcAlpha(Math.max(0, parseInt(e.target.value) || 0))}
+                        className="w-full px-3 py-1.5 border border-red-300 rounded-lg text-red-900 font-bold focus:outline-none focus:ring-2 focus:ring-red-500/20 bg-white"
+                      />
+                      <span className="text-[10px] text-red-700 font-semibold mt-1 block">Denda berat -3 poin &amp; kurang 1 HK</span>
+                    </div>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
-                      Sakit Tanpa Surat Dokter (I)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={calcI}
-                      onChange={(e) => setCalcI(Math.max(0, parseInt(e.target.value) || 0))}
-                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-amber-700 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    />
-                    <span className="text-[10px] text-amber-600 mt-0.5 block">Dipotong 1 poin &amp; kurang 1 hari kerja</span>
+                {/* Baris 2: Faktor Izin Sah Bebas Denda */}
+                <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                  <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wider block">
+                    2. Faktor Izin Kedinasan Resmi (Bebas Denda / Poin Tetap Utuh)
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                    <div className="bg-emerald-50/50 border border-emerald-200/80 rounded-xl p-3">
+                      <label className="block font-semibold text-emerald-900 mb-1">
+                        Hak Izin Pagi (HIP)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={calcHIP}
+                        onChange={(e) => setCalcHIP(Math.max(0, parseInt(e.target.value) || 0))}
+                        className="w-full px-3 py-1.5 border border-emerald-300 rounded-lg text-emerald-800 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 bg-white"
+                      />
+                      <span className="text-[10px] text-emerald-700 mt-1 block">Bebas denda (0 poin pengurang)</span>
+                    </div>
+
+                    <div className="bg-emerald-50/50 border border-emerald-200/80 rounded-xl p-3">
+                      <label className="block font-semibold text-emerald-900 mb-1">
+                        Hak Izin Siang (HIS)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={calcHIS}
+                        onChange={(e) => setCalcHIS(Math.max(0, parseInt(e.target.value) || 0))}
+                        className="w-full px-3 py-1.5 border border-emerald-300 rounded-lg text-emerald-800 font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 bg-white"
+                      />
+                      <span className="text-[10px] text-emerald-700 mt-1 block">Bebas denda (0 poin pengurang)</span>
+                    </div>
+
+                    <div className="bg-blue-50/50 border border-blue-200/80 rounded-xl p-3">
+                      <label className="block font-semibold text-blue-900 mb-1">
+                        Sakit Surat Dokter (IL)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={calcIL}
+                        onChange={(e) => setCalcIL(Math.max(0, parseInt(e.target.value) || 0))}
+                        className="w-full px-3 py-1.5 border border-blue-300 rounded-lg text-blue-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+                      />
+                      <span className="text-[10px] text-blue-700 mt-1 block">Nilai utuh, HK tidak berkurang</span>
+                    </div>
+
+                    <div className="bg-blue-50/50 border border-blue-200/80 rounded-xl p-3">
+                      <label className="block font-semibold text-blue-900 mb-1">
+                        Dinas Luar / Cuti (DL / AL)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={calcDL}
+                        onChange={(e) => setCalcDL(Math.max(0, parseInt(e.target.value) || 0))}
+                        className="w-full px-3 py-1.5 border border-blue-300 rounded-lg text-blue-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+                      />
+                      <span className="text-[10px] text-blue-700 mt-1 block">Nilai utuh, HK tidak berkurang</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -753,6 +1205,75 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                 );
               })()}
 
+              {/* Card Rincian Breakdown Matematis Real-Time (Transparansi Hitung Nilai) */}
+              <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50/40 border border-slate-200 rounded-xl p-4 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                    <TrendingUp className="w-4 h-4 text-blue-600" />
+                    <span>Rincian Transparan Perhitungan Nilai Anda</span>
+                  </span>
+                  <span className="text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                    Nilai X = {calcX} / {calcY} ({calcPct.toFixed(1)}%)
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div className="bg-white border border-slate-200/80 rounded-xl p-3 space-y-1">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase">1. Poin Kehadiran Dasar</span>
+                    <div className="font-mono text-sm font-bold text-slate-900">
+                      {calcHK} Hari &times; 2 = <span className="text-blue-700">{calcBasePoints} Poin</span>
+                    </div>
+                    <p className="text-[10.5px] text-slate-500 leading-tight">
+                      Dari {calcWorkingDays} hari kerja dikurangi {calcI} sakit tanpa surat &amp; {calcAlpha} alpa.
+                    </p>
+                  </div>
+
+                  <div className="bg-white border border-slate-200/80 rounded-xl p-3 space-y-1">
+                    <span className="text-[11px] font-bold text-rose-600 uppercase">2. Total Denda Pengurang</span>
+                    <div className="font-mono text-sm font-bold text-rose-700">
+                      -{calcTotalDeduction} Poin
+                    </div>
+                    <p className="text-[10.5px] text-slate-500 leading-tight">
+                      LE: -{calcDeductionLE} | Sakit (I): -{calcDeductionI} | Alpa (A): -{calcDeductionAlpha}
+                    </p>
+                  </div>
+
+                  <div className="bg-white border border-slate-200/80 rounded-xl p-3 space-y-1">
+                    <span className="text-[11px] font-bold text-emerald-600 uppercase">3. Skor Bersih &amp; SKP</span>
+                    <div className="font-mono text-sm font-bold text-emerald-700">
+                      {calcX} Poin &rarr; SKP {calcScore2.toFixed(1)}
+                    </div>
+                    <p className="text-[10.5px] text-slate-500 leading-tight">
+                      ({calcX} &divide; {calcY}) &times; 100% = {calcPct.toFixed(1)}% &rarr; Score 1 = {calcScore1}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Pesan Saran & Analisis Otomatis */}
+                <div className="bg-blue-50/70 border border-blue-200/80 rounded-lg p-3 text-[11px] text-blue-950 flex items-start gap-2.5">
+                  <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                  <div className="leading-relaxed">
+                    {calcPct >= 100 ? (
+                      <span>
+                        <strong>Status Sempurna:</strong> Kehadiran Anda 100% tepat waktu tanpa catatan denda keterlambatan maupun ketidakhadiran. Anda berhak memperoleh nilai tertinggi <strong>Score 1 = 10</strong> dan <strong>Score Kedisiplinan SKP = 2.0</strong>.
+                      </span>
+                    ) : calcPct >= 90 ? (
+                      <span>
+                        <strong>Status Sangat Baik:</strong> Capaian kehadiran Anda di atas 90%. Anda berada pada kategori <strong>Sangat Baik</strong> dengan <strong>Score SKP = 1.8</strong>. Toleransi denda masih berada dalam batas aman prestasi.
+                      </span>
+                    ) : calcPct >= 80 ? (
+                      <span>
+                        <strong>Status Baik:</strong> Capaian kehadiran Anda memenuhi standar kedisiplinan sekolah (<strong>Score SKP = 1.6</strong>). Kurangi keterlambatan (LE) dan hindari izin tanpa surat untuk menaikkan kembali ke kategori Sangat Baik (1.8).
+                      </span>
+                    ) : (
+                      <span>
+                        <strong>Peringatan Pembinaan:</strong> Nilai kedisiplinan Anda mengalami penurunan drastis karena denda alpa atau izin tanpa surat. Pastikan setiap ketidakhadiran selalu disertai bukti sah seperti Surat Dokter (IL) atau Surat Tugas Dinas (DL) agar nilai tidak terpotong.
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Bagian 2: Tabel Hasil Perhitungan Otomatis */}
               <div className="overflow-x-auto border border-slate-200 rounded-xl">
                 <table className="w-full text-left border-collapse text-xs">
@@ -819,9 +1340,9 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
 
       case 'cases':
         return (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <p className="text-xs text-slate-600">
-              Berikut ini adalah contoh nyata perhitungan nilai kehadiran untuk bulan dengan <strong>21 hari kerja</strong> (seperti bulan September):
+              Berikut ini adalah contoh nyata perhitungan nilai kehadiran untuk bulan dengan <strong>21 hari kerja</strong> (seperti bulan September) mencakup berbagai skenario kedinasan:
             </p>
 
             {/* Tabel Contoh Kasus Nyata (Bahasa Awam) */}
@@ -832,9 +1353,9 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     <th className="p-3 font-bold text-slate-700 w-52">Nama Contoh Kasus</th>
                     <th className="p-3 font-bold text-slate-700">Kondisi Kehadiran Pegawai</th>
                     <th className="p-3 font-bold text-slate-700 w-64">Langkah Perhitungan Sederhana</th>
-                    <th className="p-3 font-bold text-slate-700 text-center w-28">Persentase</th>
-                    <th className="p-3 font-bold text-slate-700 text-center w-24">Score 1</th>
-                    <th className="p-3 font-bold text-slate-700 text-center w-28">Score 2</th>
+                    <th className="p-3 font-bold text-slate-700 text-center w-24">Persentase</th>
+                    <th className="p-3 font-bold text-slate-700 text-center w-20">Score 1</th>
+                    <th className="p-3 font-bold text-slate-700 text-center w-24">Score 2</th>
                     <th className="p-3 font-bold text-slate-700 w-40">Kesimpulan Nilai</th>
                   </tr>
                 </thead>
@@ -877,7 +1398,25 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
 
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-slate-900">
-                      Kasus 3: Tidak Masuk 1 Hari Tanpa Izin<br />
+                      Kasus 3: Terlambat / Pulang Cepat (LE)<br />
+                      <span className="text-[11px] font-normal text-slate-500">Terlambat Datang atau Pulang Cepat Tanpa Izin</span>
+                    </td>
+                    <td className="p-3 text-slate-600">
+                      Masuk bekerja setiap hari (21 hari kerja), namun tercatat datang terlambat atau pulang mendahului jam kerja 2 kali (LE = 2). Tidak pernah alpa.
+                    </td>
+                    <td className="p-3 text-[11px] text-slate-700">
+                      Hari Kerja: Tetap 21 hari penuh (tidak berkurang).<br />
+                      Nilai: (21 &times; 2) dikurangi denda 2 poin (2 &times; 1) = <strong>40 Poin</strong> dari 42 poin.
+                    </td>
+                    <td className="p-3 text-center font-black text-emerald-700">95.2%</td>
+                    <td className="p-3 text-center font-black text-slate-900">9</td>
+                    <td className="p-3 text-center font-black text-blue-700">1.8</td>
+                    <td className="p-3 font-semibold text-emerald-700">Sangat Baik (Kena Denda 1 Poin per LE)</td>
+                  </tr>
+
+                  <tr className="hover:bg-slate-50/80 transition-colors">
+                    <td className="p-3 font-bold text-slate-900">
+                      Kasus 4: Tidak Masuk 1 Hari Tanpa Izin<br />
                       <span className="text-[11px] font-normal text-slate-500">Ada 1 Hari Alpa (A = 1)</span>
                     </td>
                     <td className="p-3 text-slate-600">
@@ -895,7 +1434,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
 
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-slate-900">
-                      Kasus 4: Sakit Surat Dokter vs Tanpa Surat<br />
+                      Kasus 5: Sakit Surat Dokter vs Tanpa Surat<br />
                       <span className="text-[11px] font-normal text-slate-500">Perbandingan Pentingnya Bukti Sah</span>
                     </td>
                     <td className="p-3 text-slate-600">
@@ -919,23 +1458,95 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
 
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-slate-900">
-                      Kasus 5: Terlambat / Pulang Cepat (LE)<br />
-                      <span className="text-[11px] font-normal text-slate-500">Terlambat Datang atau Pulang Cepat Tanpa Izin</span>
+                      Kasus 6: Kombinasi Realistis Kedinasan<br />
+                      <span className="text-[11px] font-normal text-slate-500">1 LE + 1 HIP + 1 DL + 1 Sakit Dokter</span>
                     </td>
                     <td className="p-3 text-slate-600">
-                      Masuk bekerja setiap hari (21 hari kerja), namun tercatat datang terlambat atau pulang mendahului jam kerja 2 kali (LE = 2). Tidak pernah alpa.
+                      Masuk 21 hari kerja, pernah 1 kali telat (LE=1), 1 kali izin pagi berizin (HIP=1), 1 kali dinas luar ber-Surat Tugas (DL=1), dan 1 kali sakit ber-surat dokter (IL=1).
                     </td>
                     <td className="p-3 text-[11px] text-slate-700">
                       Hari Kerja: Tetap 21 hari penuh (tidak berkurang).<br />
-                      Nilai: (21 &times; 2) dikurangi denda 2 poin (2 &times; 1) = <strong>40 Poin</strong> dari 42 poin.
+                      Nilai: (21 &times; 2) - denda 1 poin (hanya dari LE) = <strong>41 Poin</strong> dari 42 poin.
                     </td>
-                    <td className="p-3 text-center font-black text-emerald-700">95.2%</td>
+                    <td className="p-3 text-center font-black text-emerald-700">97.6%</td>
                     <td className="p-3 text-center font-black text-slate-900">9</td>
                     <td className="p-3 text-center font-black text-blue-700">1.8</td>
-                    <td className="p-3 font-semibold text-emerald-700">Sangat Baik (Kena Denda 1 Poin per LE)</td>
+                    <td className="p-3 font-semibold text-emerald-700">Sangat Baik (Aman &amp; Tertib Administrasi)</td>
+                  </tr>
+
+                  <tr className="hover:bg-slate-50/80 transition-colors">
+                    <td className="p-3 font-bold text-rose-900">
+                      Kasus 7: Sanksi Berat Multi-Alpa<br />
+                      <span className="text-[11px] font-normal text-slate-500">Tidak Masuk 3 Hari Tanpa Keterangan (A = 3)</span>
+                    </td>
+                    <td className="p-3 text-slate-600">
+                      Tidak masuk bekerja sebanyak 3 hari tanpa pemberitahuan atau izin resmi.
+                    </td>
+                    <td className="p-3 text-[11px] text-slate-700">
+                      Hari Kerja: Berkurang drastis menjadi 18 hari.<br />
+                      Nilai: (18 &times; 2) dikurangi denda 9 poin (3 &times; 3) = <strong>27 Poin</strong> dari 42 poin.
+                    </td>
+                    <td className="p-3 text-center font-black text-rose-700">64.3%</td>
+                    <td className="p-3 text-center font-black text-slate-900">6</td>
+                    <td className="p-3 text-center font-black text-rose-700">1.2</td>
+                    <td className="p-3 font-semibold text-rose-700">Kurang (Wajib Pembinaan Disiplin)</td>
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            {/* Kotak Edukasi: 5 Tips Emas Menjaga Nilai Kedisiplinan SKP 2.0 */}
+            <div className="bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/70 border border-emerald-200/90 rounded-xl p-4 sm:p-5 shadow-xs space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold text-xs shadow-xs">
+                  <Award className="w-4 h-4 text-white" />
+                </span>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm">
+                    5 Kiat Utama Menjaga Nilai Kedisiplinan SKP Tetap 2.0 (Sempurna)
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    Panduan praktis bagi seluruh guru dan tenaga kependidikan SMAN Sumatera Selatan
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1 text-xs">
+                <div className="bg-white border border-emerald-200/70 rounded-xl p-3 space-y-1">
+                  <span className="font-bold text-emerald-900 block">1. Tertib Tap Mesin</span>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Pastikan selalu melakukan tap in pagi dan tap out sore pada mesin scanner sekolah.
+                  </p>
+                </div>
+
+                <div className="bg-white border border-emerald-200/70 rounded-xl p-3 space-y-1">
+                  <span className="font-bold text-emerald-900 block">2. Manfaatkan HIP/HIS</span>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Jika ada keperluan penting pagi/siang, buat surat izin resmi pimpinan agar bebas denda (0 poin).
+                  </p>
+                </div>
+
+                <div className="bg-white border border-emerald-200/70 rounded-xl p-3 space-y-1">
+                  <span className="font-bold text-emerald-900 block">3. Wajib Surat Dokter</span>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Bila sakit, selalu lampirkan surat dokter sah agar terhitung status IL (nilai tetap utuh 100%).
+                  </p>
+                </div>
+
+                <div className="bg-white border border-emerald-200/70 rounded-xl p-3 space-y-1">
+                  <span className="font-bold text-emerald-900 block">4. Surat Tugas Dinas</span>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Untuk dinas luar kota/sekolah, mintakan Surat Perintah Tugas (ST) resmi kepada kepala sekolah.
+                  </p>
+                </div>
+
+                <div className="bg-white border border-rose-200/70 rounded-xl p-3 space-y-1">
+                  <span className="font-bold text-rose-900 block">5. Hindari Alpa</span>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Satu hari alpa menghilangkan 5 poin (rugi 2 poin hari + denda 3) dan langsung menjatuhkan nilai SKP.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -1472,36 +2083,134 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
           <table className="print-table mb-3">
             <thead>
               <tr>
-                <th style={{ width: '15%' }}>Langkah</th>
-                <th style={{ width: '25%' }}>Indikator &amp; Letak Kolom</th>
-                <th style={{ width: '35%' }}>Rumus Matematis</th>
-                <th style={{ width: '25%' }}>Penjelasan Singkat</th>
+                <th style={{ width: '12%' }}>Langkah</th>
+                <th style={{ width: '22%' }}>Indikator &amp; Kolom</th>
+                <th style={{ width: '38%' }}>Rumus Matematis Baku</th>
+                <th style={{ width: '28%' }}>Penjelasan Singkat</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td className="font-bold">Langkah 1</td>
-                <td>Hari Kerja Nyata (HK) - Kolom AG</td>
-                <td className="font-semibold">Hari Kerja Bulan Ini - I - Alpa</td>
-                <td>Hanya berkurang jika sakit tanpa surat atau alpa</td>
+                <td>Hari Kerja Nyata (HK)<br /><span className="text-[7.5pt] font-semibold">Kolom AG</span></td>
+                <td className="font-semibold">HK = Total Hari Kerja - (I + A)</td>
+                <td>Hanya berkurang oleh Sakit Tanpa Surat (I) dan Alpa (A)</td>
               </tr>
               <tr>
                 <td className="font-bold">Langkah 2</td>
-                <td>Nilai Bersih (Nilai X) - Kolom AR</td>
-                <td className="font-semibold">(HK &times; 2) - denda (LE + I + A&times;3) [LE denda 1 poin, HIP &amp; HIS bebas denda]</td>
-                <td>Tiap hari kerja bernilai 2 poin dikurangi potongan</td>
+                <td>Nilai Bersih (Nilai X)<br /><span className="text-[7.5pt] font-semibold">Kolom AR</span></td>
+                <td className="font-semibold">X = (HK &times; 2) - (LE&times;1) - (I&times;1) - (A&times;3)</td>
+                <td>Poin dasar 2/hari dikurangi denda keterlambatan dan alpa</td>
               </tr>
               <tr>
                 <td className="font-bold">Langkah 3</td>
-                <td>Maksimal (Y) &amp; Persen (%) - Kolom AS &amp; AT</td>
-                <td className="font-semibold">Y = HK Bulan Ini &times; 2 | % = (X &divide; Y) &times; 100%</td>
-                <td>Rasio perolehan poin riil terhadap poin maksimal</td>
+                <td>Nilai Maksimal (Y) &amp; %<br /><span className="text-[7.5pt] font-semibold">Kolom AS &amp; AT</span></td>
+                <td className="font-semibold">Y = Hari Kerja &times; 2 | % = (X &divide; Y) &times; 100%</td>
+                <td>Rasio perolehan poin riil terhadap poin target maksimal</td>
               </tr>
               <tr>
                 <td className="font-bold">Langkah 4</td>
-                <td>Score 1 &amp; Score 2 - Kolom AU &amp; AV</td>
+                <td>Score 1 &amp; Score 2 (SKP)<br /><span className="text-[7.5pt] font-semibold">Kolom AU &amp; AV</span></td>
                 <td className="font-semibold">Score 1 = Skala 1 s/d 10 | Score 2 = Score 1 &times; 20%</td>
-                <td>Score 2 (maksimal 2.0) dimasukkan ke laporan SKP</td>
+                <td>Score 2 (maksimal 2.0) dimasukkan langsung ke laporan SKP</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div className="font-bold text-[8.5pt] uppercase text-slate-800 mb-1">
+            Tabel Komparasi Dampak Kode Presensi Terhadap HK &amp; Nilai X
+          </div>
+          <table className="print-table mb-3">
+            <thead>
+              <tr>
+                <th style={{ width: '10%' }}>Kode</th>
+                <th style={{ width: '22%' }}>Keterangan</th>
+                <th style={{ width: '10%' }} className="text-center">Kolom</th>
+                <th style={{ width: '28%' }}>Persyaratan / Bukti Sah</th>
+                <th style={{ width: '15%' }}>Dampak HK</th>
+                <th style={{ width: '15%' }}>Denda Nilai X</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="font-bold">HADIR</td>
+                <td>Hadir Tepat Waktu</td>
+                <td className="text-center">-</td>
+                <td>Tap in dan tap out lengkap sesuai jam shift</td>
+                <td>Tetap Utuh (1 Hari)</td>
+                <td>0 Poin (+2 Penuh)</td>
+              </tr>
+              <tr>
+                <td className="font-bold">LE</td>
+                <td>Late / Earlier</td>
+                <td className="text-center font-bold">Kolom AJ</td>
+                <td>Telat datang atau pulang awal tanpa surat izin</td>
+                <td>Tetap Utuh (1 Hari)</td>
+                <td>Denda -1 Poin</td>
+              </tr>
+              <tr>
+                <td className="font-bold">HIP</td>
+                <td>Hak Izin Pagi</td>
+                <td className="text-center font-bold">Kolom AH</td>
+                <td>Surat izin datang pagi disetujui pimpinan</td>
+                <td>Tetap Utuh (1 Hari)</td>
+                <td>Bebas Denda (0 Poin)</td>
+              </tr>
+              <tr>
+                <td className="font-bold">HIS</td>
+                <td>Hak Izin Siang</td>
+                <td className="text-center font-bold">Kolom AI</td>
+                <td>Surat izin pulang siang disetujui pimpinan</td>
+                <td>Tetap Utuh (1 Hari)</td>
+                <td>Bebas Denda (0 Poin)</td>
+              </tr>
+              <tr>
+                <td className="font-bold">I</td>
+                <td>Sakit Tanpa Surat</td>
+                <td className="text-center font-bold">Kolom AK</td>
+                <td>Tidak menyerahkan surat keterangan dokter sah</td>
+                <td>Berkurang (-1 Hari)</td>
+                <td>Denda -1 Poin</td>
+              </tr>
+              <tr>
+                <td className="font-bold">IL</td>
+                <td>Sakit Surat Dokter</td>
+                <td className="text-center font-bold">Kolom AL</td>
+                <td>Surat keterangan dokter/klinik/RS sah</td>
+                <td>Tetap Utuh (1 Hari)</td>
+                <td>Bebas Denda (0 Poin)</td>
+              </tr>
+              <tr>
+                <td className="font-bold">PM / P</td>
+                <td>Izin Khusus Resmi</td>
+                <td className="text-center font-bold">Kolom AM</td>
+                <td>Surat izin khusus disetujui Kepala Sekolah</td>
+                <td>Tetap Utuh (1 Hari)</td>
+                <td>Bebas Denda (0 Poin)</td>
+              </tr>
+              <tr>
+                <td className="font-bold">OTL / AL</td>
+                <td>Cuti Resmi</td>
+                <td className="text-center font-bold">Kolom AN / AO</td>
+                <td>Berkas pengajuan cuti resmi yang disetujui</td>
+                <td>Tetap Utuh (1 Hari)</td>
+                <td>Bebas Denda (0 Poin)</td>
+              </tr>
+              <tr>
+                <td className="font-bold">DL</td>
+                <td>Dinas Luar</td>
+                <td className="text-center font-bold">Kolom AP</td>
+                <td>Surat Perintah Tugas (ST) resmi pimpinan</td>
+                <td>Tetap Utuh (1 Hari)</td>
+                <td>Bebas Denda (0 Poin)</td>
+              </tr>
+              <tr>
+                <td className="font-bold">A</td>
+                <td>Alpa / Bolos</td>
+                <td className="text-center font-bold">Kolom AQ</td>
+                <td>Tidak hadir tanpa kabar atau surat resmi</td>
+                <td>Berkurang (-1 Hari)</td>
+                <td>Denda Berat -3 Poin</td>
               </tr>
             </tbody>
           </table>
@@ -1607,7 +2316,15 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                 <td className="text-center font-bold">2.0</td>
               </tr>
               <tr>
-                <td className="font-bold">Kasus 3: 1 Hari Alpa</td>
+                <td className="font-bold">Kasus 3: Terlambat/Pulang Cepat (LE)</td>
+                <td>Masuk 21 hari, terlambat/pulang cepat 2 kali (LE=2)</td>
+                <td>HK = 21 | X = (21&times;2) - 2 = 40 poin</td>
+                <td className="text-center font-bold">95.2%</td>
+                <td className="text-center font-bold">9</td>
+                <td className="text-center font-bold">1.8</td>
+              </tr>
+              <tr>
+                <td className="font-bold">Kasus 4: 1 Hari Alpa</td>
                 <td>Tidak masuk 1 hari tanpa keterangan</td>
                 <td>HK = 20 | X = (20&times;2) - 3 = 37 poin</td>
                 <td className="text-center font-bold">88.1%</td>
@@ -1615,7 +2332,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                 <td className="text-center font-bold">1.6</td>
               </tr>
               <tr>
-                <td className="font-bold">Kasus 4: Sakit Surat vs Tanpa</td>
+                <td className="font-bold">Kasus 5: Sakit Surat vs Tanpa</td>
                 <td>Sakit 2 hari surat dokter vs tanpa surat</td>
                 <td>Surat: HK=21, X=42 | Tanpa: HK=19, X=36</td>
                 <td className="text-center font-bold">100% vs 85.7%</td>
@@ -1623,12 +2340,20 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                 <td className="text-center font-bold">2.0 vs 1.6</td>
               </tr>
               <tr>
-                <td className="font-bold">Kasus 5: Terlambat/Pulang Cepat (LE)</td>
-                <td>Masuk 21 hari, terlambat/pulang cepat 2 kali (LE=2)</td>
-                <td>HK = 21 | X = (21&times;2) - 2 = 40 poin</td>
-                <td className="text-center font-bold">95.2%</td>
+                <td className="font-bold">Kasus 6: Kombinasi Kedinasan</td>
+                <td>1 LE + 1 HIP + 1 DL + 1 Sakit Surat Dokter</td>
+                <td>HK = 21 | X = (21&times;2) - 1 = 41 poin</td>
+                <td className="text-center font-bold">97.6%</td>
                 <td className="text-center font-bold">9</td>
                 <td className="text-center font-bold">1.8</td>
+              </tr>
+              <tr>
+                <td className="font-bold">Kasus 7: Sanksi Berat Multi-Alpa</td>
+                <td>Tidak masuk 3 hari tanpa keterangan (A = 3)</td>
+                <td>HK = 18 | X = (18&times;2) - 9 = 27 poin</td>
+                <td className="text-center font-bold">64.3%</td>
+                <td className="text-center font-bold">6</td>
+                <td className="text-center font-bold">1.2</td>
               </tr>
             </tbody>
           </table>
