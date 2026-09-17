@@ -848,15 +848,23 @@ export function parseAttendanceFile(
           const nextDateStr = `${dNext.getFullYear()}-${String(dNext.getMonth() + 1).padStart(2, '0')}-${String(dNext.getDate()).padStart(2, '0')}`;
           const nextSched = getSchedForDate(nextDateStr);
 
-          // Natural boundary on next day morning:
-          // If next day has an afternoon/overnight shift, boundary is before next shift starts (at least 13:00)
-          let nextDayCheckoutCutoff = '13:00:00';
-          if (nextSched && nextSched.startTime && !nextSched.isOffDay) {
-            if (isSchedOvernight(nextSched) || nextSched.startTime >= '14:00:00') {
-              const buffer = addMinutesToTime(nextSched.startTime, -120);
-              nextDayCheckoutCutoff = buffer > '13:00:00' ? buffer : '13:00:00';
-            } else if (nextSched.startTime < '12:00:00' && nextSched.startTime > '05:00:00') {
-              nextDayCheckoutCutoff = nextSched.startTime;
+          // Dynamic checkout cutoff for overnight shift based on shift settings:
+          // Closes dynamically at endTime + checkOutWindowMinutes
+          const checkOutWin = typeof sched?.checkOutWindowMinutes === 'number' && sched.checkOutWindowMinutes > 0
+            ? sched.checkOutWindowMinutes
+            : 240;
+          let nextDayCheckoutCutoff = addMinutesToTime(schedEnd, checkOutWin);
+
+          // If next day has an active work shift, checkout must not clash with next shift's check-in opening:
+          const nextIsActiveWorkShift = Boolean(nextSched && !nextSched.isOffDay && nextSched.startTime && nextSched.startTime !== '00:00:00');
+          if (nextIsActiveWorkShift && nextSched?.startTime) {
+            const nextInWin = typeof nextSched.checkInWindowMinutes === 'number' && nextSched.checkInWindowMinutes > 0
+              ? nextSched.checkInWindowMinutes
+              : 120;
+            const nextShiftCheckInOpens = addMinutesToTime(nextSched.startTime, -nextInWin);
+            // Batasi cutoff agar tidak melebihi dibukanya check-in shift berikutnya jika terjadi overlap
+            if (nextDayCheckoutCutoff > nextShiftCheckInOpens && nextShiftCheckInOpens > schedEnd) {
+              nextDayCheckoutCutoff = nextShiftCheckInOpens;
             }
           }
 
@@ -908,8 +916,16 @@ export function parseAttendanceFile(
         // Case A: This date already has an overnight session created in Phase 1
         if (sessionsByDate.has(dateStr)) {
           const existingSession = sessionsByDate.get(dateStr)!;
-          // If this punch is a morning tap (< 13:00), it is recognized as carry-over checkout from previous period (e.g. Day 1 tap out from 31st of previous month)
-          if (punch.timeStr < '13:00:00') {
+          const currentSched = existingSession.sched;
+          const currentSchedStart = currentSched?.startTime || '20:00:00';
+          const currentInWin = typeof currentSched?.checkInWindowMinutes === 'number' && currentSched.checkInWindowMinutes > 0
+            ? currentSched.checkInWindowMinutes
+            : 300;
+          const currentEarliestIn = addMinutesToTime(currentSchedStart, -currentInWin);
+
+          // If this punch occurred before this shift's check-in window opened (< currentEarliestIn),
+          // it is recognized dynamically as carry-over checkout from previous period (e.g. Day 1 tap out from 31st of previous month)
+          if (punch.timeStr < currentEarliestIn) {
             consumedIndices.add(i);
             const carryNote = `Tap keluar limpahan shift akhir bulan sebelumnya (${punch.timeStr.substring(0, 5)})`;
             existingSession.notes = existingSession.notes ? `${existingSession.notes}; ${carryNote}` : carryNote;

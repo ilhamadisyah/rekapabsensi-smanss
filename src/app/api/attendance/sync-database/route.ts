@@ -147,12 +147,12 @@ export async function POST(request: NextRequest) {
           if (isOvernight) {
             const earliestEveningIn = addMinutesToTime(startTime, -checkInWindowMinutes);
 
-            // Special repair case: if first_in is morning (< 13:00) and last_out is evening (>= earliestEveningIn),
-            // this record previously swallowed previous period's checkout into first_in, and the true shift check-in into last_out!
+            // Special repair case: if first_in occurred before this shift's check-in window opened (< earliestEveningIn)
+            // and last_out is a valid check-in within this shift's check-in window (>= earliestEveningIn):
             if (
               effectiveFirstIn &&
               effectiveLastOut &&
-              effectiveFirstIn < '13:00:00' &&
+              effectiveFirstIn < earliestEveningIn &&
               effectiveLastOut >= earliestEveningIn
             ) {
               const prevCarry = effectiveFirstIn;
@@ -183,13 +183,19 @@ export async function POST(request: NextRequest) {
               const nextShift = nextSched ? shiftMap.get(nextSched.shift_id) : null;
               const nextShiftStart = nextSched?.custom_start_time || nextShift?.start_time;
 
-              let nextDayCheckoutCutoff = '13:00:00';
-              if (nextSched && nextShiftStart && !nextShift?.is_off_day && nextShift?.code !== 'OFF') {
-                if (nextShift?.is_overnight || nextShiftStart >= '14:00:00') {
-                  const buffer = addMinutesToTime(nextShiftStart, -120);
-                  nextDayCheckoutCutoff = buffer > '13:00:00' ? buffer : '13:00:00';
-                } else if (nextShiftStart < '12:00:00' && nextShiftStart > '05:00:00') {
-                  nextDayCheckoutCutoff = nextShiftStart;
+              // Dynamic checkout cutoff for overnight shift based on shift settings:
+              // Closes dynamically at endTime + checkOutWindowMinutes
+              let nextDayCheckoutCutoff = addMinutesToTime(endTime, checkOutWindowMinutes);
+
+              // If next day has an active work shift, checkout must not clash with next shift's check-in opening:
+              const nextIsActiveWorkShift = Boolean(nextSched && nextShiftStart && !nextShift?.is_off_day && nextShift?.code !== 'OFF' && nextShiftStart !== '00:00:00');
+              if (nextIsActiveWorkShift && nextShiftStart) {
+                const nextInWin = typeof nextShift?.check_in_window_minutes === 'number' && nextShift.check_in_window_minutes > 0
+                  ? nextShift.check_in_window_minutes
+                  : 120;
+                const nextShiftCheckInOpens = addMinutesToTime(nextShiftStart, -nextInWin);
+                if (nextDayCheckoutCutoff > nextShiftCheckInOpens && nextShiftCheckInOpens > endTime) {
+                  nextDayCheckoutCutoff = nextShiftCheckInOpens;
                 }
               }
 
