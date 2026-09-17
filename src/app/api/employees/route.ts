@@ -99,6 +99,31 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'Urutan pegawai berhasil diperbarui.' });
     }
 
+    if (action === 'bulk_update' && Array.isArray(body.updates)) {
+      const updatedList = [];
+      for (const item of body.updates) {
+        if (item.id && item.updates) {
+          const updated = await db.updateEmployee(item.id, item.updates);
+          if (updated) {
+            updatedList.push(updated);
+          }
+        }
+      }
+      return NextResponse.json(
+        {
+          success: true,
+          message: `${updatedList.length} data pegawai berhasil diperbarui.`,
+          updatedCount: updatedList.length,
+          employees: updatedList,
+        },
+        {
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate',
+          },
+        }
+      );
+    }
+
     if (!id || !updates) {
       return NextResponse.json(
         { success: false, error: 'ID dan data update wajib diisi.' },

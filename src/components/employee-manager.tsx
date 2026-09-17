@@ -3,6 +3,7 @@ import { Employee } from '@/lib/types';
 import {
   Search,
   Edit2,
+  Edit3,
   Check,
   X,
   Shield,
@@ -25,7 +26,17 @@ import {
   Sparkles,
   RotateCcw,
   Save,
+  RefreshCw,
+  Undo2,
 } from 'lucide-react';
+
+export interface EmployeeEditDraft {
+  full_name: string;
+  nik: string;
+  machine_id?: string;
+  department: string;
+  excel_row_index: number;
+}
 
 function getPageNumbers(current: number, total: number): (number | '...')[] {
   if (total <= 7) {
@@ -60,16 +71,17 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editMachineId, setEditMachineId] = useState('');
-  const [editRowIndex, setEditRowIndex] = useState<number>(0);
-  const [editFullName, setEditFullName] = useState('');
-  const [editDepartment, setEditDepartment] = useState('');
-  const [editNik, setEditNik] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
+  // Mode Edit Massal & Draft Staging (Sama seperti Matriks Roster/Presensi)
+  const [isEditMode, setIsEditMode] = useState<boolean>(false);
+  const [editingRows, setEditingRows] = useState<Set<string>>(new Set());
+  const [stagedEdits, setStagedEdits] = useState<Record<string, EmployeeEditDraft>>({});
+  const [isSavingBatch, setIsSavingBatch] = useState<boolean>(false);
+  const [isSavingSingle, setIsSavingSingle] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [quickMovingId, setQuickMovingId] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const stagedCount = Object.keys(stagedEdits).length;
 
   // Modal Tambah Pegawai
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -111,56 +123,244 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
   const endIndex = Math.min(startIndex + pageSize, totalItems);
   const paginatedEmployees = filtered.slice(startIndex, endIndex);
 
-  const startEdit = (emp: Employee) => {
-    setEditingId(emp.id);
-    setEditMachineId(emp.machine_id);
-    setEditRowIndex(emp.excel_row_index);
-    setEditFullName(emp.full_name);
-    setEditDepartment(emp.department && emp.department.includes('Guru') ? 'Guru' : 'Staff');
-    setEditNik(emp.nik || '');
+  // Cek apakah suatu baris sedang dalam mode edit (Mode Edit aktif, baris diklik edit, atau memiliki draft)
+  const isRowInEditMode = (empId: string) => {
+    return isEditMode || editingRows.has(empId) || !!stagedEdits[empId];
+  };
+
+  // Toggle global edit mode
+  const toggleEditMode = () => {
+    if (isEditMode && stagedCount > 0) {
+      if (!confirm(`Ada ${stagedCount} perubahan draft yang belum diunggah. Menutup Mode Edit tetap mempertahankan draft perubahan Anda.`)) {
+        return;
+      }
+    }
+    setIsEditMode((prev) => !prev);
+  };
+
+  // Peringatan sebelum tab ditutup/refresh jika ada draft yang belum disimpan
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (stagedCount > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [stagedCount]);
+
+  // Handle input perubahan pada baris (disimpan di stagedEdits sebagai draft)
+  const handleFieldChange = (
+    emp: Employee,
+    field: keyof EmployeeEditDraft,
+    value: string | number
+  ) => {
+    setStagedEdits((prev) => {
+      const existing = prev[emp.id] || {
+        full_name: emp.full_name,
+        nik: emp.nik || emp.id,
+        machine_id: emp.machine_id,
+        department: emp.department && emp.department.includes('Guru') ? 'Guru' : 'Staff',
+        excel_row_index: emp.excel_row_index,
+      };
+
+      const updated = {
+        ...existing,
+        [field]: value,
+      };
+
+      // Jika nilainya sama persis seperti aslinya, bersihkan draft
+      const isSameAsOriginal =
+        updated.full_name.trim() === emp.full_name.trim() &&
+        updated.nik.trim() === (emp.nik || emp.id || '').trim() &&
+        (updated.department.includes('Guru') ? 'Guru' : 'Staff') ===
+          (emp.department && emp.department.includes('Guru') ? 'Guru' : 'Staff') &&
+        Number(updated.excel_row_index) === Number(emp.excel_row_index);
+
+      if (isSameAsOriginal) {
+        const next = { ...prev };
+        delete next[emp.id];
+        return next;
+      }
+
+      return {
+        ...prev,
+        [emp.id]: updated,
+      };
+    });
+  };
+
+  // Batalkan edit pada satu baris
+  const handleCancelRowEdit = (empId: string) => {
+    setStagedEdits((prev) => {
+      const next = { ...prev };
+      delete next[empId];
+      return next;
+    });
+    setEditingRows((prev) => {
+      const next = new Set(prev);
+      next.delete(empId);
+      return next;
+    });
+  };
+
+  // Batalkan seluruh edit draft
+  const handleCancelAllEdits = () => {
+    if (stagedCount > 0) {
+      if (!confirm(`Batalkan semua ${stagedCount} perubahan data pegawai yang belum disimpan?`)) {
+        return;
+      }
+    }
+    setStagedEdits({});
+    setEditingRows(new Set());
     setMsg(null);
   };
 
-  const cancelEdit = () => {
-    setEditingId(null);
-    setMsg(null);
-  };
+  // Simpan satu baris secara langsung
+  const handleSaveSingleRow = async (emp: Employee) => {
+    const draft = stagedEdits[emp.id];
+    if (!draft) {
+      setEditingRows((prev) => {
+        const next = new Set(prev);
+        next.delete(emp.id);
+        return next;
+      });
+      return;
+    }
 
-  const saveEdit = async (empId: string) => {
-    setIsSaving(true);
+    if (!draft.full_name.trim()) {
+      alert('Nama lengkap pegawai wajib diisi.');
+      return;
+    }
+    if (!draft.nik.trim()) {
+      alert('NIK / NIP pegawai wajib diisi.');
+      return;
+    }
+
+    setIsSavingSingle(emp.id);
     try {
       const res = await fetch('/api/employees', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+        },
         body: JSON.stringify({
-          id: empId,
+          id: emp.id,
           updates: {
-            full_name: editFullName.trim(),
-            machine_id: editMachineId.trim(),
-            department: editDepartment.trim(),
-            nik: editNik.trim(),
-            excel_row_index: Number(editRowIndex) || 1,
+            full_name: draft.full_name.trim(),
+            nik: draft.nik.trim(),
+            machine_id: draft.machine_id?.trim() || draft.nik.trim(),
+            department: draft.department.trim(),
+            excel_row_index: Number(draft.excel_row_index) || 1,
           },
         }),
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setMsg({ text: 'Berhasil memperbarui data pegawai!', type: 'success' });
-        setEditingId(null);
-        if (data.employee) {
-          setLocalEmployees((prev) =>
-            prev.map((e) => (e.id === empId ? { ...e, ...data.employee } : e))
-          );
-        }
+        setMsg({ text: `Berhasil memperbarui data pegawai: ${draft.full_name}`, type: 'success' });
+        setLocalEmployees((prev) =>
+          prev.map((e) =>
+            e.id === emp.id
+              ? {
+                  ...e,
+                  full_name: draft.full_name.trim(),
+                  nik: draft.nik.trim(),
+                  machine_id: draft.machine_id?.trim() || draft.nik.trim(),
+                  department: draft.department.trim(),
+                  excel_row_index: Number(draft.excel_row_index) || 1,
+                }
+              : e
+          )
+        );
+        handleCancelRowEdit(emp.id);
         await onEmployeeUpdated();
       } else {
-        setMsg({ text: data.error || 'Gagal menyimpan perubahan', type: 'error' });
+        setMsg({ text: data.error || 'Gagal menyimpan perubahan.', type: 'error' });
       }
     } catch (e: any) {
       setMsg({ text: e.message || 'Kesalahan jaringan', type: 'error' });
     } finally {
-      setIsSaving(false);
+      setIsSavingSingle(null);
+    }
+  };
+
+  // Simpan seluruh draft perubahan sekaligus (Massal / Batch) ke database
+  const handleSaveAllEdits = async () => {
+    const entries = Object.entries(stagedEdits);
+    if (entries.length === 0) return;
+
+    for (const [, draft] of entries) {
+      if (!draft.full_name.trim()) {
+        alert('Nama lengkap pegawai tidak boleh kosong.');
+        return;
+      }
+      if (!draft.nik.trim()) {
+        alert('NIK / NIP pegawai tidak boleh kosong.');
+        return;
+      }
+    }
+
+    setIsSavingBatch(true);
+    try {
+      const updates = entries.map(([id, draft]) => ({
+        id,
+        updates: {
+          full_name: draft.full_name.trim(),
+          nik: draft.nik.trim(),
+          machine_id: draft.machine_id?.trim() || draft.nik.trim(),
+          department: draft.department.trim(),
+          excel_row_index: Number(draft.excel_row_index) || 1,
+        },
+      }));
+
+      const res = await fetch('/api/employees', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+        },
+        body: JSON.stringify({
+          action: 'bulk_update',
+          updates,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMsg({
+          text: `Berhasil mengunggah dan menyimpan ${entries.length} data pegawai ke database!`,
+          type: 'success',
+        });
+
+        // Update local state optimistically
+        setLocalEmployees((prev) =>
+          prev.map((e) => {
+            const draft = stagedEdits[e.id];
+            if (!draft) return e;
+            return {
+              ...e,
+              full_name: draft.full_name.trim(),
+              nik: draft.nik.trim(),
+              machine_id: draft.machine_id?.trim() || draft.nik.trim(),
+              department: draft.department.trim(),
+              excel_row_index: Number(draft.excel_row_index) || 1,
+            };
+          })
+        );
+
+        setStagedEdits({});
+        setEditingRows(new Set());
+        await onEmployeeUpdated();
+      } else {
+        setMsg({ text: data.error || 'Gagal menyimpan perubahan.', type: 'error' });
+      }
+    } catch (err: any) {
+      setMsg({ text: err.message || 'Terjadi kesalahan jaringan.', type: 'error' });
+    } finally {
+      setIsSavingBatch(false);
     }
   };
 
@@ -190,6 +390,16 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
               (!emp.machine_id || e.machine_id !== emp.machine_id)
           )
         );
+        setStagedEdits((prev) => {
+          const next = { ...prev };
+          delete next[emp.id];
+          return next;
+        });
+        setEditingRows((prev) => {
+          const next = new Set(prev);
+          next.delete(emp.id);
+          return next;
+        });
         await onEmployeeUpdated();
       } else {
         setMsg({ text: data.error || 'Gagal menghapus pegawai', type: 'error' });
@@ -445,6 +655,26 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             </button>
           )}
 
+          {localEmployees.length > 0 && (
+            <button
+              onClick={toggleEditMode}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
+                isEditMode
+                  ? 'bg-amber-600 text-white hover:bg-amber-700 ring-2 ring-amber-400/50'
+                  : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+              }`}
+              title="Aktifkan Mode Edit untuk mengedit banyak data pegawai sekaligus di tabel"
+            >
+              <Edit3 className="w-4 h-4" />
+              <span>{isEditMode ? 'Mode Edit Aktif' : 'Mode Edit'}</span>
+              {stagedCount > 0 && (
+                <span className="bg-white text-amber-800 px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ml-0.5 shadow-2xs">
+                  {stagedCount}
+                </span>
+              )}
+            </button>
+          )}
+
           <button
             onClick={handleOpenAddModal}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors cursor-pointer"
@@ -454,6 +684,26 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Mode Edit Informational Banner */}
+      {isEditMode && (
+        <div className="px-3.5 py-2.5 bg-gradient-to-r from-amber-500/15 via-amber-400/10 to-amber-50 border border-amber-300/80 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs text-amber-950 animate-in fade-in duration-150">
+          <div className="flex items-center gap-2">
+            <span className="flex h-2.5 w-2.5 relative shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+            </span>
+            <span>
+              <strong>Mode Edit Pegawai Aktif:</strong> Anda dapat mengubah data beberapa pegawai langsung pada tabel. Perubahan disimpan sementara sebagai <em>draft</em> dan baru diunggah ke database saat Anda menekan tombol <strong>Simpan</strong>.
+            </span>
+          </div>
+          {stagedCount > 0 && (
+            <span className="font-bold text-amber-900 bg-amber-200/80 px-2.5 py-1 rounded-lg border border-amber-400 text-[11px] shrink-0 flex items-center gap-1 shadow-2xs">
+              ⚡ {stagedCount} pegawai diubah (draft)
+            </span>
+          )}
+        </div>
+      )}
 
       {msg && (
         <div
@@ -542,14 +792,32 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                   </tr>
                 ) : (
                   paginatedEmployees.map((emp) => {
-                    const isEditing = editingId === emp.id;
+                    const draft = stagedEdits[emp.id];
+                    const isModified = !!draft;
+                    const isEditing = isRowInEditMode(emp.id);
+                    const isRowSaving = isSavingSingle === emp.id;
+
+                    const displayRowIndex = draft !== undefined ? draft.excel_row_index : emp.excel_row_index;
+                    const displayFullName = draft !== undefined ? draft.full_name : emp.full_name;
+                    const displayNik = draft !== undefined ? draft.nik : (emp.nik || emp.id || '');
+                    const displayDept = draft !== undefined ? draft.department : (emp.department || 'Guru');
+
                     const fullIndex = sortedEmployees.findIndex((e) => e.id === emp.id);
                     const isFirst = fullIndex === 0;
                     const isLast = fullIndex === sortedEmployees.length - 1;
                     const isMoving = quickMovingId === emp.id;
 
                     return (
-                      <tr key={emp.id} className="hover:bg-slate-50/80 transition-colors">
+                      <tr
+                        key={emp.id}
+                        className={`transition-colors ${
+                          isModified
+                            ? 'bg-amber-50/75 border-l-4 border-l-amber-500'
+                            : isEditing
+                            ? 'bg-slate-50/70'
+                            : 'hover:bg-slate-50/80'
+                        }`}
+                      >
                         {/* Kolom No. Urut Laporan */}
                         <td className="p-3 text-center">
                           {isEditing ? (
@@ -557,10 +825,14 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                               type="number"
                               min={1}
                               max={999}
-                              value={editRowIndex}
-                              onChange={(e) => setEditRowIndex(Number(e.target.value))}
+                              value={displayRowIndex}
+                              onChange={(e) => handleFieldChange(emp, 'excel_row_index', Number(e.target.value))}
                               title="Ubah nomor baris laporan"
-                              className="w-16 px-1.5 py-1 text-center text-xs font-bold font-mono border border-blue-400 rounded-lg text-blue-700 bg-white"
+                              className={`w-16 px-1.5 py-1 text-center text-xs font-bold font-mono border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/30 ${
+                                isModified
+                                  ? 'border-amber-400 bg-white text-amber-900 font-extrabold shadow-2xs'
+                                  : 'border-slate-300 bg-white text-slate-800'
+                              }`}
                             />
                           ) : (
                             <span
@@ -575,13 +847,24 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                         {/* Kolom Nama */}
                         <td className="p-3">
                           {isEditing ? (
-                            <input
-                              type="text"
-                              value={editFullName}
-                              onChange={(e) => setEditFullName(e.target.value)}
-                              placeholder="Nama lengkap pegawai"
-                              className="w-full px-2.5 py-1 text-xs font-bold border border-blue-400 rounded-lg text-slate-900 bg-white"
-                            />
+                            <div className="space-y-1">
+                              <input
+                                type="text"
+                                value={displayFullName}
+                                onChange={(e) => handleFieldChange(emp, 'full_name', e.target.value)}
+                                placeholder="Nama lengkap pegawai"
+                                className={`w-full px-2.5 py-1 text-xs font-bold border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/30 ${
+                                  isModified
+                                    ? 'border-amber-400 bg-white text-amber-950 shadow-2xs'
+                                    : 'border-slate-300 bg-white text-slate-900'
+                                }`}
+                              />
+                              {isModified && (
+                                <div className="flex items-center gap-1 text-[10px] font-semibold text-amber-700">
+                                  <span>⚡ Perubahan belum disimpan</span>
+                                </div>
+                              )}
+                            </div>
                           ) : (
                             <div className="font-bold text-slate-900 text-[13px]">{emp.full_name}</div>
                           )}
@@ -592,10 +875,14 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                           {isEditing ? (
                             <input
                               type="text"
-                              value={editNik}
-                              onChange={(e) => setEditNik(e.target.value)}
+                              value={displayNik}
+                              onChange={(e) => handleFieldChange(emp, 'nik', e.target.value)}
                               placeholder="NIK (Wajib)"
-                              className="w-full px-2.5 py-1 text-xs font-mono font-bold border border-blue-400 rounded-lg text-blue-700 bg-white"
+                              className={`w-full px-2.5 py-1 text-xs font-mono font-bold border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/30 ${
+                                isModified
+                                  ? 'border-amber-400 bg-white text-amber-900 shadow-2xs'
+                                  : 'border-slate-300 bg-white text-blue-700'
+                              }`}
                             />
                           ) : (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 font-mono font-bold text-[11px]">
@@ -608,9 +895,13 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                         <td className="p-3 text-slate-600">
                           {isEditing ? (
                             <select
-                              value={editDepartment === 'Guru' || editDepartment.includes('Guru') ? 'Guru' : 'Staff'}
-                              onChange={(e) => setEditDepartment(e.target.value)}
-                              className="w-full px-2.5 py-1 text-xs border border-blue-400 rounded-lg font-semibold bg-white"
+                              value={displayDept && displayDept.includes('Guru') ? 'Guru' : 'Staff'}
+                              onChange={(e) => handleFieldChange(emp, 'department', e.target.value)}
+                              className={`w-full px-2.5 py-1 text-xs border rounded-lg font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500/30 ${
+                                isModified
+                                  ? 'border-amber-400 bg-white text-slate-900 shadow-2xs'
+                                  : 'border-slate-300 bg-white text-slate-800'
+                              }`}
                             >
                               <option value="Guru">Guru</option>
                               <option value="Staff">Staff</option>
@@ -652,43 +943,57 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
                         {/* Kolom Aksi */}
                         <td className="p-3 text-center">
-                          {isEditing ? (
-                            <div className="flex items-center justify-center gap-1">
+                          <div className="flex items-center justify-center gap-1">
+                            {isModified ? (
+                              <>
+                                <button
+                                  onClick={() => handleSaveSingleRow(emp)}
+                                  disabled={isRowSaving}
+                                  className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors cursor-pointer shadow-2xs"
+                                  title="Simpan baris ini sekarang"
+                                >
+                                  {isRowSaving ? (
+                                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <Check className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => handleCancelRowEdit(emp.id)}
+                                  disabled={isRowSaving}
+                                  className="p-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg transition-colors cursor-pointer"
+                                  title="Batalkan perubahan baris ini"
+                                >
+                                  <Undo2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            ) : isEditing && !isEditMode ? (
                               <button
-                                onClick={() => saveEdit(emp.id)}
-                                disabled={isSaving}
-                                className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors cursor-pointer"
-                                title="Simpan Perubahan"
-                              >
-                                <Check className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={cancelEdit}
-                                className="p-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg transition-colors cursor-pointer"
-                                title="Batal"
+                                onClick={() => handleCancelRowEdit(emp.id)}
+                                className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-lg transition-colors cursor-pointer"
+                                title="Tutup edit baris"
                               >
                                 <X className="w-3.5 h-3.5" />
                               </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center gap-1">
+                            ) : !isEditing ? (
                               <button
-                                onClick={() => startEdit(emp)}
+                                onClick={() => setEditingRows((prev) => new Set(prev).add(emp.id))}
                                 className="p-1.5 hover:bg-blue-50 text-slate-500 hover:text-blue-600 rounded-lg transition-colors cursor-pointer"
-                                title="Ubah Pegawai &amp; No. Baris"
+                                title="Ubah data pegawai ini"
                               >
                                 <Edit2 className="w-3.5 h-3.5" />
                               </button>
-                              <button
-                                onClick={() => handleDelete(emp)}
-                                disabled={isDeleting === emp.id}
-                                className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
-                                title="Hapus Pegawai"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          )}
+                            ) : null}
+
+                            <button
+                              onClick={() => handleDelete(emp)}
+                              disabled={isDeleting === emp.id || isRowSaving}
+                              className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer disabled:opacity-40"
+                              title="Hapus Pegawai"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1117,6 +1422,50 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Floating Action Bar untuk Simpan Banyak / Massal ke Database */}
+      {stagedCount > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl shadow-2xl border border-slate-700/80 flex items-center gap-3 animate-in slide-in-from-bottom-5 duration-200">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+            <span className="text-xs font-semibold text-slate-200 whitespace-nowrap">
+              <strong className="text-amber-400 font-bold">{stagedCount}</strong> perubahan pegawai belum disimpan
+            </span>
+          </div>
+
+          <div className="h-4 w-px bg-slate-700 mx-1 shrink-0" />
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleCancelAllEdits}
+              disabled={isSavingBatch}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Batal Semua</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSaveAllEdits}
+              disabled={isSavingBatch}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all shadow-md shadow-blue-600/30 disabled:opacity-60 cursor-pointer"
+            >
+              {isSavingBatch ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Menyimpan ke Database...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Simpan ke Database ({stagedCount})</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
       )}
