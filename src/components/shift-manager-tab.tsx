@@ -690,7 +690,7 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                               type="number"
                               min={0}
                               max={1440}
-                              step={5}
+                              step={1}
                               value={checkInWindow}
                               onChange={(e) => {
                                 const val = e.target.value;
@@ -774,7 +774,7 @@ export const ShiftManagerTab: React.FC<ShiftManagerTabProps> = ({
                               type="number"
                               min={0}
                               max={1440}
-                              step={5}
+                              step={1}
                               value={checkOutWindow}
                               onChange={(e) => {
                                 const val = e.target.value;

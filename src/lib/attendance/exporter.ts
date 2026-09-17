@@ -165,6 +165,38 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
     color: { argb: 'FF9C0006' },
   };
 
+  const YELLOW_HEADER_FILL: ExcelJS.FillPattern = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFFFFF00' },
+  };
+
+  const DISCIPLINE_HEADER_FILL: ExcelJS.FillPattern = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFB8CCE4' },
+  };
+
+  const YELLOW_HEADER_FONT: Partial<ExcelJS.Font> = {
+    name: 'Arial',
+    size: 8,
+    bold: true,
+    color: { argb: 'FF000000' },
+  };
+
+  const DISCIPLINE_HEADER_FONT: Partial<ExcelJS.Font> = {
+    name: 'Aptos Narrow',
+    size: 10,
+    bold: true,
+    color: { argb: 'FF000000' },
+  };
+
+  const HEADER_ALIGNMENT: Partial<ExcelJS.Alignment> = {
+    horizontal: 'center',
+    vertical: 'middle',
+    wrapText: true,
+  };
+
   const DEFAULT_BORDER: Partial<ExcelJS.Borders> = {
     top: { style: 'thin', color: { argb: 'FF000000' } },
     left: { style: 'thin', color: { argb: 'FF000000' } },
@@ -200,9 +232,14 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
     alignment: CENTER_ALIGNMENT,
   });
 
-  // Hapus formula AG12 yang mengunci Jun-26
-  const ag12Cell = worksheet.getCell('AG12');
-  ag12Cell.value = null;
+  // Bersihkan formula dan nilai lama pada baris 11 & 12 kolom AG s/d AV
+  for (let r = 11; r <= 12; r++) {
+    for (let c = 33; c <= 48; c++) {
+      const colLet = worksheet.getColumn(c).letter;
+      const cell = worksheet.getCell(`${colLet}${r}`);
+      cell.value = null;
+    }
+  }
 
   // 5. Hitung jumlah Hari Kerja Efektif (Senin - Jumat yang bukan hari libur)
   let totalWorkingDays = 0;
@@ -256,13 +293,15 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
     });
   }
 
-  // Header Ringkasan Kolom AG..AP: REKAPITULASI KEHADIRAN (Merged AG11:AP12)
+  // Header Ringkasan Kolom AG..AQ: REKAPITULASI KEHADIRAN (Merged AG11:AQ12 - Termasuk Kolom Baru LATE/EARLIER)
+  try { worksheet.unMergeCells('AG11:AQ12'); } catch {}
+  try { worksheet.unMergeCells('AG11:AP12'); } catch {}
   try { worksheet.unMergeCells('AG12:AP12'); } catch {}
-  try { worksheet.mergeCells('AG11:AP12'); } catch {}
+  try { worksheet.mergeCells('AG11:AQ12'); } catch {}
   const ag11Cell = worksheet.getCell('AG11');
   ag11Cell.value = 'REKAPITULASI KEHADIRAN';
   for (let r = 11; r <= 12; r++) {
-    for (let c = 33; c <= 42; c++) {
+    for (let c = 33; c <= 43; c++) {
       const colLet = worksheet.getColumn(c).letter;
       setCellStyle(worksheet.getCell(`${colLet}${r}`), {
         font: BLACK_BOLD_FONT,
@@ -273,13 +312,16 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
     }
   }
 
-  // Header Ringkasan Kolom AQ..AU: NILAI KEDISIPLINAN (Merged AQ11:AU12)
+  // Header Ringkasan Kolom AR..AV: NILAI KEDISIPLINAN (Merged AR11:AV12)
+  try { worksheet.unMergeCells('AQ11:AU12'); } catch {}
   try { worksheet.unMergeCells('AQ12:AU12'); } catch {}
-  try { worksheet.mergeCells('AQ11:AU12'); } catch {}
-  const aq11Cell = worksheet.getCell('AQ11');
-  aq11Cell.value = 'NILAI KEDISIPLINAN';
+  try { worksheet.unMergeCells('AR11:AV12'); } catch {}
+  try { worksheet.unMergeCells('AR12:AV12'); } catch {}
+  try { worksheet.mergeCells('AR11:AV12'); } catch {}
+  const ar11Cell = worksheet.getCell('AR11');
+  ar11Cell.value = 'NILAI KEDISIPLINAN';
   for (let r = 11; r <= 12; r++) {
-    for (let c = 43; c <= 47; c++) {
+    for (let c = 44; c <= 48; c++) {
       const colLet = worksheet.getColumn(c).letter;
       setCellStyle(worksheet.getCell(`${colLet}${r}`), {
         font: BLACK_BOLD_FONT,
@@ -290,12 +332,66 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
     }
   }
 
-  // Pastikan seluruh baris subheader ringkasan (13 s/d 16 untuk kolom AG..AU) memiliki border rapi
-  for (let r = 13; r <= 16; r++) {
-    for (let c = 33; c <= 47; c++) {
-      const colLet = worksheet.getColumn(c).letter;
-      const cell = worksheet.getCell(`${colLet}${r}`);
-      cell.border = DEFAULT_BORDER;
+  // Definisi & Formatting Kolom Subheader Ringkasan (Baris 13 s/d 16 untuk kolom AG..AV)
+  const summaryHeaders: {
+    col: string;
+    r14: string;
+    r15: string | null;
+    isDiscipline?: boolean;
+  }[] = [
+    { col: 'AG', r14: 'HARI KERJA', r15: 'HK' },
+    { col: 'AH', r14: 'HAK IZIN PAGI', r15: 'HIP' },
+    { col: 'AI', r14: 'HAK IZIN SIANG', r15: 'HIS' },
+    { col: 'AJ', r14: 'LATE / EARLIER', r15: 'LE' },
+    { col: 'AK', r14: 'ILL (NO LETTER)', r15: 'I' },
+    { col: 'AL', r14: 'ILL (WITH LETTER)', r15: 'IL' },
+    { col: 'AM', r14: 'PERMISSION', r15: 'P' },
+    { col: 'AN', r14: 'OTHER LEAVE', r15: 'OTL' },
+    { col: 'AO', r14: 'ANNUAL LEAVE', r15: 'AL' },
+    { col: 'AP', r14: 'DINAS LUAR', r15: 'DL' },
+    { col: 'AQ', r14: 'WITHOUT INFO', r15: 'A' },
+    { col: 'AR', r14: 'X', r15: null, isDiscipline: true },
+    { col: 'AS', r14: 'Y', r15: null, isDiscipline: true },
+    { col: 'AT', r14: 'PRESENTASI', r15: null, isDiscipline: true },
+    { col: 'AU', r14: 'SCORE 1', r15: null, isDiscipline: true },
+    { col: 'AV', r14: 'SCORE KEDISIPLINAN', r15: null, isDiscipline: true },
+  ];
+
+  for (const item of summaryHeaders) {
+    // Row 13: baris pemisah / subheader kosong rapi dengan border
+    const cell13 = worksheet.getCell(`${item.col}13`);
+    cell13.value = null;
+    cell13.border = DEFAULT_BORDER;
+
+    // Row 14: Label utama (misal: "LATE / EARLIER", "ILL (NO LETTER)", "X")
+    const cell14 = worksheet.getCell(`${item.col}14`);
+    cell14.value = item.r14;
+    setCellStyle(cell14, {
+      font: item.isDiscipline ? DISCIPLINE_HEADER_FONT : YELLOW_HEADER_FONT,
+      fill: item.isDiscipline ? DISCIPLINE_HEADER_FILL : YELLOW_HEADER_FILL,
+      border: DEFAULT_BORDER,
+      alignment: HEADER_ALIGNMENT,
+    });
+
+    // Row 15: Singkatan kode (misal: "LE", "I", "A", dsb.)
+    const cell15 = worksheet.getCell(`${item.col}15`);
+    cell15.value = item.r15;
+    setCellStyle(cell15, {
+      font: item.isDiscipline ? DISCIPLINE_HEADER_FONT : YELLOW_HEADER_FONT,
+      fill: item.isDiscipline ? DISCIPLINE_HEADER_FILL : YELLOW_HEADER_FILL,
+      border: DEFAULT_BORDER,
+      alignment: CENTER_ALIGNMENT,
+    });
+
+    // Row 16: Ringkasan total (AG16 berisi totalWorkingDays, yang lain kosong dengan border)
+    const cell16 = worksheet.getCell(`${item.col}16`);
+    if (item.col !== 'AG') {
+      cell16.value = null;
+      setCellStyle(cell16, {
+        fill: NONE_FILL,
+        border: DEFAULT_BORDER,
+        alignment: CENTER_ALIGNMENT,
+      });
     }
   }
 
@@ -444,7 +540,7 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
   const lastEmployeeRow = 17 + allEmployees.length - 1;
   for (let r = 17; r <= Math.max(140, lastEmployeeRow + 20); r++) {
     const row = worksheet.getRow(r);
-    for (let c = 1; c <= 48; c++) {
+    for (let c = 1; c <= 49; c++) {
       const cell = row.getCell(c);
       cell.value = null;
       setCellStyle(cell, {
@@ -636,30 +732,31 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
     // 6. SCORE KEDISIPLINAN / SCORE 2 (Bobot 20% dari Score 1: Skala 0.0 s/d 2.0)
     const scoreKedisiplinan = Math.round(score1 * 0.2 * 10) / 10;
 
-    // Tulis nilai hasil perhitungan ke kolom AG s/d AU (Rata tengah vertikal & horizontal, border seragam)
+    // Tulis nilai hasil perhitungan ke kolom AG s/d AV (Rata tengah vertikal & horizontal, border seragam)
     const calculatedColumns: [string, number | null, string?][] = [
       ['AG', hk],
       ['AH', countHIP],
       ['AI', countHIS],
-      ['AJ', countI],
-      ['AK', countIL],
-      ['AL', countPM],
-      ['AM', countOTL],
-      ['AN', countAL],
-      ['AO', countDL],
-      ['AP', countA],
-      ['AQ', scoreX],
-      ['AR', scoreY],
-      ['AS', persentase / 100, '0.0%'],
-      ['AT', score1, '0'],
-      ['AU', scoreKedisiplinan, '0.0'],
+      ['AJ', countLE],
+      ['AK', countI],
+      ['AL', countIL],
+      ['AM', countPM],
+      ['AN', countOTL],
+      ['AO', countAL],
+      ['AP', countDL],
+      ['AQ', countA],
+      ['AR', scoreX],
+      ['AS', scoreY],
+      ['AT', persentase / 100, '0.0%'],
+      ['AU', score1, '0'],
+      ['AV', scoreKedisiplinan, '0.0'],
     ];
 
     for (const [col, val, fmt] of calculatedColumns) {
       const cell = worksheet.getCell(`${col}${rowIdx}`);
       cell.value = val;
       setCellStyle(cell, {
-        font: (col === 'AG' || col === 'AS' || col === 'AU') ? BLACK_BOLD_FONT : BLACK_REGULAR_FONT,
+        font: (col === 'AG' || col === 'AT' || col === 'AV') ? BLACK_BOLD_FONT : BLACK_REGULAR_FONT,
         fill: NONE_FILL,
         border: DEFAULT_BORDER,
         alignment: CENTER_ALIGNMENT,

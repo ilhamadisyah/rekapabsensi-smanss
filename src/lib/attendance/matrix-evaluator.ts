@@ -133,8 +133,9 @@ export function evaluateMonthlyAttendanceMatrix(params: MatrixEvaluatorParams): 
   const datesWithLogs = Array.from(
     new Set(
       attendanceRecords
-        .filter((r) => r.tap_count > 0 || r.first_in !== null)
-        .map((r) => r.attendance_date)
+        .filter((r) => (r.tap_count && r.tap_count > 0) || r.first_in !== null)
+        .map((r) => r.attendance_date || (r as any).date)
+        .filter((d): d is string => Boolean(d && typeof d === 'string' && d.includes('-')))
     )
   ).sort();
 

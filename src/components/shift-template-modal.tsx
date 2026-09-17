@@ -568,7 +568,7 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                             type="number"
                             min={0}
                             max={1440}
-                            step={5}
+                            step={1}
                             value={formCheckInWindow}
                             onChange={(e) => {
                               const val = e.target.value;
@@ -652,7 +652,7 @@ export const ShiftTemplateModal: React.FC<ShiftTemplateModalProps> = ({
                             type="number"
                             min={0}
                             max={1440}
-                            step={5}
+                            step={1}
                             value={formCheckOutWindow}
                             onChange={(e) => {
                               const val = e.target.value;

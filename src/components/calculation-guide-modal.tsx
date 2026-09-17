@@ -31,13 +31,16 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
   // State untuk Simulasi Hitung Nilai
   const [calcWorkingDays, setCalcWorkingDays] = useState<number>(21);
   const [calcAlpha, setCalcAlpha] = useState<number>(1);
+  const [calcLE, setCalcLE] = useState<number>(0);
   const [calcHIP, setCalcHIP] = useState<number>(1);
   const [calcHIS, setCalcHIS] = useState<number>(0);
   const [calcI, setCalcI] = useState<number>(0);
 
-  // Perhitungan Hasil Simulasi (HIP dan HIS bebas denda / 0 poin pengurang)
+  // Perhitungan Hasil Simulasi:
+  // HK: Hanya berkurang oleh Sakit Tanpa Surat (I) dan Alpa (A). LE, HIP, dan HIS tetap dihitung hadir bekerja.
   const calcHK = Math.max(0, calcWorkingDays - calcI - calcAlpha);
-  const calcX = Math.max(0, calcHK * 2 - calcI * 1 - calcAlpha * 3);
+  // Nilai X: (HK * 2) - LE(1) - I(1) - A(3). HIP dan HIS bebas denda (0 poin pengurang).
+  const calcX = Math.max(0, calcHK * 2 - calcLE * 1 - calcI * 1 - calcAlpha * 3);
   const calcY = calcWorkingDays * 2;
   const calcPct = calcY > 0 ? Math.min(100, Math.max(0, Math.round((calcX / calcY) * 10000) / 100)) : 0;
 
@@ -62,7 +65,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-slate-600">
-                Laporan rekapitulasi kehadiran resmi SMAN Sumatera Selatan terbagi menjadi 4 bagian utama yang tersusun rapi dari Kolom A sampai AU:
+                Laporan rekapitulasi kehadiran resmi SMAN Sumatera Selatan terbagi menjadi 4 bagian utama yang tersusun rapi dari Kolom A sampai AV:
               </p>
             </div>
 
@@ -153,49 +156,49 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     <td className="p-3 text-emerald-600 font-semibold">Bebas denda (0 poin). Hari kerja (HK) tetap dihitung hadir.</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-bold text-slate-800">Kolom C s/d AF</td>
+                    <td className="p-3 font-bold text-slate-800">Kolom AJ</td>
                     <td className="p-3 font-bold text-slate-900">LE (Late / Early)</td>
                     <td className="p-3 text-slate-600">Late Arrival or Early Departure: Terlambat datang atau pulang lebih awal (salah satunya saja atau keduanya).</td>
                     <td className="p-3 text-amber-700 font-semibold">Denda 1 poin (-1 poin pada Nilai X). Hari kerja (HK) tetap dihitung hadir karena pegawai masuk bekerja.</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-bold text-slate-800">Kolom AJ</td>
+                    <td className="p-3 font-bold text-slate-800">Kolom AK</td>
                     <td className="p-3 font-bold text-slate-900">I (Sakit Tanpa Surat)</td>
                     <td className="p-3 text-slate-600">Sakit tetapi tidak melampirkan surat keterangan dokter.</td>
                     <td className="p-3 text-slate-500">Dipotong 1 poin dan mengurangi jumlah hari kerja (HK) sebanyak 1 hari.</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-bold text-slate-800">Kolom AK</td>
+                    <td className="p-3 font-bold text-slate-800">Kolom AL</td>
                     <td className="p-3 font-bold text-slate-900">IL (Sakit Surat Dokter)</td>
                     <td className="p-3 text-slate-600">Sakit dengan melampirkan surat dokter yang sah.</td>
                     <td className="p-3 text-slate-500">Nilai utuh (tidak dipotong) dan hari kerja (HK) tetap dihitung hadir.</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-bold text-slate-800">Kolom AL</td>
+                    <td className="p-3 font-bold text-slate-800">Kolom AM</td>
                     <td className="p-3 font-bold text-slate-900">PM / P (Izin Resmi)</td>
                     <td className="p-3 text-slate-600">Izin keperluan tertulis yang disetujui Kepala Sekolah.</td>
                     <td className="p-3 text-slate-500">Nilai utuh (tidak dipotong) dan hari kerja (HK) tetap dihitung hadir.</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-bold text-slate-800">Kolom AM</td>
+                    <td className="p-3 font-bold text-slate-800">Kolom AN</td>
                     <td className="p-3 font-bold text-slate-900">OTL (Cuti Lainnya)</td>
                     <td className="p-3 text-slate-600">Cuti resmi seperti cuti melahirkan, cuti alasan penting keluarga, dll.</td>
                     <td className="p-3 text-slate-500">Nilai utuh (tidak dipotong) dan hari kerja (HK) tetap dihitung hadir.</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-bold text-slate-800">Kolom AN</td>
+                    <td className="p-3 font-bold text-slate-800">Kolom AO</td>
                     <td className="p-3 font-bold text-slate-900">AL (Cuti Tahunan)</td>
                     <td className="p-3 text-slate-600">Hak cuti tahunan resmi pegawai yang telah disetujui.</td>
                     <td className="p-3 text-slate-500">Nilai utuh (tidak dipotong) dan hari kerja (HK) tetap dihitung hadir.</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-bold text-slate-800">Kolom AO</td>
+                    <td className="p-3 font-bold text-slate-800">Kolom AP</td>
                     <td className="p-3 font-bold text-slate-900">DL (Dinas Luar)</td>
                     <td className="p-3 text-slate-600">Menjalankan tugas kedinasan di luar sekolah disertai Surat Tugas (ST).</td>
                     <td className="p-3 text-slate-500">Nilai utuh (tidak dipotong) dan hari kerja (HK) tetap dihitung hadir.</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-bold text-slate-800">Kolom AP</td>
+                    <td className="p-3 font-bold text-slate-800">Kolom AQ</td>
                     <td className="p-3 font-bold text-slate-900">A (Alpa / Tanpa Keterangan)</td>
                     <td className="p-3 text-slate-600">Tidak masuk bekerja tanpa pemberitahuan atau tanpa izin resmi.</td>
                     <td className="p-3 text-slate-500">Pengurangan berat: dipotong 3 poin dan mengurangi hari kerja (HK) 1 hari.</td>
@@ -206,7 +209,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     <td rowSpan={5} className="p-3 font-bold text-purple-700 align-top bg-purple-50/20 border-r border-slate-100">
                       Bagian 4: Penilaian Nilai &amp; Kedisiplinan
                     </td>
-                    <td className="p-3 font-bold text-slate-800">Kolom AQ</td>
+                    <td className="p-3 font-bold text-slate-800">Kolom AR</td>
                     <td className="p-3 font-bold text-slate-900">Nilai X</td>
                     <td className="p-3 text-slate-600">Total poin nilai kehadiran bersih yang berhasil dikumpulkan pegawai.</td>
                     <td className="p-3 text-slate-500">
@@ -214,7 +217,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-bold text-slate-800">Kolom AR</td>
+                    <td className="p-3 font-bold text-slate-800">Kolom AS</td>
                     <td className="p-3 font-bold text-slate-900">Nilai Y</td>
                     <td className="p-3 text-slate-600">Nilai maksimal jika pegawai hadir lengkap 100% tanpa ada potongan.</td>
                     <td className="p-3 text-slate-500">
@@ -222,7 +225,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-bold text-slate-800">Kolom AS</td>
+                    <td className="p-3 font-bold text-slate-800">Kolom AT</td>
                     <td className="p-3 font-bold text-slate-900">Persentase (%)</td>
                     <td className="p-3 text-slate-600">Tingkat kehadiran pegawai dalam bentuk persen (%).</td>
                     <td className="p-3 text-slate-500">
@@ -230,7 +233,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-bold text-slate-800">Kolom AT</td>
+                    <td className="p-3 font-bold text-slate-800">Kolom AU</td>
                     <td className="p-3 font-bold text-slate-900">Score 1 (Nilai Kehadiran)</td>
                     <td className="p-3 text-slate-600">Nilai prestasi kehadiran pegawai dalam skala angka 1 sampai 10.</td>
                     <td className="p-3 text-slate-500">
@@ -238,7 +241,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
-                    <td className="p-3 font-bold text-slate-800">Kolom AU</td>
+                    <td className="p-3 font-bold text-slate-800">Kolom AV</td>
                     <td className="p-3 font-bold text-slate-900">Score 2 (Kedisiplinan SKP)</td>
                     <td className="p-3 text-slate-600">Nilai kedisiplinan berbobot 20% untuk dimasukkan ke laporan Sasaran Kinerja Pegawai (SKP).</td>
                     <td className="p-3 text-slate-500">
@@ -288,7 +291,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-rose-700">A</td>
                     <td className="p-3 font-semibold text-slate-900">Alpa / Tanpa Keterangan</td>
-                    <td className="p-3 text-center font-bold text-slate-700">Kolom AP</td>
+                    <td className="p-3 text-center font-bold text-slate-700">Kolom AQ</td>
                     <td className="p-3 text-slate-600">Tidak masuk bekerja tanpa menyerahkan surat izin atau pemberitahuan</td>
                     <td className="p-3 font-bold text-rose-600">Dipotong 3 Poin (Sanksi Berat)</td>
                     <td className="p-3 text-rose-700 font-semibold">Hari Kerja Berkurang 1 Hari</td>
@@ -310,9 +313,17 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     <td className="p-3 text-slate-600">Tetap dihitung hadir bekerja</td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
+                    <td className="p-3 font-bold text-amber-700">LE</td>
+                    <td className="p-3 font-semibold text-slate-900">Terlambat / Pulang Awal (Late / Early)</td>
+                    <td className="p-3 text-center font-bold text-slate-700">Kolom AJ</td>
+                    <td className="p-3 text-slate-600">Terlambat masuk atau pulang mendahului jam kerja tanpa surat izin</td>
+                    <td className="p-3 font-bold text-amber-600">Dipotong 1 Poin (-1 Poin Nilai X)</td>
+                    <td className="p-3 text-slate-600">Tetap dihitung hadir bekerja</td>
+                  </tr>
+                  <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-amber-700">I</td>
                     <td className="p-3 font-semibold text-slate-900">Sakit Tanpa Surat Dokter</td>
-                    <td className="p-3 text-center font-bold text-slate-700">Kolom AJ</td>
+                    <td className="p-3 text-center font-bold text-slate-700">Kolom AK</td>
                     <td className="p-3 text-slate-600">Tidak masuk karena sakit tetapi tidak melampirkan surat dokter</td>
                     <td className="p-3 font-bold text-amber-600">Dipotong 1 Poin</td>
                     <td className="p-3 text-rose-700 font-semibold">Hari Kerja Berkurang 1 Hari</td>
@@ -320,7 +331,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-blue-700">IL</td>
                     <td className="p-3 font-semibold text-slate-900">Sakit Dengan Surat Dokter</td>
-                    <td className="p-3 text-center font-bold text-slate-700">Kolom AK</td>
+                    <td className="p-3 text-center font-bold text-slate-700">Kolom AL</td>
                     <td className="p-3 text-slate-600">Melampirkan surat keterangan sakit resmi dari dokter/klinik</td>
                     <td className="p-3 font-bold text-blue-600">Nilai Utuh (Tidak Dipotong)</td>
                     <td className="p-3 text-slate-600">Tetap dihitung hadir bekerja</td>
@@ -328,7 +339,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-blue-700">PM / P</td>
                     <td className="p-3 font-semibold text-slate-900">Izin Keperluan Resmi</td>
-                    <td className="p-3 text-center font-bold text-slate-700">Kolom AL</td>
+                    <td className="p-3 text-center font-bold text-slate-700">Kolom AM</td>
                     <td className="p-3 text-slate-600">Ada surat permohonan izin tertulis yang disetujui Kepala Sekolah</td>
                     <td className="p-3 font-bold text-blue-600">Nilai Utuh (Tidak Dipotong)</td>
                     <td className="p-3 text-slate-600">Tetap dihitung hadir bekerja</td>
@@ -336,7 +347,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-blue-700">OTL</td>
                     <td className="p-3 font-semibold text-slate-900">Cuti Khusus / Alasan Penting</td>
-                    <td className="p-3 text-center font-bold text-slate-700">Kolom AM</td>
+                    <td className="p-3 text-center font-bold text-slate-700">Kolom AN</td>
                     <td className="p-3 text-slate-600">Cuti melahirkan, cuti alasan penting keluarga, atau cuti besar</td>
                     <td className="p-3 font-bold text-blue-600">Nilai Utuh (Tidak Dipotong)</td>
                     <td className="p-3 text-slate-600">Tetap dihitung hadir bekerja</td>
@@ -344,7 +355,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-blue-700">AL</td>
                     <td className="p-3 font-semibold text-slate-900">Cuti Tahunan</td>
-                    <td className="p-3 text-center font-bold text-slate-700">Kolom AN</td>
+                    <td className="p-3 text-center font-bold text-slate-700">Kolom AO</td>
                     <td className="p-3 text-slate-600">Hak cuti tahunan pegawai yang telah diajukan dan disetujui</td>
                     <td className="p-3 font-bold text-blue-600">Nilai Utuh (Tidak Dipotong)</td>
                     <td className="p-3 text-slate-600">Tetap dihitung hadir bekerja</td>
@@ -352,7 +363,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-blue-700">DL</td>
                     <td className="p-3 font-semibold text-slate-900">Dinas Luar Sekolah</td>
-                    <td className="p-3 text-center font-bold text-slate-700">Kolom AO</td>
+                    <td className="p-3 text-center font-bold text-slate-700">Kolom AP</td>
                     <td className="p-3 text-slate-600">Bertugas kedinasan di luar sekolah dengan membawa Surat Tugas (ST) resmi</td>
                     <td className="p-3 font-bold text-blue-600">Nilai Utuh (Tidak Dipotong)</td>
                     <td className="p-3 text-slate-600">Tetap dihitung hadir bekerja</td>
@@ -409,20 +420,20 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     <td className="p-3 font-bold text-slate-900">Langkah 2</td>
                     <td className="p-3 font-semibold text-slate-800">
                       Nilai Bersih Yang Didapat (Nilai X)<br />
-                      <span className="text-slate-500 text-[11px]">Kolom AQ</span>
+                      <span className="text-slate-500 text-[11px]">Kolom AR</span>
                     </td>
                     <td className="p-3 font-semibold text-blue-700 bg-slate-50/50">
-                      (Hari Kerja Nyata &times; 2 poin) dikurangi potongan sakit tanpa surat (I) dan alpa (A)
+                      (Hari Kerja Nyata &times; 2 poin) dikurangi denda terlambat/pulang cepat (LE), sakit tanpa surat (I), dan alpa (A)
                     </td>
                     <td className="p-3 text-slate-600">
-                      Setiap hari kerja bernilai 2 poin. Sakit tanpa surat (I) dipotong 1 poin, dan alpa dipotong 3 poin. Izin Pagi (HIP) dan Izin Siang (HIS) bebas denda (0 poin / tidak memotong nilai).
+                      Setiap hari kerja bernilai 2 poin. Terlambat datang atau pulang mendahului jam kerja tanpa izin (LE) dipotong 1 poin, sakit tanpa surat (I) dipotong 1 poin, dan alpa dipotong 3 poin. Izin Pagi (HIP) dan Izin Siang (HIS) bebas denda (0 poin / tidak memotong nilai). Hari Kerja (HK) untuk LE tetap dihitung hadir bekerja.
                     </td>
                   </tr>
                   <tr className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3 font-bold text-slate-900">Langkah 3</td>
                     <td className="p-3 font-semibold text-slate-800">
                       Nilai Maksimal &amp; Persentase (%)<br />
-                      <span className="text-slate-500 text-[11px]">Kolom AR &amp; AS</span>
+                      <span className="text-slate-500 text-[11px]">Kolom AS &amp; AT</span>
                     </td>
                     <td className="p-3 font-semibold text-blue-700 bg-slate-50/50">
                       Nilai Maksimal = Hari Kerja Bulan Ini &times; 2 poin<br />
@@ -436,7 +447,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     <td className="p-3 font-bold text-slate-900">Langkah 4</td>
                     <td className="p-3 font-semibold text-slate-800">
                       Nilai Kehadiran &amp; Nilai Kedisiplinan SKP<br />
-                      <span className="text-slate-500 text-[11px]">Kolom AT &amp; AU</span>
+                      <span className="text-slate-500 text-[11px]">Kolom AU &amp; AV</span>
                     </td>
                     <td className="p-3 font-semibold text-blue-700 bg-slate-50/50">
                       Score 1 = Nilai skala 1 sampai 10<br />
@@ -543,7 +554,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                 <div className="bg-slate-100/80 px-4 py-2.5 border-b border-slate-200 font-bold text-xs text-slate-700">
                   Isian Contoh Kehadiran Pegawai
                 </div>
-                <div className="p-4 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3 bg-white text-xs">
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 bg-white text-xs">
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">
                       Hari Kerja Bulan Ini
@@ -557,6 +568,20 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                       className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                     />
                     <span className="text-[10px] text-slate-400 mt-0.5 block">Hari aktif sekolah (contoh: 21)</span>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      Terlambat / Pulang Cepat (LE)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={calcLE}
+                      onChange={(e) => setCalcLE(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-amber-800 font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    />
+                    <span className="text-[10px] text-amber-700 font-semibold mt-0.5 block">Dipotong 1 poin, HK tetap hadir</span>
                   </div>
 
                   <div>
@@ -750,35 +775,37 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                     </tr>
                     <tr className="hover:bg-slate-50/80 transition-colors">
                       <td className="p-3 font-bold text-slate-900">Nilai Bersih (Nilai X)</td>
-                      <td className="p-3 text-center font-bold text-slate-700">Kolom AQ</td>
-                      <td className="p-3 text-slate-600">({calcHK} hari &times; 2) dikurangi potongan denda ({calcI + calcAlpha * 3} poin) — HIP &amp; HIS bebas denda</td>
+                      <td className="p-3 text-center font-bold text-slate-700">Kolom AR</td>
+                      <td className="p-3 text-slate-600">
+                        ({calcHK} hari &times; 2) dikurangi potongan denda ({calcLE * 1 + calcI * 1 + calcAlpha * 3} poin){calcLE > 0 ? ` [LE: -${calcLE} poin]` : ''} — LE denda 1 poin, HIP &amp; HIS bebas denda
+                      </td>
                       <td className="p-3 text-center font-black text-blue-700 text-sm">{calcX} Poin</td>
                       <td className="p-3 text-slate-500">Poin bersih yang berhasil dikumpulkan</td>
                     </tr>
                     <tr className="hover:bg-slate-50/80 transition-colors">
                       <td className="p-3 font-bold text-slate-900">Nilai Maksimal (Nilai Y)</td>
-                      <td className="p-3 text-center font-bold text-slate-700">Kolom AR</td>
+                      <td className="p-3 text-center font-bold text-slate-700">Kolom AS</td>
                       <td className="p-3 text-slate-600">{calcWorkingDays} hari kerja &times; 2 poin</td>
                       <td className="p-3 text-center font-black text-slate-700 text-sm">{calcY} Poin</td>
                       <td className="p-3 text-slate-500">Poin tertinggi jika hadir lengkap 100%</td>
                     </tr>
                     <tr className="hover:bg-slate-50/80 transition-colors">
                       <td className="p-3 font-bold text-slate-900">Persentase Kehadiran (%)</td>
-                      <td className="p-3 text-center font-bold text-slate-700">Kolom AS</td>
+                      <td className="p-3 text-center font-bold text-slate-700">Kolom AT</td>
                       <td className="p-3 text-slate-600">({calcX} &divide; {calcY}) &times; 100%</td>
                       <td className="p-3 text-center font-black text-emerald-700 text-sm">{calcPct.toFixed(1)}%</td>
                       <td className="p-3 text-slate-500">Tingkat kehadiran kerja bulan ini</td>
                     </tr>
                     <tr className="hover:bg-slate-50/80 transition-colors bg-blue-50/20">
                       <td className="p-3 font-bold text-slate-900">Score 1 (Nilai Kehadiran)</td>
-                      <td className="p-3 text-center font-bold text-slate-700">Kolom AT</td>
+                      <td className="p-3 text-center font-bold text-slate-700">Kolom AU</td>
                       <td className="p-3 text-slate-600">Sesuai pedoman persentase (skala nilai 1 sampai 10)</td>
                       <td className="p-3 text-center font-black text-slate-900 text-base">{calcScore1}</td>
                       <td className="p-3 font-semibold text-blue-800">Nilai Prestasi Kehadiran (Skala 1 s/d 10)</td>
                     </tr>
                     <tr className="hover:bg-slate-50/80 transition-colors bg-blue-50/30">
                       <td className="p-3 font-bold text-blue-900">Score 2 (Kedisiplinan SKP)</td>
-                      <td className="p-3 text-center font-bold text-blue-900">Kolom AU</td>
+                      <td className="p-3 text-center font-bold text-blue-900">Kolom AV</td>
                       <td className="p-3 text-slate-600">Score 1 dikali bobot 20%</td>
                       <td className="p-3 text-center font-black text-blue-700 text-lg">{calcScore2.toFixed(1)}</td>
                       <td className="p-3 font-bold text-blue-900">Nilai Yang Dimasukkan ke SKP (Maksimal 2.0)</td>
@@ -888,6 +915,24 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                       2.0 vs 1.6
                     </td>
                     <td className="p-3 font-semibold text-purple-700">Pentingnya Surat Dokter</td>
+                  </tr>
+
+                  <tr className="hover:bg-slate-50/80 transition-colors">
+                    <td className="p-3 font-bold text-slate-900">
+                      Kasus 5: Terlambat / Pulang Cepat (LE)<br />
+                      <span className="text-[11px] font-normal text-slate-500">Terlambat Datang atau Pulang Cepat Tanpa Izin</span>
+                    </td>
+                    <td className="p-3 text-slate-600">
+                      Masuk bekerja setiap hari (21 hari kerja), namun tercatat datang terlambat atau pulang mendahului jam kerja 2 kali (LE = 2). Tidak pernah alpa.
+                    </td>
+                    <td className="p-3 text-[11px] text-slate-700">
+                      Hari Kerja: Tetap 21 hari penuh (tidak berkurang).<br />
+                      Nilai: (21 &times; 2) dikurangi denda 2 poin (2 &times; 1) = <strong>40 Poin</strong> dari 42 poin.
+                    </td>
+                    <td className="p-3 text-center font-black text-emerald-700">95.2%</td>
+                    <td className="p-3 text-center font-black text-slate-900">9</td>
+                    <td className="p-3 text-center font-black text-blue-700">1.8</td>
+                    <td className="p-3 font-semibold text-emerald-700">Sangat Baik (Kena Denda 1 Poin per LE)</td>
                   </tr>
                 </tbody>
               </table>
@@ -1152,7 +1197,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
         {/* BAGIAN I: SUSUNAN & ARTI KOLOM LAPORAN */}
         <div className="mb-5">
           <div className="font-bold text-[9.5pt] uppercase text-slate-900 mb-1.5 pb-1 border-b border-slate-400 print-heading">
-            I. Susunan &amp; Arti Kolom Laporan Rekapitulasi (Kolom A s/d AU)
+            I. Susunan &amp; Arti Kolom Laporan Rekapitulasi (Kolom A s/d AV)
           </div>
           <table className="print-table">
             <thead>
@@ -1200,7 +1245,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
               </tr>
 
               <tr>
-                <td rowSpan={10} className="font-bold">3. Ringkasan Hari &amp; Izin</td>
+                <td rowSpan={11} className="font-bold">3. Ringkasan Hari &amp; Izin</td>
                 <td className="font-semibold">Kolom AG</td>
                 <td className="font-bold">HK</td>
                 <td>Hari kerja nyata yang dihadiri</td>
@@ -1220,42 +1265,48 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
               </tr>
               <tr>
                 <td className="font-semibold">Kolom AJ</td>
+                <td className="font-bold">LE</td>
+                <td>Late / Earlier (Terlambat/Pulang Awal)</td>
+                <td>Denda -1 poin Nilai X, HK tetap hadir</td>
+              </tr>
+              <tr>
+                <td className="font-semibold">Kolom AK</td>
                 <td className="font-bold">I</td>
                 <td>Sakit Tanpa Surat Dokter</td>
                 <td>Denda -1 poin dan mengurangi HK (-1 hari)</td>
               </tr>
               <tr>
-                <td className="font-semibold">Kolom AK</td>
+                <td className="font-semibold">Kolom AL</td>
                 <td className="font-bold">IL</td>
                 <td>Sakit Dengan Surat Dokter Sah</td>
                 <td>Nilai utuh (bebas denda), HK tetap hadir</td>
               </tr>
               <tr>
-                <td className="font-semibold">Kolom AL</td>
+                <td className="font-semibold">Kolom AM</td>
                 <td className="font-bold">PM / P</td>
                 <td>Izin Keperluan Resmi</td>
                 <td>Disetujui Kepala Sekolah, bebas denda</td>
               </tr>
               <tr>
-                <td className="font-semibold">Kolom AM</td>
+                <td className="font-semibold">Kolom AN</td>
                 <td className="font-bold">OTL</td>
                 <td>Cuti Khusus / Alasan Penting</td>
                 <td>Cuti resmi yang sah, bebas denda</td>
               </tr>
               <tr>
-                <td className="font-semibold">Kolom AN</td>
+                <td className="font-semibold">Kolom AO</td>
                 <td className="font-bold">AL</td>
                 <td>Cuti Tahunan</td>
                 <td>Hak cuti resmi tahunan, bebas denda</td>
               </tr>
               <tr>
-                <td className="font-semibold">Kolom AO</td>
+                <td className="font-semibold">Kolom AP</td>
                 <td className="font-bold">DL</td>
                 <td>Dinas Luar Sekolah</td>
                 <td>Melampirkan Surat Tugas (ST), bebas denda</td>
               </tr>
               <tr>
-                <td className="font-semibold">Kolom AP</td>
+                <td className="font-semibold">Kolom AQ</td>
                 <td className="font-bold">A</td>
                 <td>Alpa / Tanpa Keterangan</td>
                 <td>Denda berat -3 poin dan mengurangi HK (-1 hari)</td>
@@ -1263,31 +1314,31 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
 
               <tr>
                 <td rowSpan={5} className="font-bold">4. Penilaian Kedisiplinan</td>
-                <td className="font-semibold">Kolom AQ</td>
+                <td className="font-semibold">Kolom AR</td>
                 <td className="font-bold">Nilai X</td>
                 <td>Total skor poin bersih perolehan</td>
                 <td>(HK &times; 2 poin) dikurangi potongan denda</td>
               </tr>
               <tr>
-                <td className="font-semibold">Kolom AR</td>
+                <td className="font-semibold">Kolom AS</td>
                 <td className="font-bold">Nilai Y</td>
                 <td>Total poin maksimal jika 100%</td>
                 <td>Total hari kerja sebulan &times; 2 poin</td>
               </tr>
               <tr>
-                <td className="font-semibold">Kolom AS</td>
+                <td className="font-semibold">Kolom AT</td>
                 <td className="font-bold">Persentase (%)</td>
                 <td>Tingkat persentase kehadiran</td>
                 <td>(Nilai X &divide; Nilai Y) &times; 100%</td>
               </tr>
               <tr>
-                <td className="font-semibold">Kolom AT</td>
+                <td className="font-semibold">Kolom AU</td>
                 <td className="font-bold">Score 1</td>
                 <td>Nilai prestasi kehadiran (skala 10)</td>
                 <td>Angka bulat resmi: 10, 9, 8, 7, 6, atau 5</td>
               </tr>
               <tr>
-                <td className="font-semibold">Kolom AU</td>
+                <td className="font-semibold">Kolom AV</td>
                 <td className="font-bold">Score 2 (SKP)</td>
                 <td>Nilai kedisiplinan berbobot 20%</td>
                 <td>Score 1 &times; 20% (skala nilai 0.0 s/d 2.0)</td>
@@ -1346,9 +1397,17 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                 <td>Tetap terhitung hadir</td>
               </tr>
               <tr>
+                <td className="font-bold">LE</td>
+                <td>Late / Earlier (Terlambat / Pulang Awal)</td>
+                <td className="text-center font-bold">Kolom AJ</td>
+                <td>Terlambat datang atau pulang awal tanpa surat izin resmi</td>
+                <td>Dipotong 1 Poin</td>
+                <td>Tetap terhitung hadir</td>
+              </tr>
+              <tr>
                 <td className="font-bold">I</td>
                 <td>Sakit Tanpa Surat Dokter</td>
-                <td className="text-center font-bold">Kolom AJ</td>
+                <td className="text-center font-bold">Kolom AK</td>
                 <td>Tidak hadir sakit tetapi tidak menyerahkan surat dokter</td>
                 <td>Dipotong 1 Poin</td>
                 <td>Berkurang (-1 Hari)</td>
@@ -1356,7 +1415,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
               <tr>
                 <td className="font-bold">IL</td>
                 <td>Sakit Surat Dokter Sah</td>
-                <td className="text-center font-bold">Kolom AK</td>
+                <td className="text-center font-bold">Kolom AL</td>
                 <td>Melampirkan surat keterangan sakit resmi dari dokter/klinik</td>
                 <td>Bebas Potongan (0)</td>
                 <td>Tetap terhitung hadir</td>
@@ -1364,7 +1423,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
               <tr>
                 <td className="font-bold">PM / P</td>
                 <td>Izin Keperluan Resmi</td>
-                <td className="text-center font-bold">Kolom AL</td>
+                <td className="text-center font-bold">Kolom AM</td>
                 <td>Surat permohonan tertulis yang disetujui Kepala Sekolah</td>
                 <td>Bebas Potongan (0)</td>
                 <td>Tetap terhitung hadir</td>
@@ -1372,7 +1431,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
               <tr>
                 <td className="font-bold">OTL</td>
                 <td>Cuti Khusus / Alasan Penting</td>
-                <td className="text-center font-bold">Kolom AM</td>
+                <td className="text-center font-bold">Kolom AN</td>
                 <td>Cuti melahirkan, cuti alasan penting keluarga mendesak</td>
                 <td>Bebas Potongan (0)</td>
                 <td>Tetap terhitung hadir</td>
@@ -1380,7 +1439,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
               <tr>
                 <td className="font-bold">AL</td>
                 <td>Cuti Tahunan</td>
-                <td className="text-center font-bold">Kolom AN</td>
+                <td className="text-center font-bold">Kolom AO</td>
                 <td>Hak cuti tahunan resmi yang telah disetujui pimpinan</td>
                 <td>Bebas Potongan (0)</td>
                 <td>Tetap terhitung hadir</td>
@@ -1388,7 +1447,7 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
               <tr>
                 <td className="font-bold">DL</td>
                 <td>Dinas Luar Sekolah</td>
-                <td className="text-center font-bold">Kolom AO</td>
+                <td className="text-center font-bold">Kolom AP</td>
                 <td>Tugas luar sekolah berlandaskan Surat Tugas (ST) resmi</td>
                 <td>Bebas Potongan (0)</td>
                 <td>Tetap terhitung hadir</td>
@@ -1428,19 +1487,19 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
               </tr>
               <tr>
                 <td className="font-bold">Langkah 2</td>
-                <td>Nilai Bersih (Nilai X) - Kolom AQ</td>
-                <td className="font-semibold">(HK &times; 2) - denda (I + A&times;3) [HIP &amp; HIS bebas denda]</td>
+                <td>Nilai Bersih (Nilai X) - Kolom AR</td>
+                <td className="font-semibold">(HK &times; 2) - denda (LE + I + A&times;3) [LE denda 1 poin, HIP &amp; HIS bebas denda]</td>
                 <td>Tiap hari kerja bernilai 2 poin dikurangi potongan</td>
               </tr>
               <tr>
                 <td className="font-bold">Langkah 3</td>
-                <td>Maksimal (Y) &amp; Persen (%) - Kolom AR &amp; AS</td>
+                <td>Maksimal (Y) &amp; Persen (%) - Kolom AS &amp; AT</td>
                 <td className="font-semibold">Y = HK Bulan Ini &times; 2 | % = (X &divide; Y) &times; 100%</td>
                 <td>Rasio perolehan poin riil terhadap poin maksimal</td>
               </tr>
               <tr>
                 <td className="font-bold">Langkah 4</td>
-                <td>Score 1 &amp; Score 2 - Kolom AT &amp; AU</td>
+                <td>Score 1 &amp; Score 2 - Kolom AU &amp; AV</td>
                 <td className="font-semibold">Score 1 = Skala 1 s/d 10 | Score 2 = Score 1 &times; 20%</td>
                 <td>Score 2 (maksimal 2.0) dimasukkan ke laporan SKP</td>
               </tr>
@@ -1562,6 +1621,14 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                 <td className="text-center font-bold">100% vs 85.7%</td>
                 <td className="text-center font-bold">10 vs 8</td>
                 <td className="text-center font-bold">2.0 vs 1.6</td>
+              </tr>
+              <tr>
+                <td className="font-bold">Kasus 5: Terlambat/Pulang Cepat (LE)</td>
+                <td>Masuk 21 hari, terlambat/pulang cepat 2 kali (LE=2)</td>
+                <td>HK = 21 | X = (21&times;2) - 2 = 40 poin</td>
+                <td className="text-center font-bold">95.2%</td>
+                <td className="text-center font-bold">9</td>
+                <td className="text-center font-bold">1.8</td>
               </tr>
             </tbody>
           </table>
