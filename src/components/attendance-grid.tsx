@@ -274,6 +274,10 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
           permissionCount++;
           if (rec.final_status === 'HIP') lateCount++;
           if (rec.final_status === 'HIS') earlyCount++;
+          if (rec.final_status === 'LE') {
+            lateCount++;
+            earlyCount++;
+          }
           if (rec.final_status === 'DL') dutyCount++;
           if (rec.final_status === 'I' || rec.final_status === 'IL') sickCount++;
         }
@@ -285,6 +289,10 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
             permissionCount++;
             if (rec.final_status === 'HIP') lateCount++;
             if (rec.final_status === 'HIS') earlyCount++;
+            if (rec.final_status === 'LE') {
+              lateCount++;
+              earlyCount++;
+            }
             if (rec.final_status === 'DL') dutyCount++;
             if (rec.final_status === 'I' || rec.final_status === 'IL') sickCount++;
           }
@@ -1155,6 +1163,13 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
+            <span className="inline-block w-5 h-4 rounded bg-[#FEF3C7] border border-amber-300 text-amber-900 text-center font-bold text-[9px] leading-4">
+              LE
+            </span>
+            <span className="text-slate-600 font-semibold text-amber-800">Late & Early (-1 Poin)</span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
             <span className="inline-block w-5 h-4 rounded bg-[#FFEB9C] border border-[#ECC767] text-[#9C6500] text-center font-bold text-[10px] leading-4">
               DL
             </span>
@@ -1255,6 +1270,8 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
             return { label: 'Izin Pagi', badge: 'bg-amber-50 text-amber-700 border-amber-200' };
           case 'HIS':
             return { label: 'Izin Siang', badge: 'bg-amber-50 text-amber-700 border-amber-200' };
+          case 'LE':
+            return { label: 'Late & Early (-1 Poin)', badge: 'bg-amber-100 text-amber-900 border-amber-300' };
           default:
             return { label: 'Belum Terekap', badge: 'bg-slate-100 text-slate-500 border-slate-200' };
         }

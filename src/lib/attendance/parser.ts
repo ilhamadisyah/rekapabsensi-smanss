@@ -507,7 +507,12 @@ export function evaluateAttendanceStatus(
       return { systemStatus: 'HADIR', finalStatus: 'HADIR' };
     }
 
-    // Terlambat atau pulang lebih awal dari jam wajib shift -> ALPA (A)
+    // Datang terlambat DAN pulang lebih awal pada shift malam -> LE (Late & Early: -1 Poin)
+    if (!isOnTimeIn && !isFullOut) {
+      return { systemStatus: 'HADIR', finalStatus: 'LE' };
+    }
+
+    // Terlambat saja atau pulang lebih awal saja dari jam wajib shift -> ALPA (A)
     return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
   }
 
@@ -525,8 +530,13 @@ export function evaluateAttendanceStatus(
     return { systemStatus: 'HADIR', finalStatus: 'HADIR' };
   }
 
-  // Kasus 2: Datang terlambat (firstIn > checkInLimit) ATAU pulang lebih cepat sebelum jam kerja selesai (lastOut < checkOutLimit) -> ALPA (A)
-  // Aturan ketat sekolah (FR-04): Pokoknya telat = ALPA (A), tanpa toleransi otomatis menjadi izin
+  // Kasus 2: Datang terlambat (firstIn > checkInLimit) DAN pulang lebih cepat sebelum jam kerja selesai (lastOut < checkOutLimit) -> LE (Late & Early: -1 Poin)
+  if (!isOnTimeIn && !isFullDayOut) {
+    return { systemStatus: 'HADIR', finalStatus: 'LE' };
+  }
+
+  // Kasus 3: Datang terlambat saja ATAU pulang lebih cepat saja -> ALPA (A)
+  // Aturan ketat sekolah (FR-04): Telat saja atau pulang cepat saja tanpa izin = ALPA (A) sebelum diverifikasi menjadi HIP / HIS oleh admin
   return { systemStatus: 'TIDAK_HADIR', finalStatus: 'A' };
 }
 

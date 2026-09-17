@@ -491,6 +491,7 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
     // Variabel kalkulasi kehadiran per pegawai
     let countHIP = 0;
     let countHIS = 0;
+    let countLE = 0;
     let countI = 0;
     let countIL = 0;
     let countPM = 0;
@@ -579,7 +580,7 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
         });
         countA++;
       } else {
-        // Status perizinan / sakit / cuti / dinas
+        // Status perizinan / sakit / cuti / dinas / LE
         cell.value = status;
         setCellStyle(cell, {
           font: BLACK_BOLD_FONT,
@@ -590,6 +591,7 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
 
         if (status === 'HIP') countHIP++;
         else if (status === 'HIS') countHIS++;
+        else if (status === 'LE') countLE++;
         else if (status === 'I') countI++;
         else if (status === 'IL') countIL++;
         else if (status === 'PM') countPM++;
@@ -600,12 +602,12 @@ export async function generateRekapExcel(options: ExportOptions): Promise<Buffer
     }
 
     // Perhitungan logika di Web (Tanpa rumus Excel yang rentan korup)
-    // 1. Hari Kerja (HK): Hari kerja aktif yang dihadiri / tidak terhitung I atau A
+    // 1. Hari Kerja (HK): Hari kerja aktif yang dihadiri / tidak terhitung I atau A (LE tetap terhitung hadir HK)
     const hk = Math.max(0, totalWorkingDays - countI - countA);
 
     // 2. Skor Nilai X:
-    // (HK * 2) - I(1) - A(3) (Catatan: HIP dan HIS tidak memotong poin / bebas denda)
-    const scoreX = Math.max(0, (hk * 2) - (countI * 1) - (countA * 3));
+    // (HK * 2) - LE(1) - I(1) - A(3) (Catatan: HIP dan HIS tidak memotong poin / bebas denda)
+    const scoreX = Math.max(0, (hk * 2) - (countLE * 1) - (countI * 1) - (countA * 3));
 
     // 3. Skor Nilai Y: Total poin maksimal hari kerja
     const scoreY = totalWorkingDays * 2;

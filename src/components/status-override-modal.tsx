@@ -87,6 +87,12 @@ const STATUS_DISPLAY_CONFIG: Record<AttendanceCode, {
     badgeText: 'text-amber-800',
     badgeBorder: 'border-amber-300',
   },
+  LE: {
+    title: 'Late & Early (Telat Masuk & Pulang Cepat: -1 Poin)',
+    badgeBg: 'bg-amber-100',
+    badgeText: 'text-amber-900',
+    badgeBorder: 'border-amber-300',
+  },
   I: {
     title: 'Sakit Tanpa Surat',
     badgeBg: 'bg-amber-100',
@@ -122,6 +128,7 @@ const ORDERED_STATUS_LIST: AttendanceCode[] = [
   'OTL',
   'HIP',
   'HIS',
+  'LE',
   'I',
   'OFF',
   'LIBUR',

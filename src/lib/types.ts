@@ -25,6 +25,7 @@ export type AttendanceCode =
   | 'A'      // Without Info (Alpha / Merah)
   | 'HIP'    // Hak Izin Pagi (Tidak Potong Poin / 0 Poin)
   | 'HIS'    // Hak Izin Siang (Tidak Potong Poin / 0 Poin)
+  | 'LE'     // Late & Early Departure (-1 poin)
   | 'I'      // Ill (No Letter) (-1 poin)
   | 'IL'     // Ill (With Letter) (Bebas Pengurang)
   | 'PM'     // Permission (Izin Resmi)
@@ -95,6 +96,18 @@ export const ATTENDANCE_STATUS_MAP: Record<AttendanceCode, AttendanceStatusInfo>
     bgHex: '#FFEB9C',
     textHex: '#9C6500',
     tailwindClass: 'bg-[#FFEB9C] text-[#9C6500] border-[#ECC767]',
+  },
+  LE: {
+    code: 'LE',
+    label: 'LATE & EARLY (Late Arrival & Early Departure)',
+    category: 'absent_verified',
+    excelCode: 'LE',
+    targetCol: '-',
+    description: 'Terlambat Masuk & Pulang Lebih Awal (-1 Poin)',
+    penaltyPoints: 1,
+    bgHex: '#FEF3C7',
+    textHex: '#92400E',
+    tailwindClass: 'bg-amber-100 text-amber-900 border-amber-300',
   },
   I: {
     code: 'I',
