@@ -500,14 +500,27 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                 {onSyncDatabase && (
                   <button
                     type="button"
-                    onClick={onSyncDatabase}
-                    disabled={isSyncingDatabase}
-                    className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xs active:scale-[0.98] disabled:opacity-60 cursor-pointer"
-                    title="Sinkronkan seluruh data matriks presensi ke database Supabase"
+                    onClick={() => {
+                      if (!isEditMode) {
+                        showToast?.('Mode Lihat: Sinkronisasi database hanya tersedia dalam Mode Edit. Silakan beralih ke Mode Edit terlebih dahulu.');
+                        return;
+                      }
+                      onSyncDatabase();
+                    }}
+                    disabled={isSyncingDatabase || !isEditMode}
+                    className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs ${
+                      !isEditMode
+                        ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-[0.98] cursor-pointer'
+                    }`}
+                    title={!isEditMode ? 'Mode Lihat: Beralih ke Mode Edit untuk menyinkronkan database' : 'Sinkronkan seluruh data matriks presensi ke database Supabase'}
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isSyncingDatabase ? 'animate-spin' : ''}`} />
                     <span className="hidden xs:inline sm:inline">{isSyncingDatabase ? 'Menyinkronkan...' : 'Sinkronkan DB'}</span>
                     <span className="xs:hidden sm:hidden">Sinkron</span>
+                    {!isEditMode && (
+                      <span className="text-[10px] font-normal text-slate-400 hidden sm:inline">(Mode Edit)</span>
+                    )}
                   </button>
                 )}
                 {onOpenBulk && (
@@ -1309,8 +1322,8 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
       );
     })()}
 
-    {/* Floating Sticky Batch Action Bar (Mode Edit) */}
-    {pendingCount > 0 && (
+    {/* Floating Sticky Batch Action Bar (Hanya muncul dan aktif saat Mode Edit) */}
+    {isEditMode && pendingCount > 0 && (
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 bg-slate-900/95 text-white rounded-2xl shadow-2xl border border-slate-700/80 backdrop-blur-md animate-in slide-in-from-bottom-5 duration-200">
         <div className="flex items-center gap-2.5">
           <span className="flex h-2.5 w-2.5 relative shrink-0">
@@ -1329,7 +1342,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
             <button
               type="button"
               onClick={onCancelBatch}
-              disabled={isSavingBatch}
+              disabled={isSavingBatch || !isEditMode}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50 cursor-pointer"
             >
               <Undo2 className="w-3.5 h-3.5" />
@@ -1340,9 +1353,19 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
           {onSaveBatch && (
             <button
               type="button"
-              onClick={onSaveBatch}
-              disabled={isSavingBatch}
-              className="flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all shadow-md shadow-blue-600/30 disabled:opacity-60 cursor-pointer"
+              onClick={() => {
+                if (!isEditMode) {
+                  showToast?.('Mode Lihat: Data presensi tidak dapat disimpan. Silakan beralih ke Mode Edit terlebih dahulu.');
+                  return;
+                }
+                onSaveBatch();
+              }}
+              disabled={isSavingBatch || !isEditMode}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md ${
+                !isEditMode
+                  ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                  : 'text-white bg-blue-600 hover:bg-blue-500 active:scale-95 shadow-blue-600/30 disabled:opacity-60 cursor-pointer'
+              }`}
             >
               {isSavingBatch ? (
                 <>

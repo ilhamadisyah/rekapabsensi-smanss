@@ -289,6 +289,11 @@ export default function HomePage() {
 
   // Simpan semua perubahan pending overrides sekaligus ke database
   const handleSaveBatchOverrides = async () => {
+    if (!isEditMode) {
+      showToast('Mode Lihat: Data presensi tidak dapat disimpan. Silakan beralih ke Mode Edit terlebih dahulu.');
+      return;
+    }
+
     const pendingList = Object.values(pendingOverrides);
     if (pendingList.length === 0) return;
 
@@ -330,11 +335,11 @@ export default function HomePage() {
   };
 
   // Batalkan seluruh pending overrides dan kembalikan ke data asli
-  const handleCancelBatchOverrides = () => {
+  const handleCancelBatchOverrides = (skipConfirm = false) => {
     const count = Object.keys(pendingOverrides).length;
     if (count === 0) return;
 
-    if (confirm(`Apakah Anda yakin ingin membatalkan ${count} perubahan yang belum disimpan?`)) {
+    if (skipConfirm || confirm(`Apakah Anda yakin ingin membatalkan ${count} perubahan yang belum disimpan?`)) {
       if (Object.keys(originalAttendanceMapRef.current).length > 0) {
         setAttendanceMap(JSON.parse(JSON.stringify(originalAttendanceMapRef.current)));
       } else {
@@ -387,6 +392,11 @@ export default function HomePage() {
 
   // Synchronize entire attendance matrix with Supabase database
   const handleSyncDatabase = async () => {
+    if (!isEditMode) {
+      showToast('Mode Lihat: Sinkronisasi database hanya tersedia dalam Mode Edit. Silakan beralih ke Mode Edit terlebih dahulu.');
+      return;
+    }
+
     try {
       setIsSyncingDb(true);
       showToast('Menyinkronkan data presensi & hari libur ke database Supabase...');
@@ -663,7 +673,7 @@ export default function HomePage() {
                     if (!confirm(`Ada ${Object.keys(pendingOverrides).length} perubahan yang belum disimpan. Yakin ingin keluar dari Mode Edit tanpa menyimpan?`)) {
                       return;
                     }
-                    handleCancelBatchOverrides();
+                    handleCancelBatchOverrides(true);
                   }
                   setIsEditMode(!isEditMode);
                 }}
