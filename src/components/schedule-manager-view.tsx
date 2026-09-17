@@ -25,6 +25,8 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  Pencil,
 } from 'lucide-react';
 
 const MONTH_NAMES = [
@@ -86,6 +88,9 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
   // Search & Department Filter
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedDept, setSelectedDept] = useState<string>('ALL');
+
+  // Mode View vs Mode Edit
+  const [isEditMode, setIsEditMode] = useState<boolean>(false);
 
   // Modals & Drawer States
   const [isBulkModalOpen, setIsBulkModalOpen] = useState<boolean>(false);
@@ -266,6 +271,11 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
 
   // Open Quick Popover
   const handleCellClick = (emp: Employee, d: any, customSchedule?: EmployeeSchedule) => {
+    if (!isEditMode) {
+      showToast('Mode Lihat: Aktifkan Mode Edit terlebih dahulu untuk mengubah jadwal shift pegawai.', 'info');
+      return;
+    }
+
     setActiveCell({
       employee: emp,
       day: d.day,
@@ -290,6 +300,10 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
 
   // Quick Assign Shift (Template or Custom)
   const handleQuickAssign = async (shiftId: string | null) => {
+    if (!isEditMode) {
+      showToast('Mode Lihat: Perubahan jadwal ditolak.', 'error');
+      return;
+    }
     if (!activeCell) return;
     const { employee, dateStr } = activeCell;
 
@@ -656,22 +670,45 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
-                onClick={() => setIsBulkModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-[11px] sm:text-xs font-bold text-white transition-colors shadow-xs cursor-pointer"
+                onClick={() => {
+                  if (!isEditMode) {
+                    showToast('Penugasan massal hanya dapat dilakukan dalam Mode Edit. Silakan beralih ke Mode Edit terlebih dahulu.', 'info');
+                    return;
+                  }
+                  setIsBulkModalOpen(true);
+                }}
+                className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-bold transition-colors shadow-xs ${
+                  !isEditMode
+                    ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer'
+                }`}
+                title={!isEditMode ? 'Mode Lihat: Beralih ke Mode Edit untuk melakukan penugasan massal' : 'Penugasan massal shift kerja'}
               >
                 <PlusCircle className="w-3.5 h-3.5" />
                 <span>Penugasan Massal</span>
+                {!isEditMode && <span className="text-[10px] font-normal text-slate-400 hidden sm:inline">(Mode Edit)</span>}
               </button>
 
               <button
                 type="button"
-                onClick={() => setIsCopyModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[11px] sm:text-xs font-bold text-slate-700 transition-colors shadow-2xs cursor-pointer"
-                title="Salin penugasan jadwal dari bulan lalu"
+                onClick={() => {
+                  if (!isEditMode) {
+                    showToast('Salin jadwal hanya dapat dilakukan dalam Mode Edit. Silakan beralih ke Mode Edit terlebih dahulu.', 'info');
+                    return;
+                  }
+                  setIsCopyModalOpen(true);
+                }}
+                className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border text-[11px] sm:text-xs font-bold transition-colors shadow-2xs ${
+                  !isEditMode
+                    ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer'
+                }`}
+                title={!isEditMode ? 'Mode Lihat: Beralih ke Mode Edit untuk menyalin jadwal' : 'Salin penugasan jadwal dari bulan lalu'}
               >
                 <Copy className="w-3.5 h-3.5 text-slate-500" />
                 <span className="hidden xs:inline sm:inline">Salin Bulan Lalu</span>
                 <span className="xs:hidden sm:hidden">Salin</span>
+                {!isEditMode && <span className="text-[10px] font-normal text-slate-400 hidden sm:inline">(Mode Edit)</span>}
               </button>
 
               <button
@@ -749,9 +786,44 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                   </div>
                 </div>
 
-                {/* Right side: Employee Counter */}
-                <div className="text-[11px] sm:text-xs text-slate-500 font-medium whitespace-nowrap">
-                  Menampilkan <span className="font-bold text-slate-900">{filteredEmployees.length}</span> dari {employees.length} pegawai
+                {/* Right side: Mode Switch & Employee Counter */}
+                <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+                  {/* Mode Switcher: Mode Lihat vs Mode Edit */}
+                  <div className="inline-flex items-center p-0.5 rounded-xl bg-slate-200/70 border border-slate-200 shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsEditMode(false);
+                        setActiveCell(null);
+                      }}
+                      className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        !isEditMode
+                          ? 'bg-white text-slate-800 shadow-xs font-bold'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                      title="Mode Lihat: Tinjau alokasi roster jadwal pegawai tanpa risiko perubahan tidak disengaja"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-slate-600" />
+                      <span>Mode Lihat</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditMode(true)}
+                      className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        isEditMode
+                          ? 'bg-blue-600 text-white shadow-xs font-bold'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                      title="Mode Edit: Aktifkan untuk mengubah dan menetapkan shift pegawai"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>Mode Edit</span>
+                    </button>
+                  </div>
+
+                  <div className="text-[11px] sm:text-xs text-slate-500 font-medium whitespace-nowrap hidden sm:block">
+                    Menampilkan <span className="font-bold text-slate-900">{filteredEmployees.length}</span> dari {employees.length} pegawai
+                  </div>
                 </div>
               </div>
             </div>
@@ -765,14 +837,14 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
               <span className="font-bold text-blue-600">➔</span>
             </div>
 
-            <div className="overflow-x-auto max-h-[640px] relative smooth-scroll-touch">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead className="bg-slate-50 sticky top-0 z-20 shadow-xs">
-                  <tr className="border-b border-slate-200">
-                    <th className="sticky left-0 z-20 bg-slate-50 px-1.5 sm:px-3 py-2 sm:py-3 font-bold text-slate-700 w-8 sm:w-10 text-center border-r border-slate-200 text-[11px] sm:text-xs">
+            <div className="overflow-x-auto max-h-[640px] relative smooth-scroll-touch border-b border-slate-200">
+              <table className="w-full text-left border-separate border-spacing-0 text-xs">
+                <thead className="bg-slate-100 sticky top-0 z-30 shadow-xs">
+                  <tr>
+                    <th className="sticky left-0 top-0 z-40 bg-slate-100 px-1 py-2 sm:py-3 font-bold text-slate-700 w-12 min-w-[48px] max-w-[48px] text-center border-b border-r border-slate-300 text-[11px] sm:text-xs box-border">
                       #
                     </th>
-                    <th className="sticky left-8 sm:left-10 z-20 bg-slate-50 px-2 sm:px-3 py-2 sm:py-3 font-bold text-slate-700 min-w-[140px] sm:min-w-[220px] max-w-[160px] sm:max-w-[260px] border-r border-slate-200 text-[11px] sm:text-xs">
+                    <th className="sticky left-[48px] top-0 z-40 bg-slate-100 px-2.5 sm:px-3 py-2 sm:py-3 font-bold text-slate-800 w-[200px] sm:w-[240px] min-w-[200px] sm:min-w-[240px] max-w-[220px] sm:max-w-[260px] text-left border-b border-r-2 border-slate-300 text-[11px] sm:text-xs shadow-[3px_0_6px_-2px_rgba(0,0,0,0.08)] box-border">
                       Identitas Pegawai
                     </th>
                     {monthDays.map((d) => {
@@ -780,12 +852,12 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                       return (
                         <th
                           key={d.day}
-                          className={`px-1.5 py-2 text-center border-r border-slate-200 min-w-[56px] ${
+                          className={`sticky top-0 z-30 px-1.5 py-2 text-center border-b border-r border-slate-200 min-w-[56px] box-border ${
                             d.holiday
-                              ? 'bg-rose-100/70 text-rose-900'
+                              ? 'bg-rose-100 text-rose-900'
                               : d.isWeekend
-                              ? 'bg-rose-50/70 text-rose-800'
-                              : 'text-slate-700'
+                              ? 'bg-rose-50 text-rose-800'
+                              : 'bg-slate-50 text-slate-700'
                           }`}
                           title={d.holiday ? `Hari Libur: ${d.holiday.name}` : d.isWeekend ? 'Akhir Pekan (Libur)' : undefined}
                         >
@@ -826,12 +898,12 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                     </tr>
                   ) : (
                     filteredEmployees.map((emp, empIdx) => (
-                      <tr key={emp.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="sticky left-0 z-20 bg-white group-hover:bg-slate-50 px-1 sm:px-2 py-2 text-center text-[10px] sm:text-[11px] font-sans font-semibold text-slate-400 border-r border-slate-200 w-8 sm:w-10">
+                      <tr key={emp.id} className="hover:bg-slate-50/70 transition-colors group">
+                        <td className="sticky left-0 z-20 bg-white group-hover:bg-slate-50 px-1 py-2 text-center text-[10px] sm:text-[11px] font-sans font-semibold text-slate-400 border-r border-b border-slate-200 w-12 min-w-[48px] max-w-[48px] box-border">
                           {empIdx + 1}
                         </td>
 
-                        <td className="sticky left-8 sm:left-10 z-20 bg-white group-hover:bg-slate-50 px-2 sm:px-3 py-2 border-r border-slate-200 min-w-[140px] sm:min-w-[220px] max-w-[160px] sm:max-w-[260px]">
+                        <td className="sticky left-[48px] z-20 bg-white group-hover:bg-slate-50 px-2.5 sm:px-3 py-2 border-r-2 border-b border-slate-300 w-[200px] sm:w-[240px] min-w-[200px] sm:min-w-[240px] max-w-[220px] sm:max-w-[260px] shadow-[3px_0_6px_-2px_rgba(0,0,0,0.08)] box-border">
                           <div className="flex items-center gap-1.5 sm:gap-2">
                             <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-slate-800 text-white font-bold text-[11px] sm:text-xs flex items-center justify-center shrink-0">
                               {emp.full_name.charAt(0)}
@@ -872,14 +944,22 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                             <td
                               key={d.day}
                               onClick={() => handleCellClick(emp, d, customSchedule)}
-                              className={`p-1 text-center border-r border-slate-100 cursor-pointer transition-all hover:ring-2 hover:ring-blue-500 hover:z-10 ${
+                              className={`p-1 text-center border-r border-b border-slate-100 transition-all ${
+                                !isEditMode
+                                  ? 'cursor-default'
+                                  : 'cursor-pointer hover:ring-2 hover:ring-blue-500 hover:z-10'
+                              } ${
                                 d.holiday
                                   ? 'bg-rose-50/60'
                                   : d.isWeekend
                                   ? 'bg-rose-50/30'
                                   : 'bg-white'
                               }`}
-                              title={`Ubah shift ${emp.full_name} (Tgl ${d.day})`}
+                              title={
+                                isEditMode
+                                  ? `Ubah shift ${emp.full_name} (Tgl ${d.day})`
+                                  : `${emp.full_name} | Tgl ${d.day}: ${displayShift?.name || (isRedDay ? 'Hari Libur / Akhir Pekan' : 'Bebas Tugas')} (Mode Lihat)`
+                              }
                             >
                               {displayShift ? (
                                 <div
