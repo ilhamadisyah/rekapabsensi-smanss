@@ -12,7 +12,9 @@ import {
   Sparkles,
   Info,
   Briefcase,
-  Fingerprint
+  Fingerprint,
+  Eye,
+  Pencil
 } from 'lucide-react';
 import { addMinutesToTime } from '@/lib/attendance/parser';
 
@@ -26,6 +28,8 @@ interface StatusOverrideModalProps {
   onSaveStatus: (newStatus: AttendanceCode, notes: string) => Promise<void>;
   defaultShift?: ShiftTemplate | null;
   shifts?: ShiftTemplate[];
+  isReadOnly?: boolean;
+  onSwitchToEditMode?: () => void;
 }
 
 // Friendly titles and clean badges for presentation
@@ -159,6 +163,8 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
   onSaveStatus,
   defaultShift,
   shifts = [],
+  isReadOnly = false,
+  onSwitchToEditMode,
 }) => {
   const isWeekendDay = (() => {
     if (!dateStr) return false;
@@ -216,6 +222,10 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isReadOnly) {
+      onClose();
+      return;
+    }
     setIsSubmitting(true);
     try {
       await onSaveStatus(selectedStatus, notes);
@@ -260,22 +270,35 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
         {/* Header - Fixed & Compact */}
         <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs">
-              <CheckCircle2 className="w-4 h-4" />
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-xs ${
+              isReadOnly ? 'bg-slate-700 text-white' : 'bg-blue-600 text-white'
+            }`}>
+              {isReadOnly ? <Eye className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900">
-                Ubah Status Presensi
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900">
+                  {isReadOnly ? 'Detail Rincian Presensi' : 'Ubah Status Presensi'}
+                </h3>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  isReadOnly
+                    ? 'bg-slate-200 text-slate-700 border border-slate-300'
+                    : 'bg-blue-100 text-blue-700 border border-blue-200'
+                }`}>
+                  {isReadOnly ? 'Mode Lihat (Hanya Baca)' : 'Mode Edit'}
+                </span>
+              </div>
               <p className="text-[11px] text-slate-500">
-                Verifikasi atau sesuaikan kategori presensi harian pegawai
+                {isReadOnly
+                  ? 'Tinjau rincian kehadiran, jam kerja, dan log tap mesin'
+                  : 'Verifikasi atau sesuaikan kategori presensi harian pegawai'}
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
             title="Tutup (Esc)"
           >
             <X className="w-4 h-4" />
@@ -591,112 +614,180 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
               })()}
             </div>
 
-            {/* Status Selection Grid (Clean 2-Column Compact Layout) */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                  Pilih Kategori Status:
-                </label>
-                <span className="text-[10px] text-slate-400 font-medium">
-                  Klik untuk memilih status
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {ORDERED_STATUS_LIST.map((code) => {
-                  const cfg = STATUS_DISPLAY_CONFIG[code] || {
-                    title: code,
-                    badgeBg: 'bg-slate-100',
-                    badgeText: 'text-slate-800',
-                    badgeBorder: 'border-slate-300',
-                  };
-                  const isSelected = selectedStatus === code;
-
-                  return (
-                    <button
-                      key={code}
-                      type="button"
-                      onClick={() => setSelectedStatus(code)}
-                      className={`p-2 rounded-xl border text-left transition-all flex items-center justify-between gap-2.5 ${
-                        isSelected
-                          ? 'border-blue-600 bg-blue-50/60 shadow-xs ring-2 ring-blue-500/20'
-                          : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/80'
-                      }`}
+            {isReadOnly ? (
+              <div className="space-y-3 pt-1">
+                {/* Status Presensi Terdaftar Card */}
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/90 space-y-2">
+                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Status Presensi Terdaftar:
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-12 h-8 rounded-lg border flex items-center justify-center font-sans font-black text-sm shrink-0 shadow-2xs ${selectedConfig.badgeBg} ${selectedConfig.badgeText} ${selectedConfig.badgeBorder}`}
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        {/* Code Badge */}
-                        <div
-                          className={`w-11 h-7 rounded-lg border flex items-center justify-center font-sans font-black text-xs shrink-0 ${cfg.badgeBg} ${cfg.badgeText} ${cfg.badgeBorder}`}
-                        >
-                          {code}
-                        </div>
-
-                        {/* Title */}
-                        <div className="min-w-0">
-                          <div className="text-xs font-bold text-slate-900 truncate">
-                            {cfg.title}
-                          </div>
-                        </div>
+                      {selectedStatus}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">
+                        {selectedConfig.title}
                       </div>
+                      <div className="text-[11px] text-slate-500">
+                        {currentAttendance?.is_verified ? 'Status telah diverifikasi manual oleh admin' : 'Status otomatis hasil perhitungan sistem'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-                      {/* Selection Radio / Check Indicator */}
-                      <div className="shrink-0 pr-1">
-                        <div
-                          className={`w-4 h-4 rounded-full flex items-center justify-center border transition-all ${
+                {/* Catatan / Keterangan Display */}
+                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/90 space-y-1.5">
+                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Catatan / Keterangan:</span>
+                  </div>
+                  <p className="text-xs text-slate-700 font-medium">
+                    {currentAttendance?.notes || notes ? (
+                      <span className="italic font-medium text-slate-900 bg-white px-2.5 py-1 rounded-lg border border-slate-200 inline-block">
+                        &ldquo;{notes || currentAttendance?.notes}&rdquo;
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 italic">Tidak ada catatan pada presensi ini.</span>
+                    )}
+                  </p>
+                </div>
+
+                {/* Mode Lihat Notification Banner */}
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+                  <div className="flex items-start gap-2 text-amber-900 min-w-0">
+                    <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="leading-relaxed">
+                      Anda sedang dalam <strong>Mode Lihat (Hanya Baca)</strong>. Status presensi tidak dapat diubah maupun disimpan dalam mode ini.
+                    </div>
+                  </div>
+                  {onSwitchToEditMode && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onSwitchToEditMode();
+                      }}
+                      className="shrink-0 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>Buka Mode Edit</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Status Selection Grid (Clean 2-Column Compact Layout) */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                      Pilih Kategori Status:
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      Klik untuk memilih status
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {ORDERED_STATUS_LIST.map((code) => {
+                      const cfg = STATUS_DISPLAY_CONFIG[code] || {
+                        title: code,
+                        badgeBg: 'bg-slate-100',
+                        badgeText: 'text-slate-800',
+                        badgeBorder: 'border-slate-300',
+                      };
+                      const isSelected = selectedStatus === code;
+
+                      return (
+                        <button
+                          key={code}
+                          type="button"
+                          onClick={() => setSelectedStatus(code)}
+                          className={`p-2 rounded-xl border text-left transition-all flex items-center justify-between gap-2.5 cursor-pointer ${
                             isSelected
-                              ? 'bg-blue-600 border-blue-600 text-white'
-                              : 'border-slate-300 bg-white'
+                              ? 'border-blue-600 bg-blue-50/60 shadow-xs ring-2 ring-blue-500/20'
+                              : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/80'
                           }`}
                         >
-                          {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {/* Code Badge */}
+                            <div
+                              className={`w-11 h-7 rounded-lg border flex items-center justify-center font-sans font-black text-xs shrink-0 ${cfg.badgeBg} ${cfg.badgeText} ${cfg.badgeBorder}`}
+                            >
+                              {code}
+                            </div>
 
-            {/* Notes / Reason Input & Quick Suggestions */}
-            <div>
-              <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Catatan / Nomor Surat (Opsional):
-              </label>
-              <div className="relative">
-                <FileText className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Ketik keterangan atau pilih saran cepat di bawah..."
-                  className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 bg-white transition-all placeholder:text-slate-400"
-                />
-              </div>
+                            {/* Title */}
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold text-slate-900 truncate">
+                                {cfg.title}
+                              </div>
+                            </div>
+                          </div>
 
-              {/* Quick Suggestion Chips */}
-              <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                <span className="text-[10px] text-slate-400 font-medium mr-0.5">
-                  Saran cepat:
-                </span>
-                {QUICK_NOTES.map((text) => (
-                  <button
-                    key={text}
-                    type="button"
-                    onClick={() => setNotes(text)}
-                    className="text-[10px] font-medium px-2 py-0.5 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 rounded-md text-slate-600 transition-colors"
-                  >
-                    + {text}
-                  </button>
-                ))}
-              </div>
-            </div>
+                          {/* Selection Radio / Check Indicator */}
+                          <div className="shrink-0 pr-1">
+                            <div
+                              className={`w-4 h-4 rounded-full flex items-center justify-center border transition-all ${
+                                isSelected
+                                  ? 'bg-blue-600 border-blue-600 text-white'
+                                  : 'border-slate-300 bg-white'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Notes / Reason Input & Quick Suggestions */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Catatan / Nomor Surat (Opsional):
+                  </label>
+                  <div className="relative">
+                    <FileText className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Ketik keterangan atau pilih saran cepat di bawah..."
+                      className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 bg-white transition-all placeholder:text-slate-400"
+                    />
+                  </div>
+
+                  {/* Quick Suggestion Chips */}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                    <span className="text-[10px] text-slate-400 font-medium mr-0.5">
+                      Saran cepat:
+                    </span>
+                    {QUICK_NOTES.map((text) => (
+                      <button
+                        key={text}
+                        type="button"
+                        onClick={() => setNotes(text)}
+                        className="text-[10px] font-medium px-2 py-0.5 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 border border-slate-200 rounded-md text-slate-600 transition-colors cursor-pointer"
+                      >
+                        + {text}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Footer - Fixed, Clean & Always Visible */}
           <div className="px-5 py-3 bg-slate-50 border-t border-slate-200/90 flex items-center justify-between gap-3 shrink-0">
             {/* Status Summary on Left */}
             <div className="hidden sm:flex items-center gap-2 text-xs">
-              <span className="text-slate-500">Status baru:</span>
+              <span className="text-slate-500">{isReadOnly ? 'Status presensi:' : 'Status baru:'}</span>
               <span className={`font-bold px-2 py-0.5 rounded-md text-xs border ${selectedConfig?.badgeBg || 'bg-slate-100'} ${selectedConfig?.badgeText || 'text-slate-800'} ${selectedConfig?.badgeBorder || 'border-slate-300'}`}>
                 {selectedStatus} - {selectedConfig?.title || selectedStatus}
               </span>
@@ -707,18 +798,22 @@ export const StatusOverrideModal: React.FC<StatusOverrideModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200/70 rounded-xl transition-colors"
+                className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-colors cursor-pointer ${
+                  isReadOnly ? 'bg-slate-200 hover:bg-slate-300 text-slate-800' : 'text-slate-600 hover:bg-slate-200/70'
+                }`}
               >
-                Batal
+                {isReadOnly ? 'Tutup' : 'Batal'}
               </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 disabled:bg-blue-400 rounded-xl shadow-xs transition-all flex items-center gap-1.5"
-              >
-                <Check className="w-3.5 h-3.5" />
-                {isSubmitting ? 'Menyimpan...' : 'Simpan Perubahan'}
-              </button>
+              {!isReadOnly && (
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-4 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 disabled:bg-blue-400 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  {isSubmitting ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
+              )}
             </div>
           </div>
         </form>

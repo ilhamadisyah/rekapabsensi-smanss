@@ -165,6 +165,7 @@ interface AttendanceGridProps {
   onSaveBatch?: () => void;
   onCancelBatch?: () => void;
   isSavingBatch?: boolean;
+  showToast?: (msg: string) => void;
 }
 
 export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
@@ -193,6 +194,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
   onSaveBatch,
   onCancelBatch,
   isSavingBatch = false,
+  showToast,
 }) => {
   const pendingCount = Object.keys(pendingOverrides || {}).length;
   const [searchQuery, setSearchQuery] = useState('');
@@ -511,12 +513,25 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                 {onOpenBulk && (
                   <button
                     type="button"
-                    onClick={onOpenBulk}
-                    className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-xs active:scale-[0.98] cursor-pointer"
-                    title="Verifikasi status presensi secara massal"
+                    onClick={() => {
+                      if (!isEditMode) {
+                        showToast?.('Verifikasi massal hanya tersedia dalam Mode Edit. Silakan beralih ke Mode Edit terlebih dahulu.');
+                        return;
+                      }
+                      onOpenBulk();
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-xs ${
+                      !isEditMode
+                        ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700 text-white active:scale-[0.98] cursor-pointer'
+                    }`}
+                    title={!isEditMode ? 'Mode Lihat: Aktifkan Mode Edit untuk melakukan verifikasi massal' : 'Verifikasi status presensi secara massal'}
                   >
-                    <Layers className="w-3.5 h-3.5 text-white" />
+                    <Layers className={`w-3.5 h-3.5 ${!isEditMode ? 'text-slate-400' : 'text-white'}`} />
                     <span>Verifikasi Massal</span>
+                    {!isEditMode && (
+                      <span className="text-[10px] font-normal text-slate-400 hidden sm:inline">(Mode Edit)</span>
+                    )}
                   </button>
                 )}
               </div>
@@ -914,7 +929,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                             className={`w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-300 bg-rose-50/90 hover:bg-rose-100/90 transition-all font-semibold select-none cursor-pointer box-border relative ${
                               isPending ? 'ring-2 ring-inset ring-amber-500 bg-amber-50/90' : ''
                             }`}
-                            title={`${emp.full_name} | Tgl ${d.day}: ${d.holiday?.name || (isWeekend ? `Akhir Pekan (${d.dayName})` : 'Hari Libur')} | Jam Kerja: Bebas Tugas (Klik untuk ubah status)${isPending ? ` | [DRAFT: Diubah ke ${pendingItem?.newStatus}]` : ''}`}
+                            title={`${emp.full_name} | Tgl ${d.day}: ${d.holiday?.name || (isWeekend ? `Akhir Pekan (${d.dayName})` : 'Hari Libur')} | Jam Kerja: Bebas Tugas (${isEditMode ? 'Klik untuk ubah status' : 'Mode Lihat: Klik untuk lihat rincian'})${isPending ? ` | [DRAFT: Diubah ke ${pendingItem?.newStatus}]` : ''}`}
                           >
                             <div className="w-full h-full flex flex-col items-center justify-center relative">
                               <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200 shadow-2xs">
@@ -950,7 +965,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                             className={`w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-300 bg-slate-100/90 hover:bg-slate-200 transition-all font-semibold select-none cursor-pointer box-border relative ${
                               isPending ? 'ring-2 ring-inset ring-amber-500 bg-amber-50/90' : ''
                             }`}
-                            title={`${emp.full_name} | Tgl ${d.day}: Libur Shift / Bebas Tugas | Jam Kerja: Bebas Tugas (Klik untuk ganti shift/izin)${isPending ? ` | [DRAFT: Diubah ke ${pendingItem?.newStatus}]` : ''}`}
+                            title={`${emp.full_name} | Tgl ${d.day}: Libur Shift / Bebas Tugas | Jam Kerja: Bebas Tugas (${isEditMode ? 'Klik untuk ganti shift/izin' : 'Mode Lihat: Klik untuk lihat rincian'})${isPending ? ` | [DRAFT: Diubah ke ${pendingItem?.newStatus}]` : ''}`}
                           >
                             <div className="w-full h-full flex flex-col items-center justify-center relative">
                               <span className="px-1 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-600 border border-slate-300 shadow-2xs">
@@ -987,7 +1002,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                             className={`w-[42px] min-w-[42px] max-w-[42px] h-9 p-0 text-center border-r border-b border-slate-300 bg-slate-100/70 hover:bg-slate-200/70 transition-all font-medium select-none cursor-pointer box-border relative group/cell ${
                               isPending ? 'ring-2 ring-inset ring-amber-500 bg-amber-50/90' : ''
                             }`}
-                            title={`${emp.full_name} | Tgl ${d.day}: Belum Terekap | Shift: ${rec?.shift_name || empShift?.name || defaultShift?.name || 'Jam Kerja Normal'} | Jam Kerja: ${cellWorkingHours}${isPending ? ` | [DRAFT: Diubah ke ${pendingItem?.newStatus}]` : ''}`}
+                            title={`${emp.full_name} | Tgl ${d.day}: Belum Terekap | Shift: ${rec?.shift_name || empShift?.name || defaultShift?.name || 'Jam Kerja Normal'} | Jam Kerja: ${cellWorkingHours} (${isEditMode ? 'Klik untuk ubah status' : 'Mode Lihat: Klik untuk lihat rincian'})${isPending ? ` | [DRAFT: Diubah ke ${pendingItem?.newStatus}]` : ''}`}
                           >
                             <div className="w-full h-full flex flex-col items-center justify-center relative">
                               <span className="text-[11px] font-semibold text-slate-300 select-none">
@@ -1042,7 +1057,7 @@ export const AttendanceGrid: React.FC<AttendanceGridProps> = ({
                               ? 'bg-[#FFC7CE] text-[#9C0006] hover:brightness-95 animate-pulse-subtle'
                               : 'bg-[#FFEB9C] text-[#9C6500] hover:brightness-95'
                           }`}
-                          title={`${emp.full_name} | Tgl ${d.day}: ${statusInfo?.label || finalStatus} | Shift: ${rec?.shift_name || 'Jam Kerja Normal'} | Jam Kerja: ${cellWorkingHours} | Tap: ${rec?.first_in || '--:--'} s/d ${rec?.last_out || '--:--'}${isPending ? ` | [DRAFT: Diubah ke ${pendingItem?.newStatus}]` : ''}`}
+                          title={`${emp.full_name} | Tgl ${d.day}: ${statusInfo?.label || finalStatus} | Shift: ${rec?.shift_name || 'Jam Kerja Normal'} | Jam Kerja: ${cellWorkingHours} | Tap: ${rec?.first_in || '--:--'} s/d ${rec?.last_out || '--:--'} (${isEditMode ? 'Klik untuk ubah status' : 'Mode Lihat: Klik untuk lihat rincian'})${isPending ? ` | [DRAFT: Diubah ke ${pendingItem?.newStatus}]` : ''}`}
                         >
                           <div className="w-full h-full flex flex-col items-center justify-center relative">
                             {isHadir ? (

@@ -202,7 +202,7 @@ export default function HomePage() {
     }
   }, [activeTab, loadData]);
 
-  // Handle cell click
+  // Handle cell click (Membuka detail presensi di Mode Lihat, atau form edit di Mode Edit)
   const handleCellClick = (
     employee: Employee,
     day: AttendanceMatrixDay,
@@ -216,9 +216,15 @@ export default function HomePage() {
     });
   };
 
-  // Handle save status override (Optimistic UI)
+  // Handle save status override (Hanya diizinkan di Mode Edit)
   const handleSaveStatus = async (newStatus: AttendanceCode, notes: string) => {
     if (!overrideModal.employee || !overrideModal.day) return;
+
+    // Keamanan ketat: Dalam Mode Lihat, sistem MENOLAK mutlak segala bentuk penyimpanan!
+    if (!isEditMode) {
+      showToast('Mode Lihat: Data presensi tidak dapat diubah atau disimpan. Silakan beralih ke Mode Edit terlebih dahulu.');
+      return;
+    }
 
     const emp = overrideModal.employee;
     const empId = emp.nik || emp.machine_id || emp.id;
@@ -259,53 +265,20 @@ export default function HomePage() {
       return next;
     });
 
-    // JIKA MODE EDIT AKTIF -> Simpan sementara ke draft, TANPA panggil server dan TANPA reload!
-    if (isEditMode) {
-      const pendingKey = `${empId}___${dayNum}`;
-      setPendingOverrides((prev) => ({
-        ...prev,
-        [pendingKey]: {
-          employee: emp,
-          day: overrideModal.day!,
-          newStatus,
-          notes,
-          originalStatus,
-        },
-      }));
-      showToast(`[Draft Tersimpan] ${emp.full_name} Tgl ${dayNum} diubah ke [${newStatus}]. Tekan "Simpan Semua" saat selesai.`);
-      setOverrideModal((prev) => ({ ...prev, isOpen: false }));
-      return;
-    }
-
-    // JIKA MODE LIHAT BIASA (Direct Save)
-    showToast(`Status pegawai ${overrideModal.employee.full_name} diubah menjadi [${newStatus}].`);
+    // Simpan sementara ke draft staging (Mode Edit aktif)
+    const pendingKey = `${empId}___${dayNum}`;
+    setPendingOverrides((prev) => ({
+      ...prev,
+      [pendingKey]: {
+        employee: emp,
+        day: overrideModal.day!,
+        newStatus,
+        notes,
+        originalStatus,
+      },
+    }));
+    showToast(`[Draft Tersimpan] ${emp.full_name} Tgl ${dayNum} diubah ke [${newStatus}]. Tekan "Simpan Semua" saat selesai.`);
     setOverrideModal((prev) => ({ ...prev, isOpen: false }));
-
-    // Persist to API
-    try {
-      const res = await fetch('/api/attendance/update-cell', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employee_id: empId,
-          nik: emp.nik,
-          machine_id: emp.machine_id,
-          date: dateStr,
-          final_status: newStatus,
-          notes,
-          changed_by: userRole,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error('Gagal menyimpan pembaruan ke server');
-      }
-      loadData();
-    } catch (e: any) {
-      console.error(e);
-      showToast('Galat: ' + (e.message || 'Gagal menyimpan status'));
-      loadData(); // Revert
-    }
   };
 
   // Simpan semua perubahan pending overrides sekaligus ke database
@@ -656,7 +629,13 @@ export default function HomePage() {
                 userRole={userRole}
                 onlyNeedsVerification={onlyNeedsVerification}
                 recordedDays={recordedDays}
-                onOpenBulk={() => setIsBulkOpen(true)}
+                onOpenBulk={() => {
+                  if (!isEditMode) {
+                    showToast('Verifikasi massal hanya tersedia dalam Mode Edit. Silakan aktifkan Mode Edit terlebih dahulu.');
+                    return;
+                  }
+                  setIsBulkOpen(true);
+                }}
                 selectedMonth={selectedMonth}
                 selectedYear={selectedYear}
                 onMonthChange={(m, y) => {
@@ -686,6 +665,7 @@ export default function HomePage() {
                 onSaveBatch={handleSaveBatchOverrides}
                 onCancelBatch={handleCancelBatchOverrides}
                 isSavingBatch={isSavingBatch}
+                showToast={showToast}
               />
             )}
           </div>
@@ -746,6 +726,8 @@ export default function HomePage() {
         onSaveStatus={handleSaveStatus}
         defaultShift={defaultShift}
         shifts={shifts}
+        isReadOnly={!isEditMode}
+        onSwitchToEditMode={() => setIsEditMode(true)}
       />
 
       <UploadModal
