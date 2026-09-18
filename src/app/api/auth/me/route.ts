@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
       email: session.email,
       full_name: session.fullName,
       role: session.role,
+      work_unit_access: session.workUnitAccess || (session.role === 'superadmin' ? ['ALL'] : []),
     },
   });
 }
@@ -119,6 +120,7 @@ export async function PATCH(request: NextRequest) {
       email: updatedUser.email,
       fullName: updatedUser.full_name,
       role: updatedUser.role,
+      workUnitAccess: updatedUser.work_unit_access || (updatedUser.role === 'superadmin' ? ['ALL'] : []),
     });
 
     const response = NextResponse.json({
@@ -129,6 +131,7 @@ export async function PATCH(request: NextRequest) {
         email: updatedUser.email,
         full_name: updatedUser.full_name,
         role: updatedUser.role,
+        work_unit_access: updatedUser.work_unit_access || (updatedUser.role === 'superadmin' ? ['ALL'] : []),
         is_active: updatedUser.is_active,
         created_at: updatedUser.created_at,
         updated_at: updatedUser.updated_at,

@@ -458,65 +458,6 @@ export const CalculationGuideModal: React.FC<CalculationGuideModalProps> = ({
                 </div>
               </div>
             </div>
-
-            {/* Kotak Informasi Tambahan: Pedoman Teknis Mesin Presensi & Shift Kerja */}
-            <div className="bg-gradient-to-br from-slate-50 via-white to-blue-50/50 border border-slate-200/90 rounded-xl p-4 sm:p-5 shadow-xs space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-xs shadow-xs">
-                  <Clock className="w-4 h-4 text-white" />
-                </span>
-                <div>
-                  <h4 className="font-bold text-slate-900 text-sm">
-                    Pedoman Teknis Mesin Presensi &amp; Pengaturan Jam Kerja (Shift)
-                  </h4>
-                  <p className="text-[11px] text-slate-500">
-                    Mekanisme pencatatan mesin finger/face recognition, toleransi waktu, dan perlakuan khusus shift malam
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 pt-1 text-xs">
-                <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-1.5">
-                  <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Toleransi Masuk (Grace Period)</span>
-                  </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    Setiap jenis jam kerja (reguler maupun shift) memiliki toleransi keterlambatan (contoh: 15 menit). Bila tap masuk melewati batas toleransi, sistem otomatis menetapkan status <strong>LE</strong>.
-                  </p>
-                </div>
-
-                <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-1.5">
-                  <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                    <Clock className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Pulang Cepat (Early Departure)</span>
-                  </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    Pegawai wajib melakukan tap pulang setelah jam dinas berakhir. Melakukan tap pulang mendahului jam berakhir shift tanpa surat izin dinas akan otomatis tercatat sebagai <strong>LE</strong>.
-                  </p>
-                </div>
-
-                <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-1.5">
-                  <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Keadilan Dobel Insiden (1 Hari)</span>
-                  </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    Jika dalam satu hari yang sama pegawai terlambat datang <strong>DAN</strong> pulang lebih cepat sekaligus, sistem <strong>tidak menjatuhkan denda ganda</strong>. Tetap dihitung 1 kali <strong>LE</strong> (-1 poin).
-                  </p>
-                </div>
-
-                <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-1.5">
-                  <div className="flex items-center gap-1.5 font-bold text-slate-800">
-                    <Layers className="w-3.5 h-3.5 text-purple-600" />
-                    <span>Shift Lintas Hari (Overnight)</span>
-                  </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    Untuk petugas asrama / satpam yang bertugas shift malam melewati pergantian hari (00:00), tap out pagi berikutnya otomatis dipasangkan dengan shift malam hari sebelumnya secara cerdas dan akurat.
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         );
 

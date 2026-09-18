@@ -25,6 +25,12 @@ export async function getSessionUser(request?: NextRequest): Promise<SessionPayl
 
   if (request) {
     token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+    if (!token) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7).trim();
+      }
+    }
   } else {
     try {
       const cookieStore = await cookies();

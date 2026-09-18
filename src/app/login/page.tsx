@@ -86,7 +86,7 @@ export default function LoginPage() {
                 AutoAbsen SMANSS
               </h1>
               <p className="text-xs text-emerald-100/80 mt-2 leading-relaxed">
-                Pengelolaan dan rekapitulasi kehadiran Guru &amp; Tenaga Kependidikan SMAN Sumatera Selatan dengan proteksi enterprise.
+                Pengelolaan dan rekapitulasi kehadiran Guru &amp; Tenaga Kependidikan SMAN Sumatera Selatan.
               </p>
             </div>
           </div>
@@ -94,7 +94,7 @@ export default function LoginPage() {
           {/* Bottom Security Assurance */}
           <div className="relative z-10 pt-6 border-t border-emerald-700/50 mt-6 sm:mt-0 flex items-center justify-between text-[11px] text-emerald-200/70">
             <span>&copy; {new Date().getFullYear()} SMAN Sumatera Selatan</span>
-            <span className="font-mono text-[10px] bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-700/40">v1.1</span>
+            <span className="font-mono text-[10px] bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-700/40">v1.3</span>
           </div>
         </div>
 

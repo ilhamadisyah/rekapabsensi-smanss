@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { ShiftTemplate, Employee, EmployeeSchedule, Holiday } from '@/lib/types';
+import { ShiftTemplate, Employee, EmployeeSchedule, Holiday, AdminUserPublic } from '@/lib/types';
 import { BulkScheduleModal } from '@/components/bulk-schedule-modal';
 import { ShiftManagerTab } from '@/components/shift-manager-tab';
 import { HolidayManagerTab } from '@/components/holiday-manager-tab';
@@ -27,6 +27,8 @@ import {
   ChevronRight,
   Eye,
   Pencil,
+  Shield,
+  Building2,
 } from 'lucide-react';
 
 const MONTH_NAMES = [
@@ -42,6 +44,7 @@ interface ScheduleManagerViewProps {
   onMonthChange?: (month: number, year: number) => void;
   onScheduleUpdated?: () => void;
   showToast: (text: string, type?: 'success' | 'info' | 'error') => void;
+  currentUser?: AdminUserPublic | null;
 }
 
 export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
@@ -50,6 +53,7 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
   onMonthChange,
   onScheduleUpdated,
   showToast,
+  currentUser,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'matrix' | 'employees' | 'shifts' | 'holidays'>('matrix');
 
@@ -100,6 +104,26 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
   // Search & Department Filter
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedDept, setSelectedDept] = useState<string>('ALL');
+  const [selectedWorkUnit, setSelectedWorkUnit] = useState<string>('ALL');
+
+  // RBAC Work Unit Access Control
+  const isSuperAdmin = !currentUser || currentUser.role === 'superadmin' || currentUser.work_unit_access?.includes('ALL');
+  const allowedUnits = currentUser?.work_unit_access || [];
+
+  const isEmpAllowed = useCallback((emp: Employee) => {
+    if (isSuperAdmin) return true;
+    if (!emp.work_unit) return false;
+    return allowedUnits.includes(emp.work_unit);
+  }, [isSuperAdmin, allowedUnits]);
+
+  // Extract unique work units from employees list
+  const workUnitsList = useMemo(() => {
+    const set = new Set<string>();
+    employees.forEach((e) => {
+      if (e.work_unit) set.add(e.work_unit);
+    });
+    return Array.from(set).sort();
+  }, [employees]);
 
   // Mode View vs Mode Edit
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
@@ -259,6 +283,9 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
   // Filtered employees
   const filteredEmployees = useMemo(() => {
     return employees.filter((emp) => {
+      // Jika admin memiliki pembatasan hak akses unit kerja, otomatis hanya tampilkan unit kerja yang berhak dikelolanya
+      if (!isSuperAdmin && !isEmpAllowed(emp)) return false;
+
       if (selectedDept === 'Guru' && !emp.department.includes('Guru')) return false;
       if (selectedDept === 'TU' && !emp.department.includes('TU') && !emp.department.toLowerCase().includes('staff') && !emp.department.toLowerCase().includes('staf') && !emp.department.toLowerCase().includes('kependidikan')) return false;
       if (
@@ -269,16 +296,23 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
       ) {
         return false;
       }
+
+      if (selectedWorkUnit !== 'ALL') {
+        if (selectedWorkUnit === 'UNSET' && emp.work_unit) return false;
+        if (selectedWorkUnit !== 'UNSET' && emp.work_unit !== selectedWorkUnit) return false;
+      }
+
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchName = emp.full_name.toLowerCase().includes(q);
         const matchNik = (emp.nik || '').toLowerCase().includes(q);
         const matchId = emp.machine_id.toLowerCase().includes(q);
-        if (!matchName && !matchNik && !matchId) return false;
+        const matchUnit = (emp.work_unit || '').toLowerCase().includes(q);
+        if (!matchName && !matchNik && !matchId && !matchUnit) return false;
       }
       return true;
     });
-  }, [employees, selectedDept, searchQuery]);
+  }, [employees, selectedDept, selectedWorkUnit, searchQuery, isSuperAdmin, isEmpAllowed]);
 
   // Count employees with custom shift schedules
   const employeesWithCustomSchedules = useMemo(() => {
@@ -291,6 +325,14 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
   const handleCellClick = (emp: Employee, d: any, customSchedule?: EmployeeSchedule) => {
     if (!isEditMode) {
       showToast('Mode Lihat: Aktifkan Mode Edit terlebih dahulu untuk mengubah jadwal shift pegawai.', 'info');
+      return;
+    }
+
+    if (!isEmpAllowed(emp)) {
+      showToast(
+        `Akses Ditolak: Anda hanya berwenang mengatur jadwal untuk unit: [${allowedUnits.join(', ')}]`,
+        'error'
+      );
       return;
     }
 
@@ -324,6 +366,14 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
     }
     if (!activeCell) return;
     const { employee, dateStr, day: cellDay } = activeCell;
+
+    if (!isEmpAllowed(employee)) {
+      showToastRef.current?.(
+        `Akses Ditolak: Anda hanya berwenang mengatur jadwal untuk unit: [${allowedUnits.join(', ')}]`,
+        'error'
+      );
+      return;
+    }
 
     const targetEmpId = employee.nik || employee.id || employee.machine_id;
 
@@ -792,6 +842,22 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
             </div>
           </div>
 
+          {/* RBAC Info Banner if restricted admin */}
+          {!isSuperAdmin && (
+            <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-3 px-4 flex items-center gap-3 text-xs text-amber-900 shadow-xs">
+              <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-800 flex items-center justify-center shrink-0">
+                <Shield className="w-4 h-4" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-amber-950">Akses Penjadwalan Terbatas (RBAC Unit Kerja)</p>
+                <p className="text-[11px] text-amber-800 mt-0.5">
+                  Anda masuk sebagai Admin Unit. Anda hanya berwenang mengatur jadwal untuk unit kerja:{' '}
+                  <span className="font-bold underline">{allowedUnits.length > 0 ? allowedUnits.join(', ') : 'Tidak ada unit'}</span>. Pegawai di luar unit ini dibatasi secara otomatis.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden flex flex-col relative z-10">
             {/* Table Control Bar */}
             <div className="border-b border-slate-200/80 bg-slate-50/60">
@@ -817,6 +883,25 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                         {d.label}
                       </button>
                     ))}
+                  </div>
+
+                  {/* Unit Kerja Filter Dropdown */}
+                  <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-slate-300 text-xs shrink-0 shadow-2xs">
+                    <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="text-slate-400 font-medium text-[11px]">Unit:</span>
+                    <select
+                      value={selectedWorkUnit}
+                      onChange={(e) => setSelectedWorkUnit(e.target.value)}
+                      className="bg-transparent font-semibold text-slate-700 focus:outline-none cursor-pointer text-xs"
+                    >
+                      <option value="ALL">Semua Unit</option>
+                      {workUnitsList.map((unit) => (
+                        <option key={unit} value={unit}>
+                          {unit}
+                        </option>
+                      ))}
+                      <option value="UNSET">Tanpa Unit</option>
+                    </select>
                   </div>
 
                   {/* Search Box */}
@@ -976,13 +1061,18 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                               <p className="font-bold text-slate-900 text-[11px] sm:text-xs truncate leading-tight">
                                 {emp.full_name}
                               </p>
-                              <div className="flex items-center gap-1.5 mt-0.5">
+                              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                 <span className="text-[10px] font-sans font-medium text-slate-500">
                                   {emp.nik || emp.machine_id}
                                 </span>
                                 <span className="px-1.5 py-0.2 bg-slate-100 text-slate-600 text-[9px] font-semibold rounded">
                                   {emp.department || 'Umum'}
                                 </span>
+                                {emp.work_unit && (
+                                  <span className="px-1.5 py-0.2 bg-indigo-50 text-indigo-700 border border-indigo-200/60 text-[9px] font-semibold rounded">
+                                    {emp.work_unit}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -1153,9 +1243,16 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                           {emp.nik || emp.machine_id}
                         </td>
                         <td className="py-3 px-4 text-center">
-                          <span className="inline-block px-2.5 py-1 bg-slate-100 text-slate-700 font-semibold text-[10px] rounded-lg text-center leading-tight">
-                            {emp.department || 'Umum'}
-                          </span>
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-700 font-semibold text-[10px] rounded leading-tight">
+                              {emp.department || 'Umum'}
+                            </span>
+                            {emp.work_unit && (
+                              <span className="inline-block px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-semibold text-[9px] rounded leading-tight">
+                                {emp.work_unit}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-4 text-center">
                           {hasCustom ? (
@@ -1447,6 +1544,7 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
         holidays={holidays}
         currentMonth={currMonth}
         currentYear={currYear}
+        currentUser={currentUser}
         onSaved={() => {
           loadScheduleData(currMonth, currYear, true);
           onScheduleUpdated?.();

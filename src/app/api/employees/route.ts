@@ -32,7 +32,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { full_name, machine_id, department, nik, excel_row_index, is_active } = body;
+    const { full_name, machine_id, department, nik, excel_row_index, is_active, work_unit } = body;
 
     if (!full_name || !String(full_name).trim()) {
       return NextResponse.json(
@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
       machine_id: cleanMachineId,
       full_name: String(full_name).trim(),
       department: department ? String(department).trim() : 'Guru',
+      work_unit: work_unit ? String(work_unit).trim() : null,
       nik: cleanNik,
       excel_row_index: nextRow,
       is_active: is_active !== false,

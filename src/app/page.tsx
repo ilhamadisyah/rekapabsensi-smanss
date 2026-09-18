@@ -704,6 +704,7 @@ export default function HomePage() {
           <ScheduleManagerView
             selectedMonth={selectedMonth}
             selectedYear={selectedYear}
+            currentUser={currentUser}
             onMonthChange={(m, y) => {
               setSelectedMonth(m);
               setSelectedYear(y);
@@ -833,9 +834,9 @@ export default function HomePage() {
 
       {/* Floating Toast Message */}
       {toastMsg && (
-        <div className="fixed bottom-5 right-5 z-[120] bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 text-xs font-semibold animate-in slide-in-from-bottom-2 duration-200 border border-slate-700">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>{toastMsg}</span>
+        <div className="fixed top-5 right-5 z-[9999] bg-slate-900/95 backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-semibold animate-in slide-in-from-top-3 fade-in duration-200 border border-slate-700/80 max-w-sm sm:max-w-md">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span className="leading-snug">{toastMsg}</span>
         </div>
       )}
     </div>

@@ -94,6 +94,7 @@ export async function POST(request: NextRequest) {
       email: user.email,
       fullName: user.full_name,
       role: user.role,
+      workUnitAccess: user.work_unit_access || (user.role === 'superadmin' ? ['ALL'] : []),
     });
 
     // 6. Buat response & pasang cookie HttpOnly
@@ -106,6 +107,7 @@ export async function POST(request: NextRequest) {
         email: user.email,
         full_name: user.full_name,
         role: user.role,
+        work_unit_access: user.work_unit_access || (user.role === 'superadmin' ? ['ALL'] : []),
       },
     });
 

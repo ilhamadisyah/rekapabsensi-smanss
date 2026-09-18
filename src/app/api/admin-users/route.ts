@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
       email: u.email,
       full_name: u.full_name,
       role: u.role,
+      work_unit_access: u.work_unit_access || (u.role === 'superadmin' ? ['ALL'] : []),
       is_active: u.is_active,
       last_login_at: u.last_login_at,
       created_at: u.created_at,
@@ -51,6 +52,9 @@ export async function POST(request: NextRequest) {
     const rawFullName = sanitizeInputText(body.full_name || '', 100);
     const password = typeof body.password === 'string' ? body.password.trim() : '';
     const role = body.role === 'superadmin' ? 'superadmin' : 'admin';
+    const workUnitAccess = Array.isArray(body.work_unit_access)
+      ? body.work_unit_access.map((u: any) => String(u).trim()).filter(Boolean)
+      : (role === 'superadmin' ? ['ALL'] : []);
 
     // Validasi kelengkapan data
     if (!rawUsername || !rawEmail || !rawFullName || !password) {
@@ -100,6 +104,7 @@ export async function POST(request: NextRequest) {
       password_hash: passwordHash,
       full_name: rawFullName,
       role,
+      work_unit_access: role === 'superadmin' ? ['ALL'] : workUnitAccess,
       is_active: true,
     });
 
@@ -114,7 +119,7 @@ export async function POST(request: NextRequest) {
       attendance_date: new Date().toISOString().split('T')[0],
       previous_status: 'NONE',
       new_status: 'CREATED',
-      reason: `Superadmin "${auth.user.username}" menambahkan akun admin baru: "${newUser.username}" (${newUser.role})`,
+      reason: `Superadmin "${auth.user.username}" menambahkan akun admin baru: "${newUser.username}" (${newUser.role}, Unit: ${newUser.work_unit_access?.join(', ') || 'ALL'})`,
       changed_by: auth.user.username,
     });
 
@@ -127,6 +132,7 @@ export async function POST(request: NextRequest) {
         email: newUser.email,
         full_name: newUser.full_name,
         role: newUser.role,
+        work_unit_access: newUser.work_unit_access || (newUser.role === 'superadmin' ? ['ALL'] : []),
         is_active: newUser.is_active,
         created_at: newUser.created_at,
       },
@@ -135,6 +141,92 @@ export async function POST(request: NextRequest) {
     console.error('[AdminUsers API] Error POST:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Gagal menambahkan admin baru.' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PATCH: Perbarui role, hak akses unit kerja, status, atau password admin (HANYA SUPERADMIN)
+ */
+export async function PATCH(request: NextRequest) {
+  const auth = await requireSuperAdmin(request);
+  if (auth.error) return auth.error;
+
+  try {
+    const body = await request.json();
+    const id = String(body.id || '').trim();
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'ID admin wajib disertakan.' },
+        { status: 400 }
+      );
+    }
+
+    const updates: Partial<any> = {};
+
+    if (body.full_name !== undefined) {
+      updates.full_name = sanitizeInputText(body.full_name, 100);
+    }
+
+    if (body.role !== undefined) {
+      updates.role = body.role === 'superadmin' ? 'superadmin' : 'admin';
+    }
+
+    if (body.work_unit_access !== undefined) {
+      updates.work_unit_access = Array.isArray(body.work_unit_access)
+        ? body.work_unit_access.map((u: any) => String(u).trim()).filter(Boolean)
+        : ['ALL'];
+    }
+
+    if (body.is_active !== undefined) {
+      updates.is_active = Boolean(body.is_active);
+    }
+
+    if (body.password && typeof body.password === 'string' && body.password.trim().length >= 8) {
+      updates.password_hash = hashPassword(body.password.trim());
+    }
+
+    const updatedUser = await db.updateAdminUser(id, updates);
+
+    if (!updatedUser) {
+      return NextResponse.json(
+        { success: false, error: 'Admin dengan ID tersebut tidak ditemukan.' },
+        { status: 404 }
+      );
+    }
+
+    // Catat log audit
+    await db.addAuditLog({
+      attendance_id: 'admin_management',
+      employee_id: updatedUser.username,
+      attendance_date: new Date().toISOString().split('T')[0],
+      previous_status: 'UPDATED',
+      new_status: updatedUser.role,
+      reason: `Superadmin "${auth.user.username}" memperbarui data admin "${updatedUser.username}"`,
+      changed_by: auth.user.username,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Data admin "${updatedUser.full_name}" berhasil diperbarui.`,
+      admin: {
+        id: updatedUser.id,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        full_name: updatedUser.full_name,
+        role: updatedUser.role,
+        work_unit_access: updatedUser.work_unit_access || (updatedUser.role === 'superadmin' ? ['ALL'] : []),
+        is_active: updatedUser.is_active,
+        created_at: updatedUser.created_at,
+        updated_at: updatedUser.updated_at,
+      },
+    });
+  } catch (error: any) {
+    console.error('[AdminUsers API] Error PATCH:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Gagal memperbarui admin.' },
       { status: 500 }
     );
   }

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Employee } from '@/lib/types';
+import { Employee, WorkUnit } from '@/lib/types';
+import { WorkUnitManagerModal } from './work-unit-manager-modal';
 import {
   Search,
   Edit2,
@@ -28,6 +29,7 @@ import {
   Save,
   RefreshCw,
   Undo2,
+  Building2,
 } from 'lucide-react';
 
 export interface EmployeeEditDraft {
@@ -35,6 +37,7 @@ export interface EmployeeEditDraft {
   nik: string;
   machine_id?: string;
   department: string;
+  work_unit?: string | null;
   excel_row_index: number;
 }
 
@@ -83,14 +86,36 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
   const stagedCount = Object.keys(stagedEdits).length;
 
+  // State Master Unit Kerja
+  const [workUnits, setWorkUnits] = useState<WorkUnit[]>([]);
+  const [isWorkUnitModalOpen, setIsWorkUnitModalOpen] = useState(false);
+  const [filterWorkUnit, setFilterWorkUnit] = useState<string>('ALL');
+
   // Modal Tambah Pegawai
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newFullName, setNewFullName] = useState('');
   const [newMachineId, setNewMachineId] = useState('');
   const [newNik, setNewNik] = useState('');
   const [newDepartment, setNewDepartment] = useState('Guru');
+  const [newWorkUnit, setNewWorkUnit] = useState<string>('');
   const [newRowIndex, setNewRowIndex] = useState<number>(employees.length + 1);
   const [isSubmittingNew, setIsSubmittingNew] = useState(false);
+
+  const loadWorkUnits = async () => {
+    try {
+      const res = await fetch('/api/work-units');
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setWorkUnits(data.workUnits || []);
+      }
+    } catch (err) {
+      console.error('Failed to load work units:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadWorkUnits();
+  }, []);
 
   // Modal Atur Urutan Laporan Presensi
   const [isReorderModalOpen, setIsReorderModalOpen] = useState(false);
@@ -107,14 +132,24 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
   }, [localEmployees]);
 
   const filtered = useMemo(() => {
-    return sortedEmployees.filter(
-      (e) =>
+    return sortedEmployees.filter((e) => {
+      const matchesSearch =
         e.full_name.toLowerCase().includes(search.toLowerCase()) ||
         e.machine_id.toLowerCase().includes(search.toLowerCase()) ||
         (e.nik && e.nik.toLowerCase().includes(search.toLowerCase())) ||
-        (e.department && e.department.toLowerCase().includes(search.toLowerCase()))
-    );
-  }, [sortedEmployees, search]);
+        (e.department && e.department.toLowerCase().includes(search.toLowerCase())) ||
+        (e.work_unit && e.work_unit.toLowerCase().includes(search.toLowerCase()));
+
+      const matchesWorkUnit =
+        filterWorkUnit === 'ALL'
+          ? true
+          : filterWorkUnit === 'UNSET'
+          ? !e.work_unit
+          : e.work_unit === filterWorkUnit;
+
+      return matchesSearch && matchesWorkUnit;
+    });
+  }, [sortedEmployees, search, filterWorkUnit]);
 
   const totalItems = filtered.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -154,7 +189,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
   const handleFieldChange = (
     emp: Employee,
     field: keyof EmployeeEditDraft,
-    value: string | number
+    value: any
   ) => {
     setStagedEdits((prev) => {
       const existing = prev[emp.id] || {
@@ -162,6 +197,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
         nik: emp.nik || emp.id,
         machine_id: emp.machine_id,
         department: emp.department && emp.department.includes('Guru') ? 'Guru' : 'Staff',
+        work_unit: emp.work_unit || null,
         excel_row_index: emp.excel_row_index,
       };
 
@@ -176,6 +212,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
         updated.nik.trim() === (emp.nik || emp.id || '').trim() &&
         (updated.department.includes('Guru') ? 'Guru' : 'Staff') ===
           (emp.department && emp.department.includes('Guru') ? 'Guru' : 'Staff') &&
+        (updated.work_unit || null) === (emp.work_unit || null) &&
         Number(updated.excel_row_index) === Number(emp.excel_row_index);
 
       if (isSameAsOriginal) {
@@ -253,6 +290,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             nik: draft.nik.trim(),
             machine_id: draft.machine_id?.trim() || draft.nik.trim(),
             department: draft.department.trim(),
+            work_unit: draft.work_unit !== undefined ? (draft.work_unit ? draft.work_unit.trim() : null) : emp.work_unit,
             excel_row_index: Number(draft.excel_row_index) || 1,
           },
         }),
@@ -270,6 +308,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                   nik: draft.nik.trim(),
                   machine_id: draft.machine_id?.trim() || draft.nik.trim(),
                   department: draft.department.trim(),
+                  work_unit: draft.work_unit !== undefined ? (draft.work_unit ? draft.work_unit.trim() : null) : e.work_unit,
                   excel_row_index: Number(draft.excel_row_index) || 1,
                 }
               : e
@@ -312,6 +351,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
           nik: draft.nik.trim(),
           machine_id: draft.machine_id?.trim() || draft.nik.trim(),
           department: draft.department.trim(),
+          work_unit: draft.work_unit !== undefined ? (draft.work_unit ? draft.work_unit.trim() : null) : undefined,
           excel_row_index: Number(draft.excel_row_index) || 1,
         },
       }));
@@ -346,6 +386,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
               nik: draft.nik.trim(),
               machine_id: draft.machine_id?.trim() || draft.nik.trim(),
               department: draft.department.trim(),
+              work_unit: draft.work_unit !== undefined ? (draft.work_unit ? draft.work_unit.trim() : null) : e.work_unit,
               excel_row_index: Number(draft.excel_row_index) || 1,
             };
           })
@@ -465,6 +506,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
     setNewMachineId('');
     setNewNik('');
     setNewDepartment('Guru');
+    setNewWorkUnit('');
     setNewRowIndex(localEmployees.length + 1);
     setMsg(null);
     setIsAddModalOpen(true);
@@ -493,6 +535,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
           machine_id: cleanMachineId,
           nik: newNik.trim(),
           department: newDepartment.trim(),
+          work_unit: newWorkUnit.trim() ? newWorkUnit.trim() : null,
           excel_row_index: Number(newRowIndex) || (localEmployees.length + 1),
           is_active: true,
         }),
@@ -644,6 +687,39 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
             />
           </div>
 
+          {/* Filter Unit Kerja */}
+          <select
+            value={filterWorkUnit}
+            onChange={(e) => {
+              setFilterWorkUnit(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="px-2.5 py-1.5 text-xs rounded-xl border border-slate-300 bg-white font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer max-w-[180px] truncate"
+            title="Filter daftar pegawai berdasarkan Unit Kerja"
+          >
+            <option value="ALL">Semua Unit Kerja ({localEmployees.length})</option>
+            <option value="UNSET">Belum Diatur Unit</option>
+            {workUnits.map((u) => {
+              const count = localEmployees.filter((e) => e.work_unit === u.name).length;
+              return (
+                <option key={u.id} value={u.name}>
+                  {u.name} ({count})
+                </option>
+              );
+            })}
+          </select>
+
+          {/* Tombol Kelola Unit Kerja */}
+          <button
+            type="button"
+            onClick={() => setIsWorkUnitModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200 hover:border-blue-200 rounded-xl text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+            title="Kelola Master Data Unit Kerja (Tambah, Ubah Nama, Hapus Unit)"
+          >
+            <Building2 className="w-4 h-4 text-blue-600" />
+            <span>Kelola Unit Kerja</span>
+          </button>
+
           {localEmployees.length > 1 && (
             <button
               onClick={handleOpenReorderModal}
@@ -778,7 +854,8 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                   </th>
                   <th className="p-3 font-bold text-slate-700">Nama Pegawai</th>
                   <th className="p-3 font-bold text-slate-700 w-44">NIK / NIP</th>
-                  <th className="p-3 font-bold text-slate-700 w-36">Unit / Jabatan</th>
+                  <th className="p-3 font-bold text-slate-700 w-28">Jabatan</th>
+                  <th className="p-3 font-bold text-slate-700 w-44">Unit Kerja</th>
                   <th className="p-3 font-bold text-slate-700 text-center w-28">Pindah Baris</th>
                   <th className="p-3 font-bold text-slate-700 text-center w-24">Aksi</th>
                 </tr>
@@ -786,7 +863,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
               <tbody className="divide-y divide-slate-100">
                 {paginatedEmployees.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-6 text-center text-slate-400 text-xs italic">
+                    <td colSpan={7} className="p-6 text-center text-slate-400 text-xs italic">
                       Tidak ditemukan pegawai dengan kata kunci &quot;{search}&quot;.
                     </td>
                   </tr>
@@ -801,6 +878,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                     const displayFullName = draft !== undefined ? draft.full_name : emp.full_name;
                     const displayNik = draft !== undefined ? draft.nik : (emp.nik || emp.id || '');
                     const displayDept = draft !== undefined ? draft.department : (emp.department || 'Guru');
+                    const displayWorkUnit = draft !== undefined ? draft.work_unit : emp.work_unit;
 
                     const fullIndex = sortedEmployees.findIndex((e) => e.id === emp.id);
                     const isFirst = fullIndex === 0;
@@ -891,7 +969,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                           )}
                         </td>
 
-                        {/* Kolom Unit / Jabatan */}
+                        {/* Kolom Jabatan */}
                         <td className="p-3 text-slate-600">
                           {isEditing ? (
                             <select
@@ -915,6 +993,36 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                               }`}
                             >
                               {emp.department && emp.department.includes('Guru') ? 'Guru' : 'Staff'}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Kolom Unit Kerja */}
+                        <td className="p-3">
+                          {isEditing ? (
+                            <select
+                              value={displayWorkUnit || ''}
+                              onChange={(e) => handleFieldChange(emp, 'work_unit', e.target.value || null)}
+                              className={`w-full px-2 py-1 text-xs border rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/30 ${
+                                isModified
+                                  ? 'border-amber-400 bg-white text-slate-900 shadow-2xs'
+                                  : 'border-slate-300 bg-white text-slate-800'
+                              }`}
+                            >
+                              <option value="">-- Tanpa Unit --</option>
+                              {workUnits.map((u) => (
+                                <option key={u.id} value={u.name}>
+                                  {u.name}
+                                </option>
+                              ))}
+                            </select>
+                          ) : emp.work_unit ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              {emp.work_unit}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-slate-400 italic">
+                              Belum diatur
                             </span>
                           )}
                         </td>
@@ -1393,7 +1501,7 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Unit Kerja / Jabatan <span className="text-rose-500">*</span>
+                  Jabatan (Klasifikasi) <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={newDepartment}
@@ -1403,6 +1511,27 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
                   <option value="Guru">Guru</option>
                   <option value="Staff">Staff</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Unit Kerja (Opsional)
+                </label>
+                <select
+                  value={newWorkUnit}
+                  onChange={(e) => setNewWorkUnit(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-xs font-semibold"
+                >
+                  <option value="">-- Tanpa Unit Kerja --</option>
+                  {workUnits.map((u) => (
+                    <option key={u.id} value={u.name}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  Dapat diatur sekarang atau dikelola di kemudian hari
+                </p>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
@@ -1469,6 +1598,15 @@ export const EmployeeManager: React.FC<EmployeeManagerProps> = ({
           </div>
         </div>
       )}
+
+      {/* Modal Kelola Unit Kerja */}
+      <WorkUnitManagerModal
+        isOpen={isWorkUnitModalOpen}
+        onClose={() => setIsWorkUnitModalOpen(false)}
+        onToast={(t) => setMsg({ text: t, type: 'success' })}
+        employees={localEmployees}
+        onWorkUnitsChanged={loadWorkUnits}
+      />
     </div>
   );
 };

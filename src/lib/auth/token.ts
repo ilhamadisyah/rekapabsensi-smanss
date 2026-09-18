@@ -12,6 +12,7 @@ export interface SessionPayload {
   email: string;
   fullName: string;
   role: 'superadmin' | 'admin';
+  workUnitAccess?: string[];
   exp: number; // Unix epoch in seconds
 }
 

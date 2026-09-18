@@ -9,6 +9,7 @@ import {
   EmployeeSchedule,
   Holiday,
   AdminUser,
+  WorkUnit,
 } from '../types';
 import { getEmployeeNameByMachineId } from '../attendance/employee-mapping';
 
@@ -76,12 +77,26 @@ export const supabaseStore = {
     const client = getSupabaseServerClient();
     if (!client) return null;
 
-    const { data, error } = await client
+    let payload: any = { ...updates };
+    let { data, error } = await client
       .from('employees')
-      .update(updates)
+      .update(payload)
       .or(`id.eq.${id},nik.eq.${id},machine_id.eq.${id}`)
       .select()
       .single();
+
+    if (error && (error.code === 'PGRST204' || error.message?.includes('work_unit'))) {
+      console.warn('[Supabase] work_unit column does not exist yet on employees, updating without work_unit');
+      delete payload.work_unit;
+      const res = await client
+        .from('employees')
+        .update(payload)
+        .or(`id.eq.${id},nik.eq.${id},machine_id.eq.${id}`)
+        .select()
+        .single();
+      data = res.data;
+      error = res.error;
+    }
 
     if (error) {
       console.error('[Supabase] Error updateEmployee:', error);
@@ -100,7 +115,7 @@ export const supabaseStore = {
     }
     const cleanMachineId = String(employeeData.machine_id || '').trim();
 
-    const newEmp: Employee = {
+    const newEmp: any = {
       id: cleanNik,
       nik: cleanNik,
       machine_id: cleanMachineId || cleanNik,
@@ -110,12 +125,27 @@ export const supabaseStore = {
       is_active: employeeData.is_active ?? true,
       created_at: new Date().toISOString(),
     };
+    if (employeeData.work_unit !== undefined) {
+      newEmp.work_unit = employeeData.work_unit ? employeeData.work_unit.trim() : null;
+    }
 
-    const { data, error } = await client
+    let { data, error } = await client
       .from('employees')
       .insert(newEmp)
       .select()
       .single();
+
+    if (error && (error.code === 'PGRST204' || error.message?.includes('work_unit'))) {
+      console.warn('[Supabase] work_unit column does not exist yet on employees, inserting without work_unit');
+      delete newEmp.work_unit;
+      const res = await client
+        .from('employees')
+        .insert(newEmp)
+        .select()
+        .single();
+      data = res.data;
+      error = res.error;
+    }
 
     if (error) {
       console.error('[Supabase] Error createEmployee:', error);
@@ -1092,18 +1122,33 @@ export const supabaseStore = {
     const client = getSupabaseServerClient();
     if (!client) return null;
 
-    const { data, error } = await client
+    const payload: any = {
+      username: userData.username.toLowerCase().trim(),
+      email: userData.email.toLowerCase().trim(),
+      password_hash: userData.password_hash,
+      full_name: userData.full_name.trim(),
+      role: userData.role,
+      work_unit_access: userData.work_unit_access || (userData.role === 'superadmin' ? ['ALL'] : []),
+      is_active: userData.is_active !== undefined ? userData.is_active : true,
+    };
+
+    let { data, error } = await client
       .from('admin_users')
-      .insert({
-        username: userData.username.toLowerCase().trim(),
-        email: userData.email.toLowerCase().trim(),
-        password_hash: userData.password_hash,
-        full_name: userData.full_name.trim(),
-        role: userData.role,
-        is_active: userData.is_active !== undefined ? userData.is_active : true,
-      })
+      .insert(payload)
       .select()
       .single();
+
+    if (error && (error.code === 'PGRST204' || error.message?.includes('work_unit_access'))) {
+      console.warn('[Supabase] work_unit_access column does not exist yet on admin_users, inserting without it');
+      delete payload.work_unit_access;
+      const res = await client
+        .from('admin_users')
+        .insert(payload)
+        .select()
+        .single();
+      data = res.data;
+      error = res.error;
+    }
 
     if (error) {
       console.error('[Supabase] Error createAdminUser:', error);
@@ -1141,12 +1186,25 @@ export const supabaseStore = {
     delete updatePayload.id;
     delete updatePayload.created_at;
 
-    const { data, error } = await client
+    let { data, error } = await client
       .from('admin_users')
       .update(updatePayload)
       .eq('id', id)
       .select()
       .single();
+
+    if (error && (error.code === 'PGRST204' || error.message?.includes('work_unit_access'))) {
+      console.warn('[Supabase] work_unit_access column does not exist yet on admin_users, updating without it');
+      delete updatePayload.work_unit_access;
+      const res = await client
+        .from('admin_users')
+        .update(updatePayload)
+        .eq('id', id)
+        .select()
+        .single();
+      data = res.data;
+      error = res.error;
+    }
 
     if (error) {
       console.error('[Supabase] Error updateAdminUser:', error);
@@ -1164,6 +1222,97 @@ export const supabaseStore = {
       .from('admin_users')
       .update({ last_login_at: new Date().toISOString() })
       .eq('id', id);
+  },
+
+  // ==========================================
+  // WORK UNITS CRUD (MASTER UNIT KERJA)
+  // ==========================================
+  async getWorkUnits(): Promise<WorkUnit[]> {
+    const client = getSupabaseServerClient();
+    if (!client) return [];
+
+    try {
+      const { data, error } = await client
+        .from('work_units')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.warn('[Supabase] work_units table query returned error (falling back to store/localDb):', error.message);
+        return [];
+      }
+
+      return (data || []) as WorkUnit[];
+    } catch (err: any) {
+      console.warn('[Supabase] Error getWorkUnits:', err.message);
+      return [];
+    }
+  },
+
+  async createWorkUnit(unitData: Omit<WorkUnit, 'id' | 'created_at'>): Promise<WorkUnit | null> {
+    const client = getSupabaseServerClient();
+    if (!client) return null;
+
+    const id = `unit-${Date.now()}`;
+    const payload = {
+      id,
+      name: unitData.name.trim(),
+      description: unitData.description?.trim() || '',
+      created_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await client
+      .from('work_units')
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[Supabase] Error createWorkUnit:', error);
+      throw new Error(error.message || 'Gagal menambahkan Unit Kerja');
+    }
+
+    return data as WorkUnit;
+  },
+
+  async updateWorkUnit(id: string, updates: Partial<WorkUnit>): Promise<WorkUnit | null> {
+    const client = getSupabaseServerClient();
+    if (!client) return null;
+
+    const payload: any = { ...updates };
+    delete payload.id;
+    delete payload.created_at;
+
+    const { data, error } = await client
+      .from('work_units')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[Supabase] Error updateWorkUnit:', error);
+      throw new Error(error.message || 'Gagal memperbarui Unit Kerja');
+    }
+
+    return data as WorkUnit;
+  },
+
+  async deleteWorkUnit(id: string): Promise<boolean> {
+    const client = getSupabaseServerClient();
+    if (!client) return false;
+
+    const { error } = await client
+      .from('work_units')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('[Supabase] Error deleteWorkUnit:', error);
+      return false;
+    }
+
+    return true;
   },
 };
 

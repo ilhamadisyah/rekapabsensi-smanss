@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { ShiftTemplate, Employee, Holiday } from '@/lib/types';
-import { X, Calendar, Users, Check, AlertCircle, Sparkles, Filter, Search, CheckSquare, Square } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { ShiftTemplate, Employee, Holiday, AdminUserPublic } from '@/lib/types';
+import { X, Calendar, Users, Check, AlertCircle, Sparkles, Filter, Search, CheckSquare, Square, Shield } from 'lucide-react';
 
 const DAYS_OF_WEEK = [
   { dayIndex: 1, label: 'Senin', short: 'Sen' },
@@ -23,6 +23,7 @@ interface BulkScheduleModalProps {
   currentMonth: number;
   currentYear: number;
   onSaved: () => void;
+  currentUser?: AdminUserPublic | null;
 }
 
 export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
@@ -34,6 +35,7 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
   currentMonth,
   currentYear,
   onSaved,
+  currentUser,
 }) => {
   const [selectedShiftId, setSelectedShiftId] = useState<string>(
     shifts[0]?.id || 'shift-normal'
@@ -98,27 +100,55 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
 
   // Search & selection
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [filterWorkUnit, setFilterWorkUnit] = useState<string>('ALL');
   const [selectedEmpIds, setSelectedEmpIds] = useState<Set<string>>(new Set());
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  const isSuperAdmin = !currentUser || currentUser.role === 'superadmin' || currentUser.work_unit_access?.includes('ALL');
+  const allowedUnits = currentUser?.work_unit_access || [];
+
+  // Available work units extracted from employees list
+  const availableWorkUnits = useMemo(() => {
+    const set = new Set<string>();
+    employees.forEach((e) => {
+      if (e.work_unit) set.add(e.work_unit);
+    });
+    return Array.from(set).sort();
+  }, [employees]);
+
+  const isEmpAllowed = useCallback((emp: Employee) => {
+    if (isSuperAdmin) return true;
+    if (!emp.work_unit) return false;
+    return allowedUnits.includes(emp.work_unit);
+  }, [isSuperAdmin, allowedUnits]);
+
   const getEmpKey = (emp: Employee) => emp.nik || emp.id || emp.machine_id;
 
   // Filtered employees list
   const filteredEmployees = useMemo(() => {
     return employees.filter((emp) => {
+      // If admin has restricted work_unit_access, filter out other employees
+      if (!isSuperAdmin && !isEmpAllowed(emp)) return false;
+
+      if (filterWorkUnit !== 'ALL') {
+        if (filterWorkUnit === 'UNSET' && emp.work_unit) return false;
+        if (filterWorkUnit !== 'UNSET' && emp.work_unit !== filterWorkUnit) return false;
+      }
+
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchName = (emp.full_name || '').toLowerCase().includes(q);
         const matchNik = (emp.nik || '').toLowerCase().includes(q);
         const matchId = (emp.machine_id || '').toLowerCase().includes(q);
-        if (!matchName && !matchNik && !matchId) return false;
+        const matchUnit = (emp.work_unit || '').toLowerCase().includes(q);
+        if (!matchName && !matchNik && !matchId && !matchUnit) return false;
       }
       return true;
     });
-  }, [employees, searchQuery]);
+  }, [employees, searchQuery, isSuperAdmin, isEmpAllowed, filterWorkUnit]);
 
   // Hitung jumlah hari aktif dan rincian hari yang dilewati
   const { activeDaysCount, skippedWeekendsCount, skippedHolidaysCount } = useMemo(() => {
@@ -589,25 +619,54 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
               </div>
             </div>
 
-            {/* Search Box (Bersih & Lebar Penuh) */}
-            <div className="relative w-full">
-              <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari nama pegawai, NIK, atau ID mesin..."
-                className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all placeholder:text-slate-400"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs"
-                  title="Hapus pencarian"
+            {/* RBAC Notification Banner */}
+            {!isSuperAdmin && (
+              <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 text-xs text-amber-800">
+                <Shield className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>
+                  <strong>Hak Akses Unit Kerja:</strong> Anda hanya dapat memilih pegawai unit: [
+                  <strong>{allowedUnits.join(', ')}</strong>]
+                </span>
+              </div>
+            )}
+
+            {/* Search Box & Unit Filter Row */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Cari nama pegawai, NIK, atau ID mesin..."
+                  className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all placeholder:text-slate-400"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs"
+                    title="Hapus pencarian"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {availableWorkUnits.length > 0 && isSuperAdmin && (
+                <select
+                  value={filterWorkUnit}
+                  onChange={(e) => setFilterWorkUnit(e.target.value)}
+                  className="px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 max-w-[150px] truncate cursor-pointer"
                 >
-                  ✕
-                </button>
+                  <option value="ALL">Semua Unit</option>
+                  <option value="UNSET">Tanpa Unit</option>
+                  {availableWorkUnits.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
               )}
             </div>
 
@@ -644,9 +703,16 @@ export const BulkScheduleModal: React.FC<BulkScheduleModalProps> = ({
                           </span>
                         </div>
                       </div>
-                      <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-semibold rounded">
-                        {emp.department || 'Umum'}
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {emp.work_unit && (
+                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold rounded">
+                            {emp.work_unit}
+                          </span>
+                        )}
+                        <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-semibold rounded">
+                          {emp.department || 'Umum'}
+                        </span>
+                      </div>
                     </div>
                   );
                 })

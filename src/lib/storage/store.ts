@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Employee, UploadHistory, DailyAttendance, AuditLog, AttendanceCode, ShiftTemplate, EmployeeSchedule, Holiday, AdminUser } from '../types';
+import { Employee, UploadHistory, DailyAttendance, AuditLog, AttendanceCode, ShiftTemplate, EmployeeSchedule, Holiday, AdminUser, WorkUnit } from '../types';
 import { INITIAL_EMPLOYEES, getEmployeeNameByMachineId } from '../attendance/employee-mapping';
 import { parseAttendanceFile } from '../attendance/parser';
 import { isSupabaseConfigured } from '../supabase/server';
@@ -15,6 +15,7 @@ interface DbSchema {
   employee_schedules: EmployeeSchedule[];
   holidays: Holiday[];
   admin_users?: AdminUser[];
+  work_units?: WorkUnit[];
 }
 
 export const DEFAULT_SUPERADMIN_USER: AdminUser = {
@@ -24,10 +25,50 @@ export const DEFAULT_SUPERADMIN_USER: AdminUser = {
   password_hash: 'e42aa401077bfafdbf5a64e19bfd8d0f:cc0e3c0e2898864777f07477ea57d57275bfa33c677f465ba2a094ca91686703e13ebdcb087cac2787f8b2b1b596e0c995e54167321cf384a69273d81ded02d1',
   full_name: 'Super Administrator SMANSS',
   role: 'superadmin',
+  work_unit_access: ['ALL'],
   is_active: true,
   created_at: '2026-09-01T00:00:00.000Z',
   updated_at: '2026-09-01T00:00:00.000Z',
 };
+
+export const DEFAULT_WORK_UNITS: WorkUnit[] = [
+  {
+    id: 'unit-security',
+    name: 'Security / Satpam',
+    description: 'Petugas keamanan lingkungan sekolah',
+    created_at: '2026-09-01T00:00:00.000Z',
+  },
+  {
+    id: 'unit-kebersihan',
+    name: 'Kebersihan / Cleaning Service',
+    description: 'Petugas kebersihan sekolah dan sarana prasarana',
+    created_at: '2026-09-01T00:00:00.000Z',
+  },
+  {
+    id: 'unit-asrama',
+    name: 'Asrama / Boarding',
+    description: 'Pembina, pengasuh, dan pengurus asrama siswa',
+    created_at: '2026-09-01T00:00:00.000Z',
+  },
+  {
+    id: 'unit-tu',
+    name: 'Tata Usaha / Administrasi',
+    description: 'Tenaga administrasi dan tata usaha sekolah',
+    created_at: '2026-09-01T00:00:00.000Z',
+  },
+  {
+    id: 'unit-guru',
+    name: 'Guru Mata Pelajaran',
+    description: 'Tenaga pendidik kurikulum & pengajar',
+    created_at: '2026-09-01T00:00:00.000Z',
+  },
+  {
+    id: 'unit-it',
+    name: 'Laboratorium & IT',
+    description: 'Teknisi laboratorium dan infrastruktur IT',
+    created_at: '2026-09-01T00:00:00.000Z',
+  },
+];
 
 export const DEFAULT_SHIFT_TEMPLATES: ShiftTemplate[] = [
   {
@@ -129,6 +170,7 @@ function ensureDbFile(): DbSchema {
     employee_schedules: [],
     holidays: [],
     admin_users: [{ ...DEFAULT_SUPERADMIN_USER }],
+    work_units: [...DEFAULT_WORK_UNITS],
   };
 
   try {
@@ -172,6 +214,10 @@ function ensureDbFile(): DbSchema {
     }
     if (!parsed.admin_users || parsed.admin_users.length === 0) {
       parsed.admin_users = [{ ...DEFAULT_SUPERADMIN_USER }];
+      dirty = true;
+    }
+    if (!parsed.work_units || parsed.work_units.length === 0) {
+      parsed.work_units = [...DEFAULT_WORK_UNITS];
       dirty = true;
     }
 
@@ -241,6 +287,7 @@ const localDb = {
       machine_id: cleanMachineId || cleanNik,
       full_name: employeeData.full_name.trim(),
       department: (employeeData.department || 'Guru').trim(),
+      work_unit: employeeData.work_unit ? employeeData.work_unit.trim() : null,
       excel_row_index: Number(employeeData.excel_row_index) || (data.employees.length + 1),
       is_active: employeeData.is_active ?? true,
       created_at: new Date().toISOString(),
@@ -971,6 +1018,7 @@ const localDb = {
       password_hash: userData.password_hash,
       full_name: userData.full_name.trim(),
       role: userData.role,
+      work_unit_access: userData.work_unit_access || (userData.role === 'superadmin' ? ['ALL'] : []),
       is_active: userData.is_active !== undefined ? userData.is_active : true,
       created_at: now,
       updated_at: now,
@@ -1018,6 +1066,58 @@ const localDb = {
       user.last_login_at = new Date().toISOString();
       writeDb(data);
     }
+  },
+
+  // --- WORK UNITS CRUD ---
+  getWorkUnits(): WorkUnit[] {
+    const data = ensureDbFile();
+    return (data.work_units || []).sort((a, b) => a.name.localeCompare(b.name));
+  },
+
+  createWorkUnit(unitData: Omit<WorkUnit, 'id' | 'created_at'>): WorkUnit {
+    const data = ensureDbFile();
+    if (!data.work_units) data.work_units = [];
+
+    const now = new Date().toISOString();
+    const id = `unit-${Date.now()}`;
+    const newUnit: WorkUnit = {
+      id,
+      name: unitData.name.trim(),
+      description: unitData.description?.trim() || '',
+      created_at: now,
+    };
+    data.work_units.push(newUnit);
+    writeDb(data);
+    return newUnit;
+  },
+
+  updateWorkUnit(id: string, updates: Partial<WorkUnit>): WorkUnit | null {
+    const data = ensureDbFile();
+    if (!data.work_units) return null;
+    const idx = data.work_units.findIndex((u) => u.id === id);
+    if (idx === -1) return null;
+
+    const updated: WorkUnit = {
+      ...data.work_units[idx],
+      ...updates,
+      name: updates.name ? updates.name.trim() : data.work_units[idx].name,
+      description: updates.description !== undefined ? updates.description.trim() : data.work_units[idx].description,
+    };
+    data.work_units[idx] = updated;
+    writeDb(data);
+    return updated;
+  },
+
+  deleteWorkUnit(id: string): boolean {
+    const data = ensureDbFile();
+    if (!data.work_units) return false;
+    const initialLen = data.work_units.length;
+    data.work_units = data.work_units.filter((u) => u.id !== id);
+    if (data.work_units.length !== initialLen) {
+      writeDb(data);
+      return true;
+    }
+    return false;
   },
 };
 
@@ -1299,5 +1399,63 @@ export const db = {
       }
     }
     localDb.updateAdminLastLogin(id);
+  },
+
+  // --- WORK UNITS (MASTER UNIT KERJA) ---
+  async getWorkUnits(): Promise<WorkUnit[]> {
+    if (isSupabaseConfigured) {
+      try {
+        const units = await supabaseStore.getWorkUnits();
+        if (units && units.length > 0) return units;
+      } catch (err) {
+        console.warn('[Store] Supabase error getting work units, falling back to localDb:', err);
+      }
+    }
+    return localDb.getWorkUnits();
+  },
+
+  async createWorkUnit(unitData: Omit<WorkUnit, 'id' | 'created_at'>): Promise<WorkUnit> {
+    if (isSupabaseConfigured) {
+      try {
+        const unit = await supabaseStore.createWorkUnit(unitData);
+        if (unit) {
+          try { localDb.createWorkUnit(unitData); } catch {}
+          return unit;
+        }
+      } catch (err) {
+        console.warn('[Store] Supabase error creating work unit, falling back to localDb:', err);
+      }
+    }
+    return localDb.createWorkUnit(unitData);
+  },
+
+  async updateWorkUnit(id: string, updates: Partial<WorkUnit>): Promise<WorkUnit | null> {
+    if (isSupabaseConfigured) {
+      try {
+        const unit = await supabaseStore.updateWorkUnit(id, updates);
+        if (unit) {
+          try { localDb.updateWorkUnit(id, updates); } catch {}
+          return unit;
+        }
+      } catch (err) {
+        console.warn('[Store] Supabase error updating work unit, falling back to localDb:', err);
+      }
+    }
+    return localDb.updateWorkUnit(id, updates);
+  },
+
+  async deleteWorkUnit(id: string): Promise<boolean> {
+    if (isSupabaseConfigured) {
+      try {
+        const res = await supabaseStore.deleteWorkUnit(id);
+        if (res) {
+          try { localDb.deleteWorkUnit(id); } catch {}
+          return true;
+        }
+      } catch (err) {
+        console.warn('[Store] Supabase error deleting work unit, falling back to localDb:', err);
+      }
+    }
+    return localDb.deleteWorkUnit(id);
   },
 };

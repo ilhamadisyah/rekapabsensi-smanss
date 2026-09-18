@@ -7,10 +7,18 @@ export interface AdminUser {
   password_hash: string;
   full_name: string;
   role: UserRole;
+  work_unit_access?: string[]; // e.g. ['ALL'] or specific work unit names ['Security / Satpam']
   is_active: boolean;
   last_login_at?: string | null;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface WorkUnit {
+  id: string;
+  name: string;
+  description?: string;
+  created_at?: string;
 }
 
 export type AdminUserPublic = Omit<AdminUser, 'password_hash'>;
@@ -213,6 +221,7 @@ export interface Employee {
   nik: string;
   full_name: string;
   department: string;
+  work_unit?: string | null;
   excel_row_index: number; // Row 17 to 111 in official template
   is_active: boolean;
   created_at: string;

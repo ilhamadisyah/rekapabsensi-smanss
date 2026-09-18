@@ -103,7 +103,48 @@
       "is_active": true,
       "created_at": "2026-09-01T00:00:00.000Z",
       "updated_at": "2026-09-01T00:00:00.000Z",
-      "last_login_at": "2026-09-10T01:24:17.700Z"
+      "last_login_at": "2026-09-10T01:24:17.700Z",
+      "work_unit_access": [
+        "ALL"
+      ]
+    }
+  ],
+  "work_units": [
+    {
+      "id": "unit-security",
+      "name": "Security / Satpam",
+      "description": "Petugas keamanan dan ketertiban lingkungan sekolah",
+      "created_at": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "id": "unit-kebersihan",
+      "name": "Tenaga Kebersihan / Cleaning",
+      "description": "Petugas kebersihan area sekolah dan fasilitas umum",
+      "created_at": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "id": "unit-asrama",
+      "name": "Pengelola Asrama",
+      "description": "Pembina, pengasuh, dan pengurus asrama siswa",
+      "created_at": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "id": "unit-tu",
+      "name": "Tata Usaha / Administrasi",
+      "description": "Tenaga administrasi dan tata usaha sekolah",
+      "created_at": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "id": "unit-guru",
+      "name": "Guru Mata Pelajaran",
+      "description": "Tenaga pendidik kurikulum & pengajar",
+      "created_at": "2026-09-01T00:00:00.000Z"
+    },
+    {
+      "id": "unit-it",
+      "name": "Laboratorium & IT",
+      "description": "Teknisi laboratorium dan infrastruktur IT",
+      "created_at": "2026-09-01T00:00:00.000Z"
     }
   ]
 }
