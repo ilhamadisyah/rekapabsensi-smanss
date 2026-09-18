@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/storage/store';
 import { parseAttendanceFile, ParseAttendanceOptions } from '@/lib/attendance/parser';
+import { requireSuperAdmin } from '@/lib/auth/guard';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  const auth = await requireSuperAdmin(request);
+  if (auth.error) {
+    return auth.error;
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;

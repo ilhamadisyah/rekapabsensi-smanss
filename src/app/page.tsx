@@ -116,10 +116,22 @@ export default function HomePage() {
         if (data.success && data.user) {
           setCurrentUser(data.user);
           setUserRole(data.user.role);
+          if (data.user.role !== 'superadmin') {
+            setActiveTab('schedules');
+          }
         }
       })
       .catch((err) => console.error('Gagal memuat info akun:', err));
   }, []);
+
+  // Proteksi otomatis: jika role bukan superadmin, cegah pembukaan tab terlarang
+  useEffect(() => {
+    if (currentUser && currentUser.role !== 'superadmin') {
+      if (activeTab === 'matrix' || activeTab === 'employees' || activeTab === 'audit') {
+        setActiveTab('schedules');
+      }
+    }
+  }, [currentUser, activeTab]);
 
   // Tutup dropdown saat klik di luar area profil
   useEffect(() => {
@@ -525,7 +537,7 @@ export default function HomePage() {
                             : 'bg-blue-100 text-blue-800'
                         }`}
                       >
-                        {userRole === 'superadmin' ? 'Super Administrator' : 'Admin Presensi Staff'}
+                        {userRole === 'superadmin' ? 'Super Administrator' : 'Admin Unit Kerja'}
                       </span>
                     </div>
                   </div>
@@ -591,12 +603,14 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 flex items-center justify-between border-t border-slate-100 overflow-x-auto no-scrollbar smooth-scroll-touch gap-2 sm:gap-4">
           <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-1">
             {[
-              { id: 'matrix', label: 'Matriks Presensi', fullLabel: 'Matriks Presensi', icon: Calendar },
-              { id: 'schedules', label: 'Jadwal & Shift', fullLabel: 'Jadwal & Shift Pegawai', icon: Clock },
-              { id: 'employees', label: `Pegawai (${employees.length})`, fullLabel: `Master Pegawai (${employees.length})`, icon: Users },
-              { id: 'guide', label: 'Panduan', fullLabel: 'Panduan Perhitungan', icon: BookOpen },
-              { id: 'audit', label: 'Audit Trail', fullLabel: 'Audit Trail', icon: History },
-            ].map((tab) => {
+              { id: 'matrix', label: 'Matriks Presensi', fullLabel: 'Matriks Presensi', icon: Calendar, superadminOnly: true },
+              { id: 'schedules', label: 'Jadwal & Shift', fullLabel: 'Jadwal & Shift Pegawai', icon: Clock, superadminOnly: false },
+              { id: 'employees', label: `Pegawai (${employees.length})`, fullLabel: `Master Pegawai (${employees.length})`, icon: Users, superadminOnly: true },
+              { id: 'guide', label: 'Panduan', fullLabel: 'Panduan Perhitungan', icon: BookOpen, superadminOnly: false },
+              { id: 'audit', label: 'Audit Trail', fullLabel: 'Audit Trail', icon: History, superadminOnly: true },
+            ]
+              .filter((tab) => !tab.superadminOnly || userRole === 'superadmin')
+              .map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
@@ -628,8 +642,30 @@ export default function HomePage() {
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 py-4 sm:py-6 flex-1 w-full space-y-4 sm:space-y-6">
-        {/* TAB 1: Matriks Presensi */}
-        {activeTab === 'matrix' && (
+        {/* Peringatan jika bukan Superadmin mencoba mengakses tab terlarang */}
+        {userRole !== 'superadmin' && (activeTab === 'matrix' || activeTab === 'employees' || activeTab === 'audit') && (
+          <div className="bg-white rounded-2xl border border-amber-200 p-10 text-center max-w-lg mx-auto space-y-4 shadow-sm">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
+              <Shield className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-slate-900 text-base">Akses Halaman Dibatasi</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Akun Admin berwenang khusus mengelola <strong>Jadwal & Shift Pegawai</strong> pada unit kerja yang ditugaskan. Halaman ini hanya dapat diakses oleh Superadmin.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('schedules')}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+            >
+              Buka Jadwal & Shift Pegawai
+            </button>
+          </div>
+        )}
+
+        {/* TAB 1: Matriks Presensi (Superadmin Only) */}
+        {activeTab === 'matrix' && userRole === 'superadmin' && (
           <div className="space-y-6">
             <DashboardStats
               summary={summary}
@@ -715,8 +751,8 @@ export default function HomePage() {
           />
         )}
 
-        {/* TAB 3: Master Pegawai */}
-        {activeTab === 'employees' && (
+        {/* TAB 3: Master Pegawai (Superadmin Only) */}
+        {activeTab === 'employees' && userRole === 'superadmin' && (
           <EmployeeManager
             employees={employees}
             onEmployeeUpdated={loadData}
@@ -728,13 +764,13 @@ export default function HomePage() {
         {activeTab === 'guide' && (
           <CalculationGuideModal
             isOpen={true}
-            onClose={() => setActiveTab('matrix')}
+            onClose={() => setActiveTab(userRole === 'superadmin' ? 'matrix' : 'schedules')}
             isEmbeddedView={true}
           />
         )}
 
-        {/* TAB 5: Audit Trail */}
-        {activeTab === 'audit' && <AuditTrailView />}
+        {/* TAB 5: Audit Trail (Superadmin Only) */}
+        {activeTab === 'audit' && userRole === 'superadmin' && <AuditTrailView />}
       </main>
 
       {/* Footer */}

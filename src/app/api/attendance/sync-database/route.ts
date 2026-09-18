@@ -4,11 +4,17 @@ import { evaluateAttendanceStatus, addMinutesToTime } from '@/lib/attendance/par
 import { AttendanceCode, DailyAttendance } from '@/lib/types';
 import { getSupabaseServerClient, isSupabaseConfigured } from '@/lib/supabase/server';
 import { sanitizeDailyAttendanceForDb } from '@/lib/storage/supabase-store';
+import { requireSuperAdmin } from '@/lib/auth/guard';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function POST(request: NextRequest) {
+  const auth = await requireSuperAdmin(request);
+  if (auth.error) {
+    return auth.error;
+  }
+
   try {
     const body = await request.json().catch(() => ({}));
     const month = parseInt(body.month || '9', 10);

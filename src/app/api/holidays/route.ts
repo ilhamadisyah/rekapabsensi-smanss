@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/storage/store';
+import { requireSuperAdmin } from '@/lib/auth/guard';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -26,6 +27,11 @@ export async function GET(request: NextRequest) {
 
 // POST: Create or update holiday (supports single date or date range)
 export async function POST(request: NextRequest) {
+  const auth = await requireSuperAdmin(request);
+  if (auth.error) {
+    return auth.error;
+  }
+
   try {
     const body = await request.json();
 
@@ -121,6 +127,11 @@ export async function POST(request: NextRequest) {
 
 // DELETE: Delete holiday
 export async function DELETE(request: NextRequest) {
+  const auth = await requireSuperAdmin(request);
+  if (auth.error) {
+    return auth.error;
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

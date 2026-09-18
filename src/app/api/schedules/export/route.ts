@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import { db } from '@/lib/storage/store';
+import { getSessionUser } from '@/lib/auth/session';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -14,16 +15,41 @@ const DAY_NAMES_ID = ['MIN', 'SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB'];
 
 export async function GET(request: NextRequest) {
   try {
+    const user = await getSessionUser(request);
+    const isSuperAdmin = !user || user.role === 'superadmin' || user.workUnitAccess?.includes('ALL');
+    const allowedUnits = user?.workUnitAccess || [];
+
     const { searchParams } = new URL(request.url);
     const month = parseInt(searchParams.get('month') || '9', 10);
     const year = parseInt(searchParams.get('year') || '2026', 10);
     const department = searchParams.get('department') || 'ALL';
+    const workUnitParam = searchParams.get('work_unit') || 'ALL';
 
     const allEmployees = await db.getEmployees();
     const rawEmployees = allEmployees.filter((e) => e.is_active);
-    const employees = department === 'ALL'
+
+    // 1. Filter by department
+    let filteredEmployees = department === 'ALL'
       ? rawEmployees
       : rawEmployees.filter((e) => e.department === department);
+
+    // 2. Filter by work unit (with strict RBAC enforcement)
+    let activeWorkUnitLabel = 'Semua Unit';
+    if (!isSuperAdmin) {
+      // Restricted Admin: Only employees in permitted work units can be exported
+      filteredEmployees = filteredEmployees.filter((e) => e.work_unit && allowedUnits.includes(e.work_unit));
+      activeWorkUnitLabel = allowedUnits.length > 0 ? allowedUnits.join(', ') : 'Tanpa Hak Akses Unit';
+    } else if (workUnitParam !== 'ALL') {
+      if (workUnitParam === 'UNSET') {
+        filteredEmployees = filteredEmployees.filter((e) => !e.work_unit);
+        activeWorkUnitLabel = 'Tanpa Unit';
+      } else {
+        filteredEmployees = filteredEmployees.filter((e) => e.work_unit === workUnitParam);
+        activeWorkUnitLabel = workUnitParam;
+      }
+    }
+
+    const employees = filteredEmployees;
 
     const schedules = await db.getEmployeeSchedules(month, year);
     const shifts = await db.getShiftTemplates();
@@ -56,7 +82,7 @@ export async function GET(request: NextRequest) {
 
     sheet.mergeCells(2, 1, 2, totalDays + 6);
     const subCell = sheet.getCell(2, 1);
-    subCell.value = `SMAN SUMATERA SELATAN • PERIODE: ${MONTH_NAMES_ID[month - 1].toUpperCase()} ${year} • BAGIAN: ${department}`;
+    subCell.value = `SMAN SUMATERA SELATAN • PERIODE: ${MONTH_NAMES_ID[month - 1].toUpperCase()} ${year} • JABATAN: ${department} • UNIT KERJA: ${activeWorkUnitLabel.toUpperCase()}`;
     subCell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FF475569' } };
     subCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
@@ -159,7 +185,9 @@ export async function GET(request: NextRequest) {
       sheet.getCell(curRow, 1).alignment = { horizontal: 'center' };
       sheet.getCell(curRow, 2).value = emp.nik || emp.machine_id;
       sheet.getCell(curRow, 3).value = emp.full_name;
-      sheet.getCell(curRow, 4).value = emp.department || 'Umum';
+      sheet.getCell(curRow, 4).value = emp.work_unit
+        ? `${emp.work_unit} (${emp.department || 'Staff'})`
+        : (emp.department || 'Umum');
 
       // Date cells
       for (let day = 1; day <= totalDays; day++) {

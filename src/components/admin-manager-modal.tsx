@@ -267,7 +267,7 @@ export const AdminManagerModal: React.FC<AdminManagerModalProps> = ({
             </div>
             <div>
               <h2 className="text-base font-bold text-white">
-                Manajemen Admin &amp; RBAC Unit Kerja
+                Manajemen Akun Admin &amp; Unit Kerja
               </h2>
               <p className="text-xs text-slate-300">
                 Kelola hak akses admin dan batas kewenangan edit jadwal per unit kerja
@@ -371,7 +371,7 @@ export const AdminManagerModal: React.FC<AdminManagerModalProps> = ({
                 {editRole === 'admin' && (
                   <div className="sm:col-span-2 bg-white/80 p-3.5 rounded-xl border border-amber-200/80 space-y-2.5">
                     <label className="block text-[11px] font-bold text-slate-800 uppercase">
-                      Batas Wewenang Pengaturan Jadwal Pegawai (RBAC)
+                      Batas Wewenang Pengaturan Jadwal Pegawai
                     </label>
                     <div className="flex flex-wrap gap-4 text-xs">
                       <label className="flex items-center gap-2 cursor-pointer">
@@ -537,7 +537,7 @@ export const AdminManagerModal: React.FC<AdminManagerModalProps> = ({
                 {newRole === 'admin' && (
                   <div className="sm:col-span-2 bg-white p-3.5 rounded-xl border border-indigo-200/80 space-y-2.5">
                     <label className="block text-[11px] font-bold text-slate-800 uppercase">
-                      Batas Wewenang Pengaturan Jadwal Pegawai (RBAC)
+                      Batas Wewenang Pengaturan Jadwal Pegawai
                     </label>
                     <div className="flex flex-wrap gap-4 text-xs">
                       <label className="flex items-center gap-2 cursor-pointer">
@@ -648,7 +648,7 @@ export const AdminManagerModal: React.FC<AdminManagerModalProps> = ({
                   <th className="px-4 py-3">Pengguna</th>
                   <th className="px-4 py-3">Username &amp; Email</th>
                   <th className="px-4 py-3">Peran (Role)</th>
-                  <th className="px-4 py-3">Akses Unit Kerja (RBAC)</th>
+                  <th className="px-4 py-3">Wewenang Unit Kerja</th>
                   <th className="px-4 py-3 text-right">Aksi</th>
                 </tr>
               </thead>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/storage/store';
+import { requireSuperAdmin } from '@/lib/auth/guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +31,11 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await requireSuperAdmin(request);
+  if (auth.error) {
+    return auth.error;
+  }
+
   try {
     const body = await request.json();
     const { full_name, machine_id, department, nik, excel_row_index, is_active, work_unit } = body;
@@ -91,6 +97,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const auth = await requireSuperAdmin(request);
+  if (auth.error) {
+    return auth.error;
+  }
+
   try {
     const body = await request.json();
     const { id, updates, action, orders } = body;
@@ -150,6 +161,11 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const auth = await requireSuperAdmin(request);
+  if (auth.error) {
+    return auth.error;
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

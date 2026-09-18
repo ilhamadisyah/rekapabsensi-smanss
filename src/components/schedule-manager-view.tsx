@@ -110,6 +110,13 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
   const isSuperAdmin = !currentUser || currentUser.role === 'superadmin' || currentUser.work_unit_access?.includes('ALL');
   const allowedUnits = currentUser?.work_unit_access || [];
 
+  // Fallback ke subtab matrix jika admin bukan superadmin mencoba membuka tab shifts/holidays
+  useEffect(() => {
+    if (!isSuperAdmin && (activeSubTab === 'shifts' || activeSubTab === 'holidays')) {
+      setActiveSubTab('matrix');
+    }
+  }, [isSuperAdmin, activeSubTab]);
+
   const isEmpAllowed = useCallback((emp: Employee) => {
     if (isSuperAdmin) return true;
     if (!emp.work_unit) return false;
@@ -506,6 +513,7 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
         month: String(currMonth),
         year: String(currYear),
         department: selectedDept,
+        work_unit: selectedWorkUnit,
       });
       const res = await fetch(`/api/schedules/export?${params.toString()}`);
       if (!res.ok) throw new Error('Gagal mengekspor roster.');
@@ -516,7 +524,13 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
       a.href = url;
       const monthPad = String(currMonth).padStart(2, '0');
       const deptSuffix = selectedDept !== 'ALL' ? `_${selectedDept}` : '';
-      a.download = `Roster_Jadwal_SMANSS_${monthPad}_${currYear}${deptSuffix}.xlsx`;
+      let unitSuffix = '';
+      if (!isSuperAdmin) {
+        unitSuffix = allowedUnits.length > 0 ? `_${allowedUnits.join('_').replace(/[^a-zA-Z0-9_]/g, '')}` : '';
+      } else if (selectedWorkUnit !== 'ALL') {
+        unitSuffix = `_${selectedWorkUnit.replace(/[^a-zA-Z0-9_]/g, '')}`;
+      }
+      a.download = `Roster_Jadwal_SMANSS_${monthPad}_${currYear}${deptSuffix}${unitSuffix}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -635,7 +649,7 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
       {/* BARIS 1: Sub-Tabs Menu Navigasi (Lega Penuh & Tanpa Terpotong) */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-2">
         {/* Tab Header Sub-Menu */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-1 sm:gap-1.5 bg-slate-100/90 p-1 sm:p-1.5 rounded-xl">
+        <div className={`grid ${isSuperAdmin ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-2'} gap-1 sm:gap-1.5 bg-slate-100/90 p-1 sm:p-1.5 rounded-xl`}>
           <button
             type="button"
             onClick={() => setActiveSubTab('matrix')}
@@ -662,31 +676,35 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
             <span className="truncate">Atur Jadwal Pegawai</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('shifts')}
-            className={`py-2 sm:py-2.5 px-2 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
-              activeSubTab === 'shifts'
-                ? 'bg-white text-blue-600 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-            }`}
-          >
-            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="truncate">Master Shift ({shifts.length})</span>
-          </button>
+          {isSuperAdmin && (
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('shifts')}
+              className={`py-2 sm:py-2.5 px-2 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
+                activeSubTab === 'shifts'
+                  ? 'bg-white text-blue-600 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span className="truncate">Master Shift ({shifts.length})</span>
+            </button>
+          )}
 
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('holidays')}
-            className={`py-2 sm:py-2.5 px-2 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
-              activeSubTab === 'holidays'
-                ? 'bg-white text-rose-600 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-            }`}
-          >
-            <CalendarCheck2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span className="truncate">Hari Libur ({holidays.length})</span>
-          </button>
+          {isSuperAdmin && (
+            <button
+              type="button"
+              onClick={() => setActiveSubTab('holidays')}
+              className={`py-2 sm:py-2.5 px-2 sm:px-3 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer ${
+                activeSubTab === 'holidays'
+                  ? 'bg-white text-rose-600 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+            >
+              <CalendarCheck2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span className="truncate">Hari Libur ({holidays.length})</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -828,17 +846,19 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                 <span>{isExporting ? 'Ekspor...' : 'Ekspor'}</span>
               </button>
 
-              <button
-                type="button"
-                onClick={handleReevaluate}
-                disabled={isReevaluating}
-                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-[11px] sm:text-xs font-bold text-white transition-colors shadow-xs cursor-pointer disabled:opacity-50"
-                title="Sinkronisasi status presensi dengan aturan shift & hari libur"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isReevaluating ? 'animate-spin' : ''}`} />
-                <span className="hidden xs:inline sm:inline">{isReevaluating ? 'Sinkronisasi...' : 'Re-Evaluasi Presensi'}</span>
-                <span className="xs:hidden sm:hidden">Re-Evaluasi</span>
-              </button>
+              {isSuperAdmin && (
+                <button
+                  type="button"
+                  onClick={handleReevaluate}
+                  disabled={isReevaluating}
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-[11px] sm:text-xs font-bold text-white transition-colors shadow-xs cursor-pointer disabled:opacity-50"
+                  title="Sinkronisasi status presensi dengan aturan shift & hari libur"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isReevaluating ? 'animate-spin' : ''}`} />
+                  <span className="hidden xs:inline sm:inline">{isReevaluating ? 'Sinkronisasi...' : 'Re-Evaluasi Presensi'}</span>
+                  <span className="xs:hidden sm:hidden">Re-Evaluasi</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -849,7 +869,7 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
                 <Shield className="w-4 h-4" />
               </div>
               <div className="flex-1">
-                <p className="font-bold text-amber-950">Akses Penjadwalan Terbatas (RBAC Unit Kerja)</p>
+                <p className="font-bold text-amber-950">Akses Penjadwalan Terbatas (Unit Kerja)</p>
                 <p className="text-[11px] text-amber-800 mt-0.5">
                   Anda masuk sebagai Admin Unit. Anda hanya berwenang mengatur jadwal untuk unit kerja:{' '}
                   <span className="font-bold underline">{allowedUnits.length > 0 ? allowedUnits.join(', ') : 'Tidak ada unit'}</span>. Pegawai di luar unit ini dibatasi secara otomatis.
@@ -1286,8 +1306,8 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
         </div>
       )}
 
-      {/* SUB-TAB 3: Master Template Shift */}
-      {activeSubTab === 'shifts' && (
+      {/* SUB-TAB 3: Master Template Shift (Superadmin Only) */}
+      {activeSubTab === 'shifts' && isSuperAdmin && (
         <ShiftManagerTab
           templates={shifts}
           onTemplatesUpdated={() => loadScheduleData(currMonth, currYear, true)}
@@ -1295,8 +1315,8 @@ export const ScheduleManagerView: React.FC<ScheduleManagerViewProps> = ({
         />
       )}
 
-      {/* SUB-TAB 4: Blackout Hari Libur */}
-      {activeSubTab === 'holidays' && (
+      {/* SUB-TAB 4: Blackout Hari Libur (Superadmin Only) */}
+      {activeSubTab === 'holidays' && isSuperAdmin && (
         <HolidayManagerTab
           holidays={holidays}
           selectedMonth={currMonth}

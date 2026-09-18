@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/storage/store';
 import { AttendanceCode } from '@/lib/types';
+import { requireSuperAdmin } from '@/lib/auth/guard';
 
 export const dynamic = 'force-dynamic';
 
 export async function PATCH(request: NextRequest) {
+  const auth = await requireSuperAdmin(request);
+  if (auth.error) {
+    return auth.error;
+  }
+
   try {
     const body = await request.json();
     const { employee_id, date, final_status, notes, changed_by } = body;

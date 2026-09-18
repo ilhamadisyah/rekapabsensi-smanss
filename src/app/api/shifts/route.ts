@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/storage/store';
+import { requireSuperAdmin } from '@/lib/auth/guard';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -17,6 +18,11 @@ export async function GET() {
 
 // POST: Create a new shift template
 export async function POST(request: NextRequest) {
+  const auth = await requireSuperAdmin(request);
+  if (auth.error) {
+    return auth.error;
+  }
+
   try {
     const body = await request.json();
     if (!body.name || !body.code) {
@@ -50,6 +56,11 @@ export async function POST(request: NextRequest) {
 
 // PUT: Update an existing shift template
 export async function PUT(request: NextRequest) {
+  const auth = await requireSuperAdmin(request);
+  if (auth.error) {
+    return auth.error;
+  }
+
   try {
     const body = await request.json();
     if (!body.id || !body.name || !body.code) {
@@ -84,6 +95,11 @@ export async function PUT(request: NextRequest) {
 
 // DELETE: Delete a shift template
 export async function DELETE(request: NextRequest) {
+  const auth = await requireSuperAdmin(request);
+  if (auth.error) {
+    return auth.error;
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
