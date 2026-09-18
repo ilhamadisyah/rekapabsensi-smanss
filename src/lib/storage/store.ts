@@ -428,21 +428,22 @@ const localDb = {
       if (existingIdx !== undefined) {
         // Record already exists for this employee and date
         const existingRec = data.daily_attendance[existingIdx];
-        const isSystemPlaceholder =
-          existingRec.upload_id === 'sync_system' ||
-          existingRec.upload_id?.startsWith('virtual-') ||
-          existingRec.notes === 'Alpha (Tidak Ada Rekaman Mesin)' ||
-          existingRec.notes === 'Libur Rutin (Akhir Pekan)' ||
-          existingRec.notes === 'Hari Libur Resmi' ||
-          existingRec.notes === 'Libur Shift (Bebas Tugas)';
+        const isHumanVerified = Boolean(
+          existingRec.is_verified === true ||
+          (Boolean(existingRec.verified_by) && existingRec.verified_by !== 'system') ||
+          existingRec.upload_id === 'manual_override' ||
+          ['DL', 'S', 'I', 'C', 'IL', 'PM', 'AL', 'OTL', 'HIP', 'HIS'].includes(existingRec.final_status)
+        );
 
-        const isHumanVerified =
-          !isSystemPlaceholder &&
+        const isSystemPlaceholder =
+          !isHumanVerified &&
           (
-            existingRec.is_verified === true ||
-            (Boolean(existingRec.verified_by) && existingRec.verified_by !== 'system') ||
-            existingRec.upload_id === 'manual_override' ||
-            ['DL', 'S', 'I', 'C', 'IL', 'PM', 'AL', 'OTL', 'HIP', 'HIS'].includes(existingRec.final_status)
+            existingRec.upload_id === 'sync_system' ||
+            existingRec.upload_id?.startsWith('virtual-') ||
+            existingRec.notes === 'Alpha (Tidak Ada Rekaman Mesin)' ||
+            existingRec.notes === 'Libur Rutin (Akhir Pekan)' ||
+            existingRec.notes === 'Hari Libur Resmi' ||
+            existingRec.notes === 'Libur Shift (Bebas Tugas)'
           );
 
         if (isHumanVerified) {
@@ -518,14 +519,28 @@ const localDb = {
     let previousStatus: AttendanceCode = 'A';
     let record: DailyAttendance;
 
+    let cleanNotes = notes !== undefined ? notes : (recIdx !== -1 ? data.daily_attendance[recIdx].notes : undefined);
+    if (recIdx !== -1) {
+      const existingNotes = data.daily_attendance[recIdx].notes;
+      if (
+        (existingNotes === 'Alpha (Tidak Ada Rekaman Mesin)' && final_status !== 'A') ||
+        (existingNotes === 'Libur Rutin (Akhir Pekan)' && final_status !== 'LIBUR') ||
+        (existingNotes === 'Hari Libur Resmi' && final_status !== 'LIBUR') ||
+        (existingNotes === 'Libur Shift (Bebas Tugas)' && final_status !== 'OFF')
+      ) {
+        cleanNotes = notes !== undefined && notes !== '' ? notes : undefined;
+      }
+    }
+
     if (recIdx !== -1) {
       previousStatus = data.daily_attendance[recIdx].final_status;
       data.daily_attendance[recIdx] = {
         ...data.daily_attendance[recIdx],
+        upload_id: 'manual_override',
         employee_id: primaryEmpId,
         employee_name: empName,
         final_status,
-        notes: notes || data.daily_attendance[recIdx].notes,
+        notes: cleanNotes,
         is_verified: true,
         verified_by: changed_by,
         updated_at: new Date().toISOString(),

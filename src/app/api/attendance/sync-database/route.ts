@@ -109,27 +109,19 @@ export async function POST(request: NextRequest) {
 
         if (existing) {
           // Check if manually verified by admin (DL, S, I, C, IL, PM, AL, OTL, HIP, HIS, or human-verified)
-          const isSystemPlaceholder =
-            existing.upload_id === 'sync_system' ||
-            existing.upload_id?.startsWith('virtual-') ||
-            existing.notes === 'Alpha (Tidak Ada Rekaman Mesin)' ||
-            existing.notes === 'Libur Rutin (Akhir Pekan)' ||
-            existing.notes === 'Hari Libur Resmi' ||
-            existing.notes === 'Libur Shift (Bebas Tugas)';
-
-          const isManuallyVerified =
-            !isSystemPlaceholder &&
-            (
-              (existing.is_verified === true && Boolean(existing.verified_by) && existing.verified_by !== 'system') ||
-              existing.upload_id === 'manual_override' ||
-              ['DL', 'S', 'I', 'C', 'IL', 'PM', 'AL', 'OTL', 'HIP', 'HIS'].includes(existing.final_status)
-            );
+          const isManuallyVerified = Boolean(
+            existing.is_verified === true ||
+            existing.upload_id === 'manual_override' ||
+            (Boolean(existing.verified_by) && existing.verified_by !== 'system') ||
+            ['DL', 'S', 'I', 'C', 'IL', 'PM', 'AL', 'OTL', 'HIP', 'HIS'].includes(existing.final_status)
+          );
 
           if (isManuallyVerified) {
-            // Preserve manual verification exactly
+            // Preserve manual verification exactly, ensuring it is permanently marked as manual_override
             recordsToSync.push({
               ...existing,
               employee_name: existing.employee_name || emp.full_name,
+              upload_id: 'manual_override',
               is_verified: true,
               updated_at: existing.updated_at || new Date().toISOString(),
             });

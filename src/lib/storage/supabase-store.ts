@@ -348,29 +348,30 @@ export const supabaseStore = {
         `Pegawai ${newRec.employee_id}`;
 
       if (existingRec) {
-        // Distinguish system placeholders from true manual human verifications:
+        const isHumanVerified = Boolean(
+          existingRec.is_verified === true ||
+          (Boolean(existingRec.verified_by) && existingRec.verified_by !== 'system') ||
+          existingRec.upload_id === 'manual_override' ||
+          // Manual admin status overrides (DL, Sakit, Izin, Cuti, etc.)
+          ['DL', 'S', 'I', 'C', 'IL', 'PM', 'AL', 'OTL', 'HIP', 'HIS'].includes(existingRec.final_status)
+        );
+
+        // Distinguish unverified system placeholders from true manual human verifications:
         const isSystemPlaceholder =
-          existingRec.upload_id === 'sync_system' ||
-          existingRec.upload_id?.startsWith('virtual-') ||
-          existingRec.notes === 'Alpha (Tidak Ada Rekaman Mesin)' ||
-          existingRec.notes === 'Libur Rutin (Akhir Pekan)' ||
-          existingRec.notes === 'Hari Libur Resmi' ||
-          existingRec.notes === 'Libur Shift (Bebas Tugas)';
+          !isHumanVerified &&
+          (
+            existingRec.upload_id === 'sync_system' ||
+            existingRec.upload_id?.startsWith('virtual-') ||
+            existingRec.notes === 'Alpha (Tidak Ada Rekaman Mesin)' ||
+            existingRec.notes === 'Libur Rutin (Akhir Pekan)' ||
+            existingRec.notes === 'Hari Libur Resmi' ||
+            existingRec.notes === 'Libur Shift (Bebas Tugas)'
+          );
 
         // If existing record was under a different employee ID (e.g. machine_id placeholder vs real NIK)
         if (existingRec.employee_id !== newRec.employee_id && isSystemPlaceholder) {
           obsoletePlaceholderIdsToDelete.push(existingRec.id);
         }
-
-        const isHumanVerified =
-          !isSystemPlaceholder &&
-          (
-            existingRec.is_verified === true ||
-            (Boolean(existingRec.verified_by) && existingRec.verified_by !== 'system') ||
-            existingRec.upload_id === 'manual_override' ||
-            // Manual admin status overrides (DL, Sakit, Izin, Cuti, etc.)
-            ['DL', 'S', 'I', 'C', 'IL', 'PM', 'AL', 'OTL', 'HIP', 'HIS'].includes(existingRec.final_status)
-          );
 
         if (isHumanVerified) {
           recordsToUpsert.push({
@@ -475,9 +476,21 @@ export const supabaseStore = {
     const previousStatus: AttendanceCode = (existingData?.final_status as AttendanceCode) || 'A';
 
     const recordId = existingData?.id || `att-${primaryEmpId}-${date}`;
+
+    // Clean obsolete placeholder notes if status changed away from placeholder statuses
+    let cleanNotes = notes !== undefined ? notes : existingData?.notes;
+    if (
+      (existingData?.notes === 'Alpha (Tidak Ada Rekaman Mesin)' && final_status !== 'A') ||
+      (existingData?.notes === 'Libur Rutin (Akhir Pekan)' && final_status !== 'LIBUR') ||
+      (existingData?.notes === 'Hari Libur Resmi' && final_status !== 'LIBUR') ||
+      (existingData?.notes === 'Libur Shift (Bebas Tugas)' && final_status !== 'OFF')
+    ) {
+      cleanNotes = notes !== undefined && notes !== '' ? notes : null;
+    }
+
     const recordToSave: DailyAttendance = {
       id: recordId,
-      upload_id: existingData?.upload_id || 'manual_override',
+      upload_id: 'manual_override',
       employee_id: primaryEmpId,
       employee_name: empName,
       attendance_date: date,
@@ -486,7 +499,7 @@ export const supabaseStore = {
       tap_count: existingData?.tap_count || 0,
       system_status: existingData?.system_status || 'TIDAK_HADIR',
       final_status,
-      notes: notes !== undefined ? notes : existingData?.notes,
+      notes: cleanNotes,
       is_verified: true,
       verified_by: changed_by,
       updated_at: new Date().toISOString(),

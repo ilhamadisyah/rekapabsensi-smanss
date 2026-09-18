@@ -250,9 +250,19 @@ export default function HomePage() {
       const next = { ...prev };
       const keysToUpdate = [emp.nik, emp.machine_id, emp.id].filter(Boolean) as string[];
 
+      let cleanNotes = notes || existing?.notes;
+      if (
+        (existing?.notes === 'Alpha (Tidak Ada Rekaman Mesin)' && newStatus !== 'A') ||
+        (existing?.notes === 'Libur Rutin (Akhir Pekan)' && newStatus !== 'LIBUR') ||
+        (existing?.notes === 'Hari Libur Resmi' && newStatus !== 'LIBUR') ||
+        (existing?.notes === 'Libur Shift (Bebas Tugas)' && newStatus !== 'OFF')
+      ) {
+        cleanNotes = notes || undefined;
+      }
+
       const updatedRecord = {
         id: existing?.id || `att-${empId}-${dateStr}`,
-        upload_id: existing?.upload_id || 'manual',
+        upload_id: 'manual_override',
         employee_id: empId,
         attendance_date: dateStr,
         first_in: existing?.first_in || null,
@@ -260,7 +270,7 @@ export default function HomePage() {
         tap_count: existing?.tap_count || 0,
         system_status: existing?.system_status || 'TIDAK_HADIR',
         final_status: newStatus,
-        notes: notes || existing?.notes,
+        notes: cleanNotes,
         is_verified: true,
         verified_by: userRole,
         updated_at: new Date().toISOString(),

@@ -183,8 +183,18 @@ export function evaluateMonthlyAttendanceMatrix(params: MatrixEvaluatorParams): 
     if (current) {
       const currentHasTap = (current.tap_count || 0) > 0 || current.first_in !== null;
       const incomingHasTap = (rec.tap_count || 0) > 0 || rec.first_in !== null;
-      const currentIsVerified = Boolean(current.is_verified && current.verified_by && current.verified_by !== 'system');
-      const incomingIsVerified = Boolean(rec.is_verified && rec.verified_by && rec.verified_by !== 'system');
+      const currentIsVerified = Boolean(
+        current.is_verified ||
+        current.upload_id === 'manual_override' ||
+        (current.verified_by && current.verified_by !== 'system') ||
+        ['DL', 'S', 'I', 'C', 'IL', 'PM', 'AL', 'OTL', 'HIP', 'HIS'].includes(current.final_status)
+      );
+      const incomingIsVerified = Boolean(
+        rec.is_verified ||
+        rec.upload_id === 'manual_override' ||
+        (rec.verified_by && rec.verified_by !== 'system') ||
+        ['DL', 'S', 'I', 'C', 'IL', 'PM', 'AL', 'OTL', 'HIP', 'HIS'].includes(rec.final_status)
+      );
 
       if (incomingIsVerified && !currentIsVerified) {
         // Incoming manual edit takes absolute priority over unverified log!
@@ -271,7 +281,14 @@ export function evaluateMonthlyAttendanceMatrix(params: MatrixEvaluatorParams): 
         rec.is_custom_schedule = Boolean(sched);
         rec.has_assigned_duty = hasAssignedDuty;
 
-        if (!rec.is_verified) {
+        const isManuallyOverridden = Boolean(
+          rec.is_verified ||
+          rec.upload_id === 'manual_override' ||
+          (rec.verified_by && rec.verified_by !== 'system') ||
+          ['DL', 'S', 'I', 'C', 'IL', 'PM', 'AL', 'OTL', 'HIP', 'HIS'].includes(rec.final_status)
+        );
+
+        if (!isManuallyOverridden) {
           let isCrossDaySession = Boolean(rec.is_cross_day) || Boolean(isOvernight && rec.first_in && rec.last_out && (rec.first_in as string) > (rec.last_out as string));
           // Dynamic Cross-Day Punch Pairing for overnight shifts:
           // An overnight shift MUST pair with the next calendar day (beda hari)!
